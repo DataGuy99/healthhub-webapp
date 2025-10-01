@@ -137,38 +137,48 @@ export function SupplementsView() {
         </div>
       </div>
 
-      {/* Supplement Sections */}
-      {sections && sections.map(section => {
-        const supps = supplementsBySection(section.name);
-        const allTaken = supps.length > 0 && supps.every(s => isSupplementTaken(s.id!));
+      {/* Timeline with Supplement Sections */}
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-white/20" />
 
-        return (
-          <div
-            key={section.id}
-            className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-4">
-                <h3 className="text-2xl font-bold text-white">{section.name}</h3>
-                <button
-                  onClick={() => toggleSection(section.name)}
-                  className={`
-                    px-4 py-1 rounded-lg text-sm font-semibold transition-all
-                    ${allTaken
-                      ? 'bg-green-500/30 text-green-300 border border-green-500/50'
-                      : 'bg-white/20 text-white border border-white/30'}
-                  `}
-                >
-                  {allTaken ? '✓ All Taken' : 'Mark All'}
-                </button>
-              </div>
-              <button
-                onClick={() => deleteSection(section.id!, section.name)}
-                className="text-red-300 hover:text-red-200 font-semibold"
-              >
-                Delete Section
-              </button>
-            </div>
+        {sections && sections.map((section, sectionIndex) => {
+          const supps = supplementsBySection(section.name);
+          const allTaken = supps.length > 0 && supps.every(s => isSupplementTaken(s.id!));
+
+          return (
+            <div key={section.id} className="relative pl-20 pb-8">
+              {/* Timeline dot */}
+              <div className={`
+                absolute left-6 top-6 w-5 h-5 rounded-full border-2 transition-all
+                ${allTaken
+                  ? 'bg-green-500 border-green-400 shadow-lg shadow-green-500/50'
+                  : 'bg-white/20 border-white/40'}
+              `} />
+
+              <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-2xl font-bold text-white">{section.name}</h3>
+                    <button
+                      onClick={() => toggleSection(section.name)}
+                      className={`
+                        px-4 py-1 rounded-lg text-sm font-semibold transition-all
+                        ${allTaken
+                          ? 'bg-green-500/30 text-green-300 border border-green-500/50'
+                          : 'bg-white/20 text-white border border-white/30'}
+                      `}
+                    >
+                      {allTaken ? '✓ All Taken' : 'Mark All'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => deleteSection(section.id!, section.name)}
+                    className="text-red-300 hover:text-red-200 font-semibold text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
 
             {supps.length === 0 ? (
               <p className="text-white/50 text-center py-8">
@@ -243,10 +253,12 @@ export function SupplementsView() {
                   );
                 })}
               </Reorder.Group>
-            )}
-          </div>
-        );
-      })}
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
