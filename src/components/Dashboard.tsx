@@ -33,8 +33,13 @@ export function Dashboard() {
 
     const sync = async () => {
       setSyncStatus('syncing');
-      const result = await fetchAndSyncHealthData();
-      setSyncStatus(result.success ? 'success' : 'error');
+      try {
+        const result = await fetchAndSyncHealthData();
+        setSyncStatus(result.success ? 'success' : 'error');
+      } catch (error) {
+        console.error('Sync error:', error);
+        setSyncStatus('error');
+      }
 
       // Reset status after 3 seconds
       timer = setTimeout(() => setSyncStatus('idle'), 3000);
