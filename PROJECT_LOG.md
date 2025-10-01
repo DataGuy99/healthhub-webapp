@@ -191,7 +191,8 @@ Kotlinx Coroutines: 1.8.0
 
 ## Version History
 - **v0.1.0** (2025-09-29): Project initialization, planning phase complete
-- **v0.2.0** (2025-09-29): Phase 1 foundation complete - database layer, repositories, WorkManager, UI scaffold (35 files created)
+- **v0.2.0** (2025-09-29): Phase 1 foundation complete - database layer, repositories, WorkManager, UI scaffold (33 files)
+- **v0.3.0** (2025-09-30): UI polish - beautiful animations, pull-to-refresh, shimmer effects, haptic feedback (9 new components)
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)
