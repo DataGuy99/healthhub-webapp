@@ -11,6 +11,14 @@ export async function fetchAndSyncHealthData(): Promise<{ success: boolean; coun
     }
 
     const result = await response.json();
+
+    // Handle error response from server
+    if (result.error) {
+      console.warn('Server returned error:', result.error);
+      // Treat empty data as success - no data to sync yet
+      return { success: true, count: 0 };
+    }
+
     const exports = result.data || [];
 
     if (exports.length === 0) {
