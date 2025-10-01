@@ -1,4 +1,4 @@
-export async function handler(event) {
+export async function handler(event, context) {
   // Handle CORS preflight
   const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://legendary-chaja-e17d86.netlify.app';
 
@@ -61,7 +61,11 @@ export async function handler(event) {
     // Store to Netlify Blobs (simple key-value store)
     try {
       const { getStore } = await import('@netlify/blobs');
-      const store = getStore('health-data');
+      const store = getStore({
+        name: 'health-data',
+        siteID: context.site?.id,
+        token: context.token
+      });
 
       // Get existing data
       const existing = await store.get('exports', { type: 'json' }) || [];

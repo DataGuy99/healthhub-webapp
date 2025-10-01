@@ -1,4 +1,4 @@
-export async function handler(event) {
+export async function handler(event, context) {
   const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://legendary-chaja-e17d86.netlify.app';
 
   const headers = {
@@ -15,7 +15,11 @@ export async function handler(event) {
   if (event.httpMethod === 'GET') {
     try {
       const { getStore } = await import('@netlify/blobs');
-      const store = getStore('health-data');
+      const store = getStore({
+        name: 'health-data',
+        siteID: context.site?.id,
+        token: context.token
+      });
 
       const data = await store.get('exports', { type: 'json' }) || [];
 
