@@ -29,16 +29,22 @@ export function Dashboard() {
 
   // Auto-sync on mount
   useEffect(() => {
+    let timer: NodeJS.Timeout;
+
     const sync = async () => {
       setSyncStatus('syncing');
       const result = await fetchAndSyncHealthData();
       setSyncStatus(result.success ? 'success' : 'error');
 
       // Reset status after 3 seconds
-      setTimeout(() => setSyncStatus('idle'), 3000);
+      timer = setTimeout(() => setSyncStatus('idle'), 3000);
     };
 
     sync();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   const hour = new Date().getHours();

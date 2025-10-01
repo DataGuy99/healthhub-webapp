@@ -1,5 +1,5 @@
 export async function handler(event) {
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://healthhub-webapp.netlify.app';
 
   const headers = {
     'Access-Control-Allow-Origin': allowedOrigin,

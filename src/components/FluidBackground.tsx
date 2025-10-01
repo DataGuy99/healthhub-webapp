@@ -209,17 +209,33 @@ export function FluidBackground() {
     `;
 
     function compileShader(type: number, source: string) {
-      const shader = gl.createShader(type)!;
+      const shader = gl.createShader(type);
+      if (!shader) {
+        throw new Error('Failed to create shader');
+      }
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('Shader compilation failed:', gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        throw new Error('Shader compilation failed');
+      }
       return shader;
     }
 
     function createProgram(vertexShader: string, fragmentShader: string) {
-      const program = gl.createProgram()!;
+      const program = gl.createProgram();
+      if (!program) {
+        throw new Error('Failed to create program');
+      }
       gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vertexShader));
       gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fragmentShader));
       gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program linking failed:', gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        throw new Error('Program linking failed');
+      }
       return program;
     }
 
@@ -262,14 +278,18 @@ export function FluidBackground() {
       };
     }
 
+    // Check for float texture support
+    const floatExtension = gl.getExtension('OES_texture_float');
+    const floatType = floatExtension ? gl.FLOAT : gl.UNSIGNED_BYTE;
+
     const simRes = config.SIM_RESOLUTION;
     const dyeRes = config.DYE_RESOLUTION;
 
-    const velocity = createDoubleFBO(simRes, simRes, gl.FLOAT || gl.UNSIGNED_BYTE);
-    const density = createDoubleFBO(dyeRes, dyeRes, gl.FLOAT || gl.UNSIGNED_BYTE);
-    const pressure = createDoubleFBO(simRes, simRes, gl.FLOAT || gl.UNSIGNED_BYTE);
-    const divergence = createFBO(simRes, simRes, gl.FLOAT || gl.UNSIGNED_BYTE);
-    const curl = createFBO(simRes, simRes, gl.FLOAT || gl.UNSIGNED_BYTE);
+    const velocity = createDoubleFBO(simRes, simRes, floatType);
+    const density = createDoubleFBO(dyeRes, dyeRes, floatType);
+    const pressure = createDoubleFBO(simRes, simRes, floatType);
+    const divergence = createFBO(simRes, simRes, floatType);
+    const curl = createFBO(simRes, simRes, floatType);
 
     const blit = (() => {
       const buffer = gl.createBuffer()!;
@@ -310,6 +330,8 @@ export function FluidBackground() {
       blit(velocity.write);
       velocity.swap();
     }
+
+    let animationId: number;
 
     function update() {
       const dt = Math.min((Date.now() - lastTime) / 1000, 0.016);
@@ -371,11 +393,11 @@ export function FluidBackground() {
       gl.uniform1f(gl.getUniformLocation(programs.display, 'brightness'), 1.2);
       blit(null);
 
-      requestAnimationFrame(update);
+      animationId = requestAnimationFrame(update);
     }
 
     // Ambient flow - slower, more graceful splats
-    setInterval(() => {
+    const ambientInterval = setInterval(() => {
       const color = ambientColors[Math.floor(Math.random() * ambientColors.length)];
       const x = Math.random() * width;
       const y = Math.random() * height;
@@ -404,6 +426,7 @@ export function FluidBackground() {
         x = e.clientX;
         y = e.clientY;
       } else {
+        if (e.touches.length === 0) return;
         x = e.touches[0].clientX;
         y = e.touches[0].clientY;
       }
@@ -437,6 +460,10 @@ export function FluidBackground() {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      clearInterval(ambientInterval);
       window.removeEventListener('resize', handleResize);
       canvas.removeEventListener('click', handlePointer);
       canvas.removeEventListener('touchstart', handlePointer);
