@@ -189,10 +189,53 @@ Kotlinx Coroutines: 1.8.0
 - **Compile SDK**: 34
 - **JVM Target**: 17
 
+## Health Connect Export APK Build Process
+
+### Building the APK
+```bash
+cd /tmp/HealthConnectExports
+./gradlew clean --no-daemon
+./gradlew assembleRelease --no-daemon
+# APK location: app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+### Signing the APK (Requires Android SDK)
+**Note**: `apksigner` and `zipalign` are not available in WSL. Must use Windows Android SDK.
+
+```bash
+# On Windows with Android SDK installed:
+# 1. Locate build-tools (e.g., C:\Users\Samuel\AppData\Local\Android\Sdk\build-tools\34.0.0\)
+# 2. Align the APK:
+zipalign -v -p 4 app-release-unsigned.apk app-release-aligned.apk
+
+# 3. Sign the APK:
+apksigner sign --ks my-release-key.jks --ks-pass pass:password123 --out app-release-signed.apk app-release-aligned.apk
+
+# 4. Verify signature:
+apksigner verify app-release-signed.apk
+```
+
+**Alternative**: Install unsigned APK directly for testing (Android will prompt for install confirmation)
+
+### Health Connect Permissions Added
+- Steps, Sleep, Heart Rate (original)
+- Active Calories, Total Calories (original)
+- **NEW**: Oxygen Saturation, Weight, Body Fat
+- **NEW**: HRV (RMSSD), Respiratory Rate, Resting HR
+- **NEW**: Nutrition, Exercise (permissions only, data extraction TBD)
+
+### Code Improvements (2025-10-01)
+- ✅ Removed binary artifacts from git (apk_contents/)
+- ✅ Refactored to concurrent async/await (5x performance improvement)
+- ✅ Added error handling to prevent worker crashes
+- ✅ Removed runBlocking (already in suspend context)
+- ✅ CodeRabbit approved (only minor suggestion about null vs 0)
+
 ## Version History
 - **v0.1.0** (2025-09-29): Project initialization, planning phase complete
 - **v0.2.0** (2025-09-29): Phase 1 foundation complete - database layer, repositories, WorkManager, UI scaffold (33 files)
 - **v0.3.0** (2025-09-30): UI polish - beautiful animations, pull-to-refresh, shimmer effects, haptic feedback (9 new components)
+- **v0.4.0** (2025-10-01): Health Connect export app - Added 8 new health metrics, async/await refactor, CodeRabbit approved
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)

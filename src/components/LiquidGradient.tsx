@@ -84,88 +84,137 @@ export function LiquidGradientBackground() {
             }}
           />
 
-          {/* Animated blob 1 - Large swirl */}
+          {/* Turbulent flow layer 1 - Concentrated veins */}
           <motion.div
             animate={{
-              x: [0, 100, -50, 0],
-              y: [0, -100, 50, 0],
-              scale: [1, 1.2, 0.8, 1],
-              rotate: [0, 90, 180, 360],
+              x: [0, 150, -100, 0],
+              y: [0, -120, 80, 0],
+              rotate: [0, 120, 240, 360],
+            }}
+            transition={{
+              duration: 30,
+              repeat: Infinity,
+              ease: [0.45, 0.05, 0.55, 0.95], // Custom easing for fluid motion
+            }}
+            className="absolute top-0 left-0 w-full h-full opacity-40"
+            style={{
+              background: `radial-gradient(ellipse 600px 400px at 20% 30%, ${currentGradient.via}80 0%, ${currentGradient.via}20 40%, transparent 70%)`,
+              filter: 'blur(60px)',
+            }}
+          />
+
+          {/* Turbulent flow layer 2 - Swirling veins */}
+          <motion.div
+            animate={{
+              x: [0, -130, 90, 0],
+              y: [0, 140, -70, 0],
+              rotate: [360, 240, 120, 0],
+            }}
+            transition={{
+              duration: 35,
+              repeat: Infinity,
+              ease: [0.45, 0.05, 0.55, 0.95],
+              delay: 3,
+            }}
+            className="absolute bottom-0 right-0 w-full h-full opacity-50"
+            style={{
+              background: `radial-gradient(ellipse 500px 350px at 70% 60%, ${currentGradient.to}90 0%, ${currentGradient.to}30 35%, transparent 65%)`,
+              filter: 'blur(50px)',
+            }}
+          />
+
+          {/* Turbulent flow layer 3 - Dense color streaks */}
+          <motion.div
+            animate={{
+              x: [0, 110, -80, 0],
+              y: [0, -90, 110, 0],
+              rotate: [0, 180, 270, 360],
+              scaleX: [1, 1.3, 0.8, 1],
+              scaleY: [1, 0.8, 1.2, 1],
+            }}
+            transition={{
+              duration: 28,
+              repeat: Infinity,
+              ease: [0.45, 0.05, 0.55, 0.95],
+              delay: 7,
+            }}
+            className="absolute top-1/3 left-1/2 w-96 h-96 opacity-60"
+            style={{
+              background: `radial-gradient(ellipse 400px 300px, ${currentGradient.from}95 0%, ${currentGradient.from}40 30%, transparent 60%)`,
+              filter: 'blur(45px)',
+            }}
+          />
+
+          {/* Concentrated color vein 1 - Sharp edges */}
+          <motion.div
+            animate={{
+              x: [0, -70, 50, 0],
+              y: [0, 80, -60, 0],
+              rotate: [0, 90, 180, 270, 360],
+              scaleX: [1, 1.5, 0.7, 1.2, 1],
+            }}
+            transition={{
+              duration: 25,
+              repeat: Infinity,
+              ease: [0.65, 0, 0.35, 1],
+              delay: 2,
+            }}
+            className="absolute top-1/4 right-1/3 w-72 h-72 opacity-70"
+            style={{
+              background: `linear-gradient(135deg, ${currentGradient.via} 0%, ${currentGradient.to}60 50%, transparent 100%)`,
+              filter: 'blur(35px)',
+              mixBlendMode: 'screen',
+            }}
+          />
+
+          {/* Concentrated color vein 2 - Oil-like density */}
+          <motion.div
+            animate={{
+              x: [0, 90, -70, 0],
+              y: [0, -100, 70, 0],
+              rotate: [360, 270, 180, 90, 0],
+              scaleY: [1, 1.4, 0.8, 1],
+            }}
+            transition={{
+              duration: 32,
+              repeat: Infinity,
+              ease: [0.65, 0, 0.35, 1],
+              delay: 5,
+            }}
+            className="absolute bottom-1/3 left-1/4 w-80 h-80 opacity-65"
+            style={{
+              background: `linear-gradient(225deg, ${currentGradient.from} 0%, ${currentGradient.via}70 45%, transparent 100%)`,
+              filter: 'blur(40px)',
+              mixBlendMode: 'screen',
+            }}
+          />
+
+          {/* Wispy smoke trails */}
+          <motion.div
+            animate={{
+              opacity: [0.15, 0.3, 0.2, 0.15],
+              x: [0, 40, -30, 0],
+              y: [0, -50, 40, 0],
             }}
             transition={{
               duration: 20,
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className="absolute top-0 left-1/4 w-96 h-96 rounded-full opacity-30 blur-3xl"
-            style={{
-              background: `radial-gradient(circle, ${currentGradient.via} 0%, transparent 70%)`
-            }}
-          />
-
-          {/* Animated blob 2 - Medium swirl */}
-          <motion.div
-            animate={{
-              x: [0, -80, 60, 0],
-              y: [0, 120, -80, 0],
-              scale: [1, 0.8, 1.3, 1],
-              rotate: [360, 270, 90, 0],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 2,
-            }}
-            className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-40 blur-3xl"
-            style={{
-              background: `radial-gradient(circle, ${currentGradient.to} 0%, transparent 70%)`
-            }}
-          />
-
-          {/* Animated blob 3 - Small accent */}
-          <motion.div
-            animate={{
-              x: [0, 60, -40, 0],
-              y: [0, -60, 80, 0],
-              scale: [1, 1.1, 0.9, 1],
-              rotate: [0, 180, 270, 360],
-            }}
-            transition={{
-              duration: 18,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 5,
-            }}
-            className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full opacity-25 blur-3xl"
-            style={{
-              background: `radial-gradient(circle, ${currentGradient.from} 0%, transparent 70%)`
-            }}
-          />
-
-          {/* Smoke/mist effect overlay */}
-          <motion.div
-            animate={{
-              opacity: [0.1, 0.2, 0.15, 0.1],
-              scale: [1, 1.1, 1.05, 1],
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(circle at 30% 50%, ${currentGradient.from}15 0%, transparent 50%),
-                           radial-gradient(circle at 70% 80%, ${currentGradient.to}10 0%, transparent 50%)`
+              background: `radial-gradient(ellipse 800px 600px at 40% 30%, ${currentGradient.from}25 0%, transparent 50%),
+                           radial-gradient(ellipse 700px 500px at 65% 70%, ${currentGradient.to}20 0%, transparent 50%)`,
+              filter: 'blur(80px)',
             }}
           />
 
-          {/* Subtle noise texture overlay for depth */}
+          {/* Turbulence noise overlay for realistic fluid motion */}
           <div
-            className="absolute inset-0 opacity-[0.015]"
+            className="absolute inset-0 opacity-[0.03]"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 800 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='turbulence'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='5' seed='2' stitchTiles='stitch'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='50'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23turbulence)' fill='%23ffffff'/%3E%3C/svg%3E")`,
+              mixBlendMode: 'overlay',
             }}
           />
         </motion.div>
