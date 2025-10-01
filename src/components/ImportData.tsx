@@ -7,21 +7,25 @@ export function ImportData() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
 
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     setImporting(true);
     setResult(null);
 
     try {
+      // Validate file size (50MB limit)
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('File too large. Maximum size is 50MB.');
+      }
+
       const text = await file.text();
       const data = JSON.parse(text);
-      const count = await importHealthData(Array.isArray(data) ? data : [data]);
 
+      // Validate data structure
+      if (!data || (typeof data !== 'object')) {
+        throw new Error('Invalid JSON format: expected object or array');
+      }
+
+      const count = await importHealthData(Array.isArray(data) ? data : [data]);
       setResult({ success: true, count });
     } catch (error) {
       setResult({ success: false, error: (error as Error).message });
@@ -30,24 +34,21 @@ export function ImportData() {
     }
   };
 
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    await processFile(file);
+  };
+
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImporting(true);
-    setResult(null);
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const count = await importHealthData(Array.isArray(data) ? data : [data]);
-
-      setResult({ success: true, count });
-    } catch (error) {
-      setResult({ success: false, error: (error as Error).message });
-    } finally {
-      setImporting(false);
-    }
+    await processFile(file);
   };
 
   return (

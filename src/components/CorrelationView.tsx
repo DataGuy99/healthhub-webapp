@@ -11,10 +11,16 @@ export function CorrelationView() {
     db.correlations.orderBy('coefficient').reverse().toArray()
   );
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleCalculate = async () => {
     setCalculating(true);
+    setError(null);
     try {
       await calculateAllCorrelations(30);
+    } catch (err) {
+      console.error('Failed to calculate correlations:', err);
+      setError((err as Error).message || 'Failed to calculate correlations');
     } finally {
       setCalculating(false);
     }
@@ -39,6 +45,12 @@ export function CorrelationView() {
           {calculating ? 'Calculating...' : 'Calculate Correlations'}
         </button>
       </div>
+
+      {error && (
+        <div className="backdrop-blur-xl bg-red-500/20 border border-red-500/30 rounded-xl p-4">
+          <p className="text-white font-medium">❌ Error: {error}</p>
+        </div>
+      )}
 
       {correlations && correlations.length > 0 ? (
         <div className="grid gap-4">

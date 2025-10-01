@@ -55,15 +55,28 @@ export function useMetricStats(metricType: string, days: number = 30) {
 }
 
 export async function importHealthData(data: any[]) {
-  // Transform Health Connect export to our format
-  const metrics = data.map(item => ({
-    timestamp: new Date(item.timestamp || item.time),
-    metricType: item.type || item.metricType,
-    value: parseFloat(item.value),
-    unit: item.unit || '',
-    source: item.source || 'Health Connect',
-    metadata: item.metadata || {}
-  }));
+  // Transform and validate Health Connect export
+  const metrics = data
+    .map(item => {
+      const timestamp = new Date(item.timestamp || item.time);
+      const value = parseFloat(item.value);
+      const metricType = item.type || item.metricType;
+
+      // Skip invalid entries
+      if (isNaN(timestamp.getTime()) || !isFinite(value) || !metricType) {
+        return null;
+      }
+
+      return {
+        timestamp,
+        metricType,
+        value,
+        unit: item.unit || '',
+        source: item.source || 'Health Connect',
+        metadata: item.metadata || {}
+      };
+    })
+    .filter((m): m is { timestamp: Date; metricType: string; value: number; unit: string; source: string; metadata: Record<string, any> } => m !== null);
 
   await db.healthMetrics.bulkAdd(metrics);
   return metrics.length;

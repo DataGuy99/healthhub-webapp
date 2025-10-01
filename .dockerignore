@@ -1,6 +1,11 @@
 node_modules
 .git
 .gitignore
-dist
-*.log
 .env
+.env.*
+dist
+dist-ssr
+coverage
+*.log
+.DS_Store
+Thumbs.db

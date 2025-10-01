@@ -7,18 +7,19 @@ export default {
   theme: {
     extend: {
       animation: {
-        'gradient': 'gradient 15s ease infinite',
+        'gradient': 'gradient-pan 15s ease infinite',
         'blob': 'blob 20s infinite',
       },
       keyframes: {
-        gradient: {
-          '0%, 100%': {
-            'background-size': '200% 200%',
-            'background-position': 'left center'
+        'gradient-pan': {
+          '0%': {
+            'background-position': '0% 50%'
           },
           '50%': {
-            'background-size': '200% 200%',
-            'background-position': 'right center'
+            'background-position': '100% 50%'
+          },
+          '100%': {
+            'background-position': '0% 50%'
           },
         },
         blob: {

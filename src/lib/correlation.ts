@@ -20,15 +20,25 @@ function pearsonCorrelation(x: number[], y: number[]): number {
 }
 
 /**
- * Simple p-value estimation (for display purposes)
+ * Calculate p-value for Pearson correlation using t-distribution approximation
  */
 function estimatePValue(r: number, n: number): number {
-  const absR = Math.abs(r);
-  if (absR >= 0.7 && n >= 20) return 0.001;
-  if (absR >= 0.5 && n >= 20) return 0.01;
-  if (absR >= 0.3 && n >= 30) return 0.05;
-  if (absR >= 0.2 && n >= 50) return 0.1;
-  return 0.5;
+  if (n < 3) return 1.0; // Not enough data
+  if (Math.abs(r) >= 0.9999) return 0.0001; // Near-perfect correlation
+
+  // Calculate t-statistic: t = r * sqrt(n-2) / sqrt(1-r²)
+  const df = n - 2;
+  const t = r * Math.sqrt(df) / Math.sqrt(1 - r * r);
+  const absT = Math.abs(t);
+
+  // Approximate two-tailed p-value using common t-distribution critical values
+  // This is a rough approximation; for production use a proper stats library
+  if (absT > 3.5) return Math.min(0.001, 1 / (df + 10));
+  if (absT > 2.8) return Math.min(0.01, 5 / (df + 10));
+  if (absT > 2.0) return Math.min(0.05, 20 / (df + 10));
+  if (absT > 1.3) return Math.min(0.2, 50 / (df + 10));
+
+  return Math.min(1.0, 100 / (df + 10));
 }
 
 /**
@@ -109,15 +119,15 @@ function alignMetricsByDay(
   const dayMapA: Record<string, number[]> = {};
   const dayMapB: Record<string, number[]> = {};
 
-  // Group by day
+  // Group by day (local time)
   for (const point of dataA) {
-    const day = point.timestamp.toISOString().split('T')[0];
+    const day = point.timestamp.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
     if (!dayMapA[day]) dayMapA[day] = [];
     dayMapA[day].push(point.value);
   }
 
   for (const point of dataB) {
-    const day = point.timestamp.toISOString().split('T')[0];
+    const day = point.timestamp.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
     if (!dayMapB[day]) dayMapB[day] = [];
     dayMapB[day].push(point.value);
   }
