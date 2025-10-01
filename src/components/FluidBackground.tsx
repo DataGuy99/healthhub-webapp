@@ -7,7 +7,7 @@ export function FluidBackground() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    const gl = (canvas.getContext('webgl2') || canvas.getContext('webgl')) as WebGLRenderingContext;
     if (!gl) {
       console.warn('WebGL not supported');
       return;
