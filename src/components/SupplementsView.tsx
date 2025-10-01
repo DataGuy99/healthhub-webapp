@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, Reorder } from 'framer-motion';
 import { db, Supplement, SupplementSection } from '../lib/db';
@@ -25,7 +25,7 @@ export function SupplementsView() {
   const supplementsBySection = (sectionName: string) => {
     return supplements?.filter(
       s => s.section === sectionName && s.activeDays.includes(todayDayIndex)
-    ) || [];
+    ).sort((a, b) => a.order - b.order) || [];
   };
 
   const isSupplementTaken = (suppId: number) => {
@@ -50,7 +50,7 @@ export function SupplementsView() {
     const supps = supplementsBySection(sectionName);
     const allTaken = supps.every(s => isSupplementTaken(s.id!));
 
-    for (const supp of supps) {
+    await Promise.all(supps.map(async supp => {
       const log = logs?.find(l => l.supplementId === supp.id);
       if (log) {
         await db.supplementLogs.update(log.id!, { isTaken: !allTaken });
@@ -62,7 +62,7 @@ export function SupplementsView() {
           timestamp: new Date()
         });
       }
-    }
+    }));
   };
 
   const addSection = async () => {
@@ -79,9 +79,9 @@ export function SupplementsView() {
   const deleteSection = async (sectionId: number, sectionName: string) => {
     // Move supplements to "Unsorted"
     const supps = supplements?.filter(s => s.section === sectionName) || [];
-    for (const supp of supps) {
-      await db.supplements.update(supp.id!, { section: 'Unsorted' });
-    }
+    await Promise.all(
+      supps.map(supp => db.supplements.update(supp.id!, { section: 'Unsorted' }))
+    );
     await db.supplementSections.delete(sectionId);
   };
 
@@ -179,10 +179,11 @@ export function SupplementsView() {
                 axis="y"
                 values={supps}
                 onReorder={async newOrder => {
-                  // Update section for all items in newOrder
+                  // Update section and order for all items in newOrder
                   for (let i = 0; i < newOrder.length; i++) {
                     await db.supplements.update(newOrder[i].id!, {
-                      section: section.name
+                      section: section.name,
+                      order: i
                     });
                   }
                 }}
@@ -266,6 +267,21 @@ function SupplementModal({
   const [section, setSection] = useState(supplement?.section || sections[0]?.name || 'Unsorted');
   const [activeDays, setActiveDays] = useState<number[]>(supplement?.activeDays || [0, 1, 2, 3, 4, 5, 6]);
 
+  // Initialize Unsorted section if it doesn't exist
+  useEffect(() => {
+    const initializeUnsorted = async () => {
+      const unsorted = await db.supplementSections.where('name').equals('Unsorted').first();
+      if (!unsorted) {
+        await db.supplementSections.add({
+          name: 'Unsorted',
+          order: 0,
+          createdAt: new Date()
+        });
+      }
+    };
+    initializeUnsorted();
+  }, []);
+
   const toggleDay = (dayIndex: number) => {
     setActiveDays(prev =>
       prev.includes(dayIndex) ? prev.filter(d => d !== dayIndex) : [...prev, dayIndex]
@@ -275,6 +291,10 @@ function SupplementModal({
   const handleSave = async () => {
     if (!name.trim()) return;
 
+    // Get max order for this section
+    const sectionSupps = await db.supplements.where('section').equals(section).toArray();
+    const maxOrder = sectionSupps.reduce((max, s) => Math.max(max, s.order), 0);
+
     const data = {
       name,
       dose,
@@ -283,6 +303,7 @@ function SupplementModal({
       section,
       activeDays,
       isStack: false,
+      order: supplement?.order !== undefined ? supplement.order : maxOrder + 1,
       createdAt: supplement?.createdAt || new Date()
     };
 
