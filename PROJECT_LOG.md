@@ -231,11 +231,33 @@ apksigner verify app-release-signed.apk
 - ✅ Removed runBlocking (already in suspend context)
 - ✅ CodeRabbit approved (only minor suggestion about null vs 0)
 
+## Netlify Deployment (2025-10-01)
+
+### Serverless Function Setup
+- Created `netlify.toml` with build config and redirects
+- Created `/netlify/functions/health-export.js` serverless function
+- Function accepts POST requests at `/api/health-export`
+- Logs received Health Connect data (no database storage yet)
+- Returns success response with timestamp
+
+### GitHub Repository
+- Pushed to: https://github.com/DataGuy99/healthhub-webapp
+- Contains: React webapp + Netlify serverless function
+- Ready for Netlify deployment via web interface
+
+### Next Steps
+- [ ] Deploy to Netlify via web interface
+- [ ] Update Android app with Netlify endpoint URL
+- [ ] Test health data export from phone to Netlify
+- [ ] Analyze received data structure
+- [ ] Implement proper data storage/display in webapp
+
 ## Version History
 - **v0.1.0** (2025-09-29): Project initialization, planning phase complete
 - **v0.2.0** (2025-09-29): Phase 1 foundation complete - database layer, repositories, WorkManager, UI scaffold (33 files)
 - **v0.3.0** (2025-09-30): UI polish - beautiful animations, pull-to-refresh, shimmer effects, haptic feedback (9 new components)
 - **v0.4.0** (2025-10-01): Health Connect export app - Added 8 new health metrics, async/await refactor, CodeRabbit approved
+- **v0.5.0** (2025-10-01): Netlify serverless function added - health data webhook endpoint ready for deployment
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)
