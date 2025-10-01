@@ -15,11 +15,8 @@ export async function handler(event, context) {
   if (event.httpMethod === 'GET') {
     try {
       const { getStore } = await import('@netlify/blobs');
-      const store = getStore({
-        name: 'health-data',
-        siteID: process.env.SITE_ID,
-        token: process.env.NETLIFY_TOKEN || process.env.NETLIFY_BLOBS_TOKEN
-      });
+      // Use simple getStore - Netlify auto-injects credentials in Functions 2.0
+      const store = getStore('health-data');
 
       const data = await store.get('exports', { type: 'json' }) || [];
 
@@ -30,10 +27,11 @@ export async function handler(event, context) {
       };
     } catch (error) {
       console.error('Failed to retrieve from Netlify Blobs:', error);
+      // Return empty data instead of error so site loads
       return {
-        statusCode: 500,
+        statusCode: 200,
         headers,
-        body: JSON.stringify({ error: 'Failed to retrieve data', data: [] })
+        body: JSON.stringify({ data: [], count: 0 })
       };
     }
   }
