@@ -245,6 +245,14 @@ apksigner verify app-release-signed.apk
 - Contains: React webapp + Netlify serverless function
 - Ready for Netlify deployment via web interface
 
+### Security Fixes (2025-10-01)
+- ✅ Added input validation (body exists, 1MB size limit, structure check)
+- ✅ Restricted CORS to specific origin (env var configurable)
+- ✅ Added CORS preflight handling (OPTIONS requests)
+- ✅ Removed sensitive data echo from response
+- ✅ Generic error messages (no implementation details)
+- ✅ Kept health data logging (personal use, user owns data)
+
 ### Next Steps
 - [ ] Deploy to Netlify via web interface
 - [ ] Update Android app with Netlify endpoint URL
@@ -258,6 +266,7 @@ apksigner verify app-release-signed.apk
 - **v0.3.0** (2025-09-30): UI polish - beautiful animations, pull-to-refresh, shimmer effects, haptic feedback (9 new components)
 - **v0.4.0** (2025-10-01): Health Connect export app - Added 8 new health metrics, async/await refactor, CodeRabbit approved
 - **v0.5.0** (2025-10-01): Netlify serverless function added - health data webhook endpoint ready for deployment
+- **v0.5.1** (2025-10-01): Security fixes - input validation, CORS restrictions, removed data echo, generic errors
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)
