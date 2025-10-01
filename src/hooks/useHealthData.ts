@@ -55,29 +55,60 @@ export function useMetricStats(metricType: string, days: number = 30) {
 }
 
 export async function importHealthData(data: any[]) {
-  // Transform and validate Health Connect export
-  const metrics = data
-    .map(item => {
-      const timestamp = new Date(item.timestamp || item.time);
-      const value = parseFloat(item.value);
-      const metricType = item.type || item.metricType;
+  let totalCount = 0;
 
-      // Skip invalid entries
-      if (isNaN(timestamp.getTime()) || !isFinite(value) || !metricType) {
-        return null;
+  for (const exportData of data) {
+    const timestamp = new Date(exportData.time);
+    const d = exportData.data;
+
+    const metrics: any[] = [];
+
+    // Add scalar metrics
+    if (d.steps) metrics.push({ timestamp, metricType: 'steps', value: d.steps, unit: 'steps', source: 'health_connect' });
+    if (d.sleep_duration_seconds) metrics.push({ timestamp, metricType: 'sleep_duration', value: d.sleep_duration_seconds / 3600, unit: 'hours', source: 'health_connect' });
+    if (d.heart_rate_avg) metrics.push({ timestamp, metricType: 'heart_rate_avg', value: d.heart_rate_avg, unit: 'bpm', source: 'health_connect' });
+    if (d.heart_rate_min) metrics.push({ timestamp, metricType: 'heart_rate_min', value: d.heart_rate_min, unit: 'bpm', source: 'health_connect' });
+    if (d.heart_rate_max) metrics.push({ timestamp, metricType: 'heart_rate_max', value: d.heart_rate_max, unit: 'bpm', source: 'health_connect' });
+    if (d.resting_heart_rate) metrics.push({ timestamp, metricType: 'resting_heart_rate', value: d.resting_heart_rate, unit: 'bpm', source: 'health_connect' });
+    if (d.hrv_rmssd) metrics.push({ timestamp, metricType: 'hrv_rmssd', value: d.hrv_rmssd, unit: 'ms', source: 'health_connect' });
+    if (d.oxygen_saturation) metrics.push({ timestamp, metricType: 'oxygen_saturation', value: d.oxygen_saturation, unit: '%', source: 'health_connect' });
+    if (d.respiratory_rate) metrics.push({ timestamp, metricType: 'respiratory_rate', value: d.respiratory_rate, unit: 'bpm', source: 'health_connect' });
+    if (d.weight_kg) metrics.push({ timestamp, metricType: 'weight', value: d.weight_kg, unit: 'kg', source: 'health_connect' });
+    if (d.body_fat_percentage) metrics.push({ timestamp, metricType: 'body_fat', value: d.body_fat_percentage, unit: '%', source: 'health_connect' });
+    if (d.active_calories) metrics.push({ timestamp, metricType: 'active_calories', value: d.active_calories, unit: 'kcal', source: 'health_connect' });
+    if (d.total_calories) metrics.push({ timestamp, metricType: 'total_calories', value: d.total_calories, unit: 'kcal', source: 'health_connect' });
+
+    // Add nutrition records
+    if (d.nutrition_records) {
+      for (const nr of d.nutrition_records) {
+        metrics.push({
+          timestamp: new Date(nr.time),
+          metricType: 'nutrition',
+          value: nr.calories,
+          unit: 'kcal',
+          source: 'health_connect',
+          metadata: { name: nr.name, protein_g: nr.protein_g, carbs_g: nr.carbs_g, fat_g: nr.fat_g }
+        });
       }
+    }
 
-      return {
-        timestamp,
-        metricType,
-        value,
-        unit: item.unit || '',
-        source: item.source || 'Health Connect',
-        metadata: item.metadata || {}
-      };
-    })
-    .filter((m): m is { timestamp: Date; metricType: string; value: number; unit: string; source: string; metadata: Record<string, any> } => m !== null);
+    // Add exercise records
+    if (d.exercise_records) {
+      for (const er of d.exercise_records) {
+        metrics.push({
+          timestamp: new Date(er.time),
+          metricType: 'exercise',
+          value: er.duration_min,
+          unit: 'minutes',
+          source: 'health_connect',
+          metadata: { type: er.type, title: er.title }
+        });
+      }
+    }
 
-  await db.healthMetrics.bulkAdd(metrics);
-  return metrics.length;
+    await db.healthMetrics.bulkAdd(metrics);
+    totalCount += metrics.length;
+  }
+
+  return totalCount;
 }

@@ -58,8 +58,8 @@ export async function handler(event) {
     // Log for personal use (user owns their health data)
     console.log('📊 Received Health Connect export:', JSON.stringify(data, null, 2));
 
-    // In production, you'd save this to a database or external storage
-    // For now, we just log it and return success
+    // Store the data in a simple in-memory array (will be replaced with proper DB later)
+    // For now, the webapp will poll this endpoint to get latest data
 
     return {
       statusCode: 200,
