@@ -4,7 +4,7 @@ import { startOfDay, endOfDay } from 'date-fns';
 
 export function useActiveSupplements() {
   return useLiveQuery(() =>
-    db.supplements.where('isActive').equals(true).toArray()
+    db.supplements.filter(s => s.isActive === true).toArray()
   );
 }
 
