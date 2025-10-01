@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FluidBackground } from './FluidBackground';
-import { ImportData } from './ImportData';
+import { SupplementsView } from './SupplementsView';
 import { MetricChart } from './MetricChart';
 import { CorrelationView } from './CorrelationView';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
 import { fetchAndSyncHealthData } from '../services/autoSync';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'import' | 'correlations'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'correlations'>('overview');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const latestMetrics = useLatestMetrics();
 
@@ -81,7 +81,7 @@ export function Dashboard() {
               )}
             </div>
             <nav className="flex gap-4">
-              {(['overview', 'import', 'correlations'] as const).map(tab => (
+              {(['overview', 'supplements', 'correlations'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -267,13 +267,12 @@ export function Dashboard() {
               </motion.div>
             )}
 
-            {activeTab === 'import' && (
+            {activeTab === 'supplements' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="py-12"
               >
-                <ImportData />
+                <SupplementsView />
               </motion.div>
             )}
 
