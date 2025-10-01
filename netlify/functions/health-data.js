@@ -17,8 +17,8 @@ export async function handler(event, context) {
       const { getStore } = await import('@netlify/blobs');
       const store = getStore({
         name: 'health-data',
-        siteID: context.site?.id,
-        token: context.token
+        siteID: process.env.SITE_ID,
+        token: process.env.NETLIFY_TOKEN || process.env.NETLIFY_BLOBS_TOKEN
       });
 
       const data = await store.get('exports', { type: 'json' }) || [];
