@@ -1,6 +1,6 @@
 export async function handler(event) {
   // Handle CORS preflight
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://healthhub-webapp.netlify.app';
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://legendary-chaja-e17d86.netlify.app';
 
   if (event.httpMethod === 'OPTIONS') {
     return {

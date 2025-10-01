@@ -1,6 +1,6 @@
 import { importHealthData } from '../hooks/useHealthData';
 
-const NETLIFY_HEALTH_DATA_URL = import.meta.env.VITE_HEALTH_DATA_URL || 'https://healthhub-webapp.netlify.app/.netlify/functions/health-data';
+const NETLIFY_HEALTH_DATA_URL = import.meta.env.VITE_HEALTH_DATA_URL || 'https://legendary-chaja-e17d86.netlify.app/.netlify/functions/health-data';
 
 export async function fetchAndSyncHealthData(): Promise<{ success: boolean; count: number; error?: string }> {
   try {
