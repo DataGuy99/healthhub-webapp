@@ -58,9 +58,75 @@ export async function handler(event, context) {
     // Log for personal use (user owns their health data)
     console.log('📊 Received Health Connect export:', JSON.stringify(data, null, 2));
 
-    // For now, just log the data. Android app will send this data
-    // and the webapp will receive it directly via manual import or
-    // the Android app can POST directly to the webapp when on same network.
+    // Store to GitHub as simple JSON database
+    try {
+      const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+      const GITHUB_REPO = process.env.GITHUB_REPO || 'DataGuy99/healthhub-webapp';
+      const FILE_PATH = 'data/health-exports.json';
+
+      if (!GITHUB_TOKEN) {
+        console.error('GITHUB_TOKEN not set');
+        throw new Error('GitHub token not configured');
+      }
+
+      // Get current file to get SHA
+      const getResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        }
+      );
+
+      let existing = [];
+      let sha = null;
+
+      if (getResponse.ok) {
+        const fileData = await getResponse.json();
+        sha = fileData.sha;
+        const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+        existing = JSON.parse(content);
+      }
+
+      // Append new data
+      existing.push(data);
+
+      // Keep last 100 exports
+      if (existing.length > 100) {
+        existing.splice(0, existing.length - 100);
+      }
+
+      // Update file
+      const content = Buffer.from(JSON.stringify(existing, null, 2)).toString('base64');
+
+      const updateResponse = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: `Add health export ${new Date().toISOString()}`,
+            content,
+            sha
+          })
+        }
+      );
+
+      if (!updateResponse.ok) {
+        throw new Error(`GitHub API error: ${updateResponse.status}`);
+      }
+
+      console.log('✅ Stored to GitHub successfully');
+    } catch (error) {
+      console.error('Failed to store to GitHub:', error);
+      // Continue anyway - data is logged
+    }
 
     return {
       statusCode: 200,
