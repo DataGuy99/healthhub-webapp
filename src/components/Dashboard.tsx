@@ -1,17 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { LiquidGradientBackground } from './LiquidGradient';
+import { FluidBackground } from './FluidBackground';
 import { ImportData } from './ImportData';
 import { MetricChart } from './MetricChart';
 import { CorrelationView } from './CorrelationView';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
+import { fetchAndSyncHealthData } from '../services/autoSync';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'import' | 'correlations'>('overview');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const latestMetrics = useLatestMetrics();
-  const heartRateData = useHealthMetrics('HEART_RATE', 7);
-  const hrvData = useHealthMetrics('HEART_RATE_VARIABILITY', 7);
-  const stepsData = useHealthMetrics('STEPS', 7);
+
+  // Fetch all 15 metrics
+  const heartRateAvgData = useHealthMetrics('heart_rate_avg', 7);
+  const heartRateMinData = useHealthMetrics('heart_rate_min', 7);
+  const heartRateMaxData = useHealthMetrics('heart_rate_max', 7);
+  const restingHRData = useHealthMetrics('resting_heart_rate', 7);
+  const hrvData = useHealthMetrics('hrv_rmssd', 7);
+  const oxygenData = useHealthMetrics('oxygen_saturation', 7);
+  const respiratoryData = useHealthMetrics('respiratory_rate', 7);
+  const stepsData = useHealthMetrics('steps', 7);
+  const sleepData = useHealthMetrics('sleep_duration', 7);
+  const weightData = useHealthMetrics('weight', 7);
+  const bodyFatData = useHealthMetrics('body_fat', 7);
+  const activeCaloriesData = useHealthMetrics('active_calories', 7);
+  const totalCaloriesData = useHealthMetrics('total_calories', 7);
+
+  // Auto-sync on mount
+  useEffect(() => {
+    const sync = async () => {
+      setSyncStatus('syncing');
+      const result = await fetchAndSyncHealthData();
+      setSyncStatus(result.success ? 'success' : 'error');
+
+      // Reset status after 3 seconds
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    };
+
+    sync();
+  }, []);
 
   const hour = new Date().getHours();
   const greeting =
@@ -21,15 +49,26 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen relative">
-      <LiquidGradientBackground />
+      <FluidBackground />
 
       <div className="relative z-10 min-h-screen">
         {/* Header */}
         <header className="p-6">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-white drop-shadow-lg">
-              HealthHub
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+                HealthHub
+              </h1>
+              {syncStatus === 'syncing' && (
+                <span className="text-sm text-white/70">Syncing...</span>
+              )}
+              {syncStatus === 'success' && (
+                <span className="text-sm text-green-300">✓ Synced</span>
+              )}
+              {syncStatus === 'error' && (
+                <span className="text-sm text-red-300">Sync failed</span>
+              )}
+            </div>
             <nav className="flex gap-4">
               {(['overview', 'import', 'correlations'] as const).map(tab => (
                 <button
@@ -70,48 +109,147 @@ export function Dashboard() {
                 </div>
 
                 {/* Latest Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+                  <StatCard
+                    title="Steps"
+                    value={latestMetrics?.steps?.value.toFixed(0) || '--'}
+                    unit="steps"
+                  />
+                  <StatCard
+                    title="Sleep"
+                    value={latestMetrics?.sleep_duration?.value.toFixed(1) || '--'}
+                    unit="hrs"
+                  />
                   <StatCard
                     title="Heart Rate"
-                    value={latestMetrics?.HEART_RATE?.value.toFixed(0) || '--'}
+                    value={latestMetrics?.heart_rate_avg?.value.toFixed(0) || '--'}
                     unit="bpm"
                   />
                   <StatCard
                     title="HRV"
-                    value={latestMetrics?.HEART_RATE_VARIABILITY?.value.toFixed(0) || '--'}
+                    value={latestMetrics?.hrv_rmssd?.value.toFixed(0) || '--'}
                     unit="ms"
                   />
                   <StatCard
-                    title="Steps"
-                    value={latestMetrics?.STEPS?.value.toFixed(0) || '--'}
-                    unit="steps"
+                    title="Resting HR"
+                    value={latestMetrics?.resting_heart_rate?.value.toFixed(0) || '--'}
+                    unit="bpm"
+                  />
+                  <StatCard
+                    title="SpO₂"
+                    value={latestMetrics?.oxygen_saturation?.value.toFixed(1) || '--'}
+                    unit="%"
+                  />
+                  <StatCard
+                    title="Resp Rate"
+                    value={latestMetrics?.respiratory_rate?.value.toFixed(0) || '--'}
+                    unit="brpm"
+                  />
+                  <StatCard
+                    title="Weight"
+                    value={latestMetrics?.weight?.value.toFixed(1) || '--'}
+                    unit="kg"
+                  />
+                  <StatCard
+                    title="Body Fat"
+                    value={latestMetrics?.body_fat?.value.toFixed(1) || '--'}
+                    unit="%"
+                  />
+                  <StatCard
+                    title="Active Cal"
+                    value={latestMetrics?.active_calories?.value.toFixed(0) || '--'}
+                    unit="kcal"
                   />
                 </div>
 
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {heartRateData && heartRateData.length > 0 && (
-                    <MetricChart
-                      data={heartRateData}
-                      title="Heart Rate (7 days)"
-                      unit="bpm"
-                      color="#EF4444"
-                    />
-                  )}
-                  {hrvData && hrvData.length > 0 && (
-                    <MetricChart
-                      data={hrvData}
-                      title="HRV (7 days)"
-                      unit="ms"
-                      color="#14B8A6"
-                    />
-                  )}
                   {stepsData && stepsData.length > 0 && (
                     <MetricChart
                       data={stepsData}
                       title="Steps (7 days)"
                       unit="steps"
                       color="#F59E0B"
+                    />
+                  )}
+                  {sleepData && sleepData.length > 0 && (
+                    <MetricChart
+                      data={sleepData}
+                      title="Sleep Duration (7 days)"
+                      unit="hours"
+                      color="#8B5CF6"
+                    />
+                  )}
+                  {heartRateAvgData && heartRateAvgData.length > 0 && (
+                    <MetricChart
+                      data={heartRateAvgData}
+                      title="Avg Heart Rate (7 days)"
+                      unit="bpm"
+                      color="#EF4444"
+                    />
+                  )}
+                  {restingHRData && restingHRData.length > 0 && (
+                    <MetricChart
+                      data={restingHRData}
+                      title="Resting Heart Rate (7 days)"
+                      unit="bpm"
+                      color="#DC2626"
+                    />
+                  )}
+                  {hrvData && hrvData.length > 0 && (
+                    <MetricChart
+                      data={hrvData}
+                      title="HRV RMSSD (7 days)"
+                      unit="ms"
+                      color="#14B8A6"
+                    />
+                  )}
+                  {oxygenData && oxygenData.length > 0 && (
+                    <MetricChart
+                      data={oxygenData}
+                      title="Oxygen Saturation (7 days)"
+                      unit="%"
+                      color="#06B6D4"
+                    />
+                  )}
+                  {respiratoryData && respiratoryData.length > 0 && (
+                    <MetricChart
+                      data={respiratoryData}
+                      title="Respiratory Rate (7 days)"
+                      unit="brpm"
+                      color="#0EA5E9"
+                    />
+                  )}
+                  {weightData && weightData.length > 0 && (
+                    <MetricChart
+                      data={weightData}
+                      title="Weight (7 days)"
+                      unit="kg"
+                      color="#EC4899"
+                    />
+                  )}
+                  {bodyFatData && bodyFatData.length > 0 && (
+                    <MetricChart
+                      data={bodyFatData}
+                      title="Body Fat (7 days)"
+                      unit="%"
+                      color="#D946EF"
+                    />
+                  )}
+                  {activeCaloriesData && activeCaloriesData.length > 0 && (
+                    <MetricChart
+                      data={activeCaloriesData}
+                      title="Active Calories (7 days)"
+                      unit="kcal"
+                      color="#F97316"
+                    />
+                  )}
+                  {totalCaloriesData && totalCaloriesData.length > 0 && (
+                    <MetricChart
+                      data={totalCaloriesData}
+                      title="Total Calories (7 days)"
+                      unit="kcal"
+                      color="#FB923C"
                     />
                   )}
                 </div>

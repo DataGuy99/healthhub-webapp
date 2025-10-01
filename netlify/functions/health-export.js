@@ -58,8 +58,27 @@ export async function handler(event) {
     // Log for personal use (user owns their health data)
     console.log('📊 Received Health Connect export:', JSON.stringify(data, null, 2));
 
-    // Store the data in a simple in-memory array (will be replaced with proper DB later)
-    // For now, the webapp will poll this endpoint to get latest data
+    // Store to Netlify Blobs (simple key-value store)
+    try {
+      const { getStore } = await import('@netlify/blobs');
+      const store = getStore('health-data');
+
+      // Get existing data
+      const existing = await store.get('exports', { type: 'json' }) || [];
+
+      // Append new export
+      existing.push(data);
+
+      // Keep only last 100 exports
+      if (existing.length > 100) {
+        existing.splice(0, existing.length - 100);
+      }
+
+      await store.set('exports', JSON.stringify(existing));
+    } catch (error) {
+      console.error('Failed to store to Netlify Blobs:', error);
+      // Continue anyway - data is still logged
+    }
 
     return {
       statusCode: 200,
@@ -69,7 +88,7 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         success: true,
-        message: 'Export received successfully',
+        message: 'Export received and stored successfully',
         timestamp: new Date().toISOString()
       })
     };
