@@ -58,28 +58,9 @@ export async function handler(event, context) {
     // Log for personal use (user owns their health data)
     console.log('📊 Received Health Connect export:', JSON.stringify(data, null, 2));
 
-    // Store to Netlify Blobs (simple key-value store)
-    try {
-      const { getStore } = await import('@netlify/blobs');
-      // Use simple getStore - Netlify auto-injects credentials in Functions 2.0
-      const store = getStore('health-data');
-
-      // Get existing data
-      const existing = await store.get('exports', { type: 'json' }) || [];
-
-      // Append new export
-      existing.push(data);
-
-      // Keep only last 100 exports
-      if (existing.length > 100) {
-        existing.splice(0, existing.length - 100);
-      }
-
-      await store.set('exports', JSON.stringify(existing));
-    } catch (error) {
-      console.error('Failed to store to Netlify Blobs:', error);
-      // Continue anyway - data is still logged
-    }
+    // For now, just log the data. Android app will send this data
+    // and the webapp will receive it directly via manual import or
+    // the Android app can POST directly to the webapp when on same network.
 
     return {
       statusCode: 200,
