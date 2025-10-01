@@ -268,6 +268,7 @@ apksigner verify app-release-signed.apk
 - **v0.5.0** (2025-10-01): Netlify serverless function added - health data webhook endpoint ready for deployment
 - **v0.5.1** (2025-10-01): Security fixes - input validation, CORS restrictions, removed data echo, generic errors
 - **v0.6.0** (2025-10-01): Added Nutrition and Exercise data extraction - 15 total metrics now exported, tested successfully
+- **v0.7.0** (2025-10-01): Webapp complete - Ambient fluid background, auto-sync from Netlify Blobs, all 15 metrics displayed, CodeRabbit approved
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)
