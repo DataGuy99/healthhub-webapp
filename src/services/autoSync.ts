@@ -6,12 +6,17 @@ export async function fetchAndSyncHealthData(): Promise<{ success: boolean; coun
   try {
     const response = await fetch(NETLIFY_HEALTH_DATA_URL);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
+    // Even if response is not ok, try to parse it for empty data
     const result = await response.json();
     const exports = result.data || [];
+
+    if (!response.ok) {
+      // Return success with empty data if server returns empty array
+      if (exports.length === 0) {
+        return { success: true, count: 0 };
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
     if (exports.length === 0) {
       return { success: true, count: 0 };

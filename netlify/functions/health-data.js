@@ -27,11 +27,10 @@ export async function handler(event, context) {
       };
     } catch (error) {
       console.error('Failed to retrieve from Netlify Blobs:', error);
-      // Return empty data instead of error so site loads
       return {
-        statusCode: 200,
+        statusCode: 500,
         headers,
-        body: JSON.stringify({ data: [], count: 0 })
+        body: JSON.stringify({ error: 'Failed to retrieve data', data: [], count: 0 })
       };
     }
   }
