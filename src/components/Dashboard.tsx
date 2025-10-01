@@ -29,7 +29,7 @@ export function Dashboard() {
 
   // Auto-sync on mount
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: any;
 
     const sync = async () => {
       setSyncStatus('syncing');

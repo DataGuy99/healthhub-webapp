@@ -251,7 +251,7 @@ export function FluidBackground() {
     };
 
     function createFBO(w: number, h: number, type: number) {
-      const texture = gl.createTexture()!;
+      const texture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -259,13 +259,13 @@ export function FluidBackground() {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, type, null);
 
-      const fbo = gl.createFramebuffer()!;
+      const fbo = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
       gl.viewport(0, 0, w, h);
       gl.clear(gl.COLOR_BUFFER_BIT);
 
-      return { texture, fbo, width: w, height: h };
+      return { texture: texture as any, fbo, width: w, height: h };
     }
 
     function createDoubleFBO(w: number, h: number, type: number) {
