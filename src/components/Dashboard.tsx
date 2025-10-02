@@ -121,167 +121,22 @@ export function Dashboard() {
         <main className="p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-8"
-              >
-                {/* Greeting */}
-                <div className="text-center mb-12">
-                  <h2 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                    {greeting}
-                  </h2>
-                  <p className="text-xl text-white/80">
-                    Your health journey today
-                  </p>
-                </div>
-
-                {/* Latest Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-                  <StatCard
-                    title="Steps"
-                    value={latestMetrics?.steps?.value.toFixed(0) || '--'}
-                    unit="steps"
-                  />
-                  <StatCard
-                    title="Sleep"
-                    value={latestMetrics?.sleep_duration?.value.toFixed(1) || '--'}
-                    unit="hrs"
-                  />
-                  <StatCard
-                    title="Heart Rate"
-                    value={latestMetrics?.heart_rate_avg?.value.toFixed(0) || '--'}
-                    unit="bpm"
-                  />
-                  <StatCard
-                    title="HRV"
-                    value={latestMetrics?.hrv_rmssd?.value.toFixed(0) || '--'}
-                    unit="ms"
-                  />
-                  <StatCard
-                    title="Resting HR"
-                    value={latestMetrics?.resting_heart_rate?.value.toFixed(0) || '--'}
-                    unit="bpm"
-                  />
-                  <StatCard
-                    title="SpO₂"
-                    value={latestMetrics?.oxygen_saturation?.value.toFixed(1) || '--'}
-                    unit="%"
-                  />
-                  <StatCard
-                    title="Resp Rate"
-                    value={latestMetrics?.respiratory_rate?.value.toFixed(0) || '--'}
-                    unit="brpm"
-                  />
-                  <StatCard
-                    title="Weight"
-                    value={latestMetrics?.weight?.value.toFixed(1) || '--'}
-                    unit="kg"
-                  />
-                  <StatCard
-                    title="Body Fat"
-                    value={latestMetrics?.body_fat?.value.toFixed(1) || '--'}
-                    unit="%"
-                  />
-                  <StatCard
-                    title="Active Cal"
-                    value={latestMetrics?.active_calories?.value.toFixed(0) || '--'}
-                    unit="kcal"
-                  />
-                </div>
-
-                {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {stepsData && stepsData.length > 0 && (
-                    <MetricChart
-                      data={stepsData}
-                      title="Steps (7 days)"
-                      unit="steps"
-                      color="#F59E0B"
-                    />
-                  )}
-                  {sleepData && sleepData.length > 0 && (
-                    <MetricChart
-                      data={sleepData}
-                      title="Sleep Duration (7 days)"
-                      unit="hours"
-                      color="#8B5CF6"
-                    />
-                  )}
-                  {heartRateAvgData && heartRateAvgData.length > 0 && (
-                    <MetricChart
-                      data={heartRateAvgData}
-                      title="Avg Heart Rate (7 days)"
-                      unit="bpm"
-                      color="#EF4444"
-                    />
-                  )}
-                  {restingHRData && restingHRData.length > 0 && (
-                    <MetricChart
-                      data={restingHRData}
-                      title="Resting Heart Rate (7 days)"
-                      unit="bpm"
-                      color="#DC2626"
-                    />
-                  )}
-                  {hrvData && hrvData.length > 0 && (
-                    <MetricChart
-                      data={hrvData}
-                      title="HRV RMSSD (7 days)"
-                      unit="ms"
-                      color="#14B8A6"
-                    />
-                  )}
-                  {oxygenData && oxygenData.length > 0 && (
-                    <MetricChart
-                      data={oxygenData}
-                      title="Oxygen Saturation (7 days)"
-                      unit="%"
-                      color="#06B6D4"
-                    />
-                  )}
-                  {respiratoryData && respiratoryData.length > 0 && (
-                    <MetricChart
-                      data={respiratoryData}
-                      title="Respiratory Rate (7 days)"
-                      unit="brpm"
-                      color="#0EA5E9"
-                    />
-                  )}
-                  {weightData && weightData.length > 0 && (
-                    <MetricChart
-                      data={weightData}
-                      title="Weight (7 days)"
-                      unit="kg"
-                      color="#EC4899"
-                    />
-                  )}
-                  {bodyFatData && bodyFatData.length > 0 && (
-                    <MetricChart
-                      data={bodyFatData}
-                      title="Body Fat (7 days)"
-                      unit="%"
-                      color="#D946EF"
-                    />
-                  )}
-                  {activeCaloriesData && activeCaloriesData.length > 0 && (
-                    <MetricChart
-                      data={activeCaloriesData}
-                      title="Active Calories (7 days)"
-                      unit="kcal"
-                      color="#F97316"
-                    />
-                  )}
-                  {totalCaloriesData && totalCaloriesData.length > 0 && (
-                    <MetricChart
-                      data={totalCaloriesData}
-                      title="Total Calories (7 days)"
-                      unit="kcal"
-                      color="#FB923C"
-                    />
-                  )}
-                </div>
-              </motion.div>
+              <OverviewTimeline
+                latestMetrics={latestMetrics}
+                heartRateAvgData={heartRateAvgData}
+                heartRateMinData={heartRateMinData}
+                heartRateMaxData={heartRateMaxData}
+                restingHRData={restingHRData}
+                hrvData={hrvData}
+                oxygenData={oxygenData}
+                respiratoryData={respiratoryData}
+                stepsData={stepsData}
+                sleepData={sleepData}
+                weightData={weightData}
+                bodyFatData={bodyFatData}
+                activeCaloriesData={activeCaloriesData}
+                totalCaloriesData={totalCaloriesData}
+              />
             )}
 
             {activeTab === 'supplements' && (
@@ -308,17 +163,90 @@ export function Dashboard() {
   );
 }
 
-function StatCard({ title, value, unit }: { title: string; value: string; unit: string }) {
-  return (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 shadow-xl"
-    >
-      <div className="text-white/70 text-sm font-medium mb-2">{title}</div>
-      <div className="flex items-baseline gap-2">
-        <div className="text-4xl font-bold text-white">{value}</div>
-        <div className="text-white/70 text-lg">{unit}</div>
+function OverviewTimeline({ latestMetrics, ...allData }: any) {
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<'hourly' | 'daily' | 'weekly'>('daily');
+
+  const metrics = [
+    { key: 'steps', title: 'Steps', value: latestMetrics?.steps?.value.toFixed(0), unit: 'steps', data: allData.stepsData, color: '#F59E0B' },
+    { key: 'sleep_duration', title: 'Sleep', value: latestMetrics?.sleep_duration?.value.toFixed(1), unit: 'hrs', data: allData.sleepData, color: '#8B5CF6' },
+    { key: 'heart_rate_avg', title: 'Heart Rate', value: latestMetrics?.heart_rate_avg?.value.toFixed(0), unit: 'bpm', data: allData.heartRateAvgData, color: '#EF4444' },
+    { key: 'hrv_rmssd', title: 'HRV', value: latestMetrics?.hrv_rmssd?.value.toFixed(0), unit: 'ms', data: allData.hrvData, color: '#14B8A6' },
+    { key: 'resting_heart_rate', title: 'Resting HR', value: latestMetrics?.resting_heart_rate?.value.toFixed(0), unit: 'bpm', data: allData.restingHRData, color: '#DC2626' },
+    { key: 'oxygen_saturation', title: 'SpO₂', value: latestMetrics?.oxygen_saturation?.value.toFixed(1), unit: '%', data: allData.oxygenData, color: '#06B6D4' },
+    { key: 'respiratory_rate', title: 'Resp Rate', value: latestMetrics?.respiratory_rate?.value.toFixed(0), unit: 'brpm', data: allData.respiratoryData, color: '#0EA5E9' },
+    { key: 'weight', title: 'Weight', value: latestMetrics?.weight?.value.toFixed(1), unit: 'kg', data: allData.weightData, color: '#EC4899' },
+    { key: 'body_fat', title: 'Body Fat', value: latestMetrics?.body_fat?.value.toFixed(1), unit: '%', data: allData.bodyFatData, color: '#D946EF' },
+    { key: 'active_calories', title: 'Active Cal', value: latestMetrics?.active_calories?.value.toFixed(0), unit: 'kcal', data: allData.activeCaloriesData, color: '#F97316' },
+  ].filter(m => m.data && m.data.length > 0);
+
+  if (metrics.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📊</div>
+        <h3 className="text-2xl font-bold text-white mb-2">No Health Data Yet</h3>
+        <p className="text-white/70">Export data from your Health Connect app to see metrics here</p>
       </div>
-    </motion.div>
+    );
+  }
+
+  return (
+    <div className="relative max-w-4xl mx-auto">
+      {/* Dark vertical timeline line */}
+      <div className="absolute left-8 sm:left-12 top-0 bottom-0 w-1 bg-gradient-to-b from-slate-700 via-slate-600 to-slate-700 shadow-lg" />
+
+      {metrics.map((metric, idx) => {
+        const isExpanded = expandedMetric === metric.key;
+        return (
+          <div key={metric.key} className="relative pl-20 sm:pl-28 pb-8 sm:pb-12">
+            {/* Timeline dot */}
+            <div className={`absolute left-5 sm:left-9 top-8 w-7 h-7 rounded-full border-4 transition-all shadow-xl bg-slate-700 border-slate-500`} style={{ borderColor: metric.color }} />
+
+            <motion.div
+              className="backdrop-blur-xl bg-slate-900/60 border border-slate-700/50 rounded-2xl p-4 sm:p-6 shadow-2xl cursor-pointer"
+              onClick={() => setExpandedMetric(isExpanded ? null : metric.key)}
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-1">{metric.title}</h3>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-bold text-white">{metric.value || '--'}</span>
+                    <span className="text-white/70 text-lg">{metric.unit}</span>
+                  </div>
+                </div>
+                <button className="text-white/70 hover:text-white transition-colors">
+                  {isExpanded ? '▼' : '▶'}
+                </button>
+              </div>
+
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-4 pt-4 border-t border-slate-700"
+                >
+                  <div className="flex gap-2 mb-4">
+                    {(['hourly', 'daily', 'weekly'] as const).map(range => (
+                      <button
+                        key={range}
+                        onClick={(e) => { e.stopPropagation(); setTimeRange(range); }}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          timeRange === range ? 'bg-slate-700 text-white' : 'bg-slate-800/50 text-white/60 hover:text-white'
+                        }`}
+                      >
+                        {range.charAt(0).toUpperCase() + range.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                  <MetricChart data={metric.data} title={`${metric.title} (${timeRange})`} unit={metric.unit} color={metric.color} />
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
