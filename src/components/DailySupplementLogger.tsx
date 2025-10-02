@@ -24,22 +24,20 @@ export function DailySupplementLogger() {
   }, [selectedDate]);
 
   const handleToggleSupplement = async (supplementId: number) => {
+    const dateStr = selectedDate.toISOString().split('T')[0];
     const existingLog = todayLogs?.find(log => log.supplementId === supplementId);
 
     if (existingLog) {
-      // Remove log
+      // Toggle off
       await db.supplementLogs.delete(existingLog.id!);
     } else {
-      // Add log
-      const supplement = supplements?.find(s => s.id === supplementId);
-      if (supplement) {
-        await db.supplementLogs.add({
-          supplementId,
-          timestamp: new Date(),
-          dose: supplement.dosage,
-          notes: ''
-        });
-      }
+      // Toggle on
+      await db.supplementLogs.add({
+        supplementId,
+        date: dateStr,
+        isTaken: true,
+        timestamp: new Date()
+      });
     }
   };
 
@@ -109,11 +107,11 @@ export function DailySupplementLogger() {
                     {supplement.name}
                   </h3>
                   <p className="text-white/70">
-                    {supplement.dosage} {supplement.unit}
+                    {supplement.dose} {supplement.doseUnit}
                   </p>
-                  {supplement.timeOfDay && (
+                  {supplement.section && (
                     <p className="text-sm text-white/50 mt-1">
-                      Best time: {supplement.timeOfDay}
+                      {supplement.section}
                     </p>
                   )}
                 </div>
