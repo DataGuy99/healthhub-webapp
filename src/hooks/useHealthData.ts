@@ -106,8 +106,17 @@ export async function importHealthData(data: any[]) {
       }
     }
 
-    // Use bulkPut to handle duplicates (updates if exists, inserts if new)
-    await db.healthMetrics.bulkPut(metrics);
+    // Import each metric individually to handle duplicates gracefully
+    for (const metric of metrics) {
+      try {
+        await db.healthMetrics.add(metric);
+      } catch (error) {
+        // Ignore duplicate errors, metric already exists
+        if ((error as any).name !== 'ConstraintError') {
+          console.error('Error adding metric:', error);
+        }
+      }
+    }
     totalCount += metrics.length;
   }
 
