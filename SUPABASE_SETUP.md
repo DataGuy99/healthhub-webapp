@@ -26,6 +26,7 @@ CREATE TABLE supplements (
   name TEXT NOT NULL,
   dose TEXT,
   dose_unit TEXT,
+  ingredients JSONB,
   form TEXT,
   section TEXT,
   active_days JSONB,
