@@ -1,24 +1,37 @@
 import { importHealthData } from '../hooks/useHealthData';
 import { getUserId } from '../lib/auth';
+import { createClient } from '@supabase/supabase-js';
 
-const FIREBASE_URL = 'https://healthhub-data-default-rtdb.firebaseio.com';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export async function fetchAndSyncHealthData(): Promise<{ success: boolean; count: number; error?: string }> {
   try {
     const userId = getUserId() || 'default';
-    const response = await fetch(`${FIREBASE_URL}/users/${userId}/metrics.json`);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const { data: exports, error } = await supabase
+      .from('health_exports')
+      .select('*')
+      .eq('user_id', userId)
+      .order('export_time', { ascending: false });
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    const exports = await response.json();
-
-    if (!exports || !Array.isArray(exports) || exports.length === 0) {
+    if (!exports || exports.length === 0) {
       return { success: true, count: 0 };
     }
 
-    const metricsCount = await importHealthData(exports);
+    // Transform Supabase data to match expected format
+    const transformedExports = exports.map(exp => ({
+      time: exp.export_time,
+      data: exp.data
+    }));
+
+    const metricsCount = await importHealthData(transformedExports);
 
     return { success: true, count: metricsCount };
   } catch (error) {
