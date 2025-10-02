@@ -25,6 +25,9 @@ export interface Supplement {
   is_stack?: boolean;
   stack_id?: string;
   order?: number;
+  cost?: number;
+  quantity?: number;
+  frequency?: number;
   created_at?: string;
 }
 

@@ -39,13 +39,30 @@ export function DailySupplementLogger() {
       if (logsError) throw logsError;
 
       // Load sections
-      const { data: sectionsData, error: sectionsError } = await supabase
+      let { data: sectionsData, error: sectionsError } = await supabase
         .from('supplement_sections')
         .select('*')
         .eq('user_id', user.id)
         .order('order', { ascending: true });
 
       if (sectionsError) throw sectionsError;
+
+      // Create default sections if none exist
+      if (!sectionsData || sectionsData.length === 0) {
+        const defaults = ['Morning', 'Afternoon', 'Evening', 'Night'];
+        for (let i = 0; i < defaults.length; i++) {
+          await supabase
+            .from('supplement_sections')
+            .insert([{ user_id: user.id, name: defaults[i], order: i }]);
+        }
+        // Reload sections
+        const { data: reloadedSections } = await supabase
+          .from('supplement_sections')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('order', { ascending: true });
+        sectionsData = reloadedSections;
+      }
 
       setSupplements(supplementsData || []);
       setSectionsList(sectionsData || []);

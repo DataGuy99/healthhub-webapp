@@ -34,7 +34,12 @@ export function CostCalculator() {
         .eq('user_id', user.id)
         .order('order', { ascending: true });
 
-      setSupplements((supplementsData || []).map(s => ({ ...s, cost: 0, quantity: 0, frequency: 1 })));
+      setSupplements((supplementsData || []).map(s => ({
+        ...s,
+        cost: s.cost || 0,
+        quantity: s.quantity || 0,
+        frequency: s.frequency || 1
+      })));
       setSections(sectionsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -43,10 +48,23 @@ export function CostCalculator() {
     }
   };
 
-  const updateCost = (id: string, field: 'cost' | 'quantity' | 'frequency', value: number) => {
+  const updateCost = async (id: string, field: 'cost' | 'quantity' | 'frequency', value: number) => {
+    // Update local state
     setSupplements(prev => prev.map(s =>
       s.id === id ? { ...s, [field]: value } : s
     ));
+
+    // Save to database
+    try {
+      const { error } = await supabase
+        .from('supplements')
+        .update({ [field]: value })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating cost:', error);
+    }
   };
 
   const calculateDailyCost = (supp: SupplementCost): number => {

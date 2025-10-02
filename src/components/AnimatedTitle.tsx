@@ -21,15 +21,15 @@ export function AnimatedTitle() {
     // Initialize random fonts for each letter
     setLetterFonts(text.split('').map(() => Math.floor(Math.random() * FONTS.length)));
 
-    // Cycle letters
+    // Cycle letters (1.5x faster = 2000/1.5 = 1333ms)
     const letterInterval = setInterval(() => {
       setLetterFonts(prev => prev.map(() => Math.floor(Math.random() * FONTS.length)));
-    }, 2000);
+    }, 1333);
 
-    // Cycle emoji
+    // Cycle emoji (1.5x faster = 5000/1.5 = 3333ms)
     const emojiInterval = setInterval(() => {
       setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-    }, 5000);
+    }, 3333);
 
     return () => {
       clearInterval(letterInterval);

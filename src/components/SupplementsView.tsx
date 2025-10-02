@@ -64,11 +64,14 @@ export function SupplementsView() {
         dose_unit: ingredients.length > 0 ? null : doseUnit,
         ingredients: ingredients.length > 0 ? ingredients : null,
         section,
-        active_days: null
+        active_days: null,
+        cost: editingSupplement?.cost || null,
+        quantity: editingSupplement?.quantity || null,
+        frequency: editingSupplement?.frequency || 1
       };
 
       if (editingSupplement) {
-        // Update existing
+        // Update existing (preserve cost data)
         const { error } = await supabase
           .from('supplements')
           .update(supplementData)
