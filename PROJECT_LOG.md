@@ -294,12 +294,21 @@ apksigner verify app-release-signed.apk
 - `GET /api/data/all` - Download all user data (supplements, logs, sections)
 - `POST /api/sync` - Upload sync queue items (create/update/delete)
 
+### Deployment Requirements ⚠️
+**CRITICAL**: This webapp CANNOT be fully built/tested locally due to WSL limitations.
+
+- **Local development works**: Docker + Vite dev server runs fine on http://localhost:3000
+- **Production builds MUST use Netlify**: TypeScript strict mode and build optimizations only work in Netlify environment
+- **Reason**: WSL environment lacks full Node.js/TypeScript tooling compatibility for production builds
+- **Solution**: Always deploy to Netlify for production testing and final builds
+
 ### Next Steps
+- [x] Deploy to Netlify via GitHub integration (automatic on push)
 - [ ] Install server dependencies: `cd server && npm install`
 - [ ] Start backend server: `npm start` (runs on port 3001)
-- [ ] Deploy to Netlify via web interface
-- [ ] Update Android app with Netlify endpoint URL
-- [ ] Test health data export from phone to Netlify
+- [ ] Deploy backend server separately (not on Netlify - needs persistent process)
+- [ ] Update Android app with backend endpoint URL
+- [ ] Test health data export from phone
 - [ ] Test cross-device sync with same credentials
 
 ## Version History

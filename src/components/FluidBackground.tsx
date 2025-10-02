@@ -55,7 +55,7 @@ export function FluidBackground() {
   ];
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="absolute inset-0">
         {colors.map((color, i) => (
           <div key={i} className={`blob blob-${i}`} style={{ background: color }} />

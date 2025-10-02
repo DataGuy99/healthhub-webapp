@@ -121,13 +121,15 @@ function alignMetricsByDay(
 
   // Group by day (local time)
   for (const point of dataA) {
-    const day = point.timestamp.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const date = new Date(point.timestamp);
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (!dayMapA[day]) dayMapA[day] = [];
     dayMapA[day].push(point.value);
   }
 
   for (const point of dataB) {
-    const day = point.timestamp.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const date = new Date(point.timestamp);
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (!dayMapB[day]) dayMapB[day] = [];
     dayMapB[day].push(point.value);
   }

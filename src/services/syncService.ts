@@ -182,21 +182,27 @@ export async function uploadAllData(): Promise<{ success: boolean; error?: strin
     const supplementSections = await db.supplementSections.toArray();
 
     const syncItems = [
-      ...supplements.map(s => ({
-        action: 'supplement' as const,
-        operation: (s.id && serverSupplementIds.has(s.id) ? 'update' : 'create') as const,
-        data: s
-      })),
+      ...supplements.map(s => {
+        const operation: 'update' | 'create' = s.id && serverSupplementIds.has(s.id) ? 'update' : 'create';
+        return {
+          action: 'supplement' as const,
+          operation,
+          data: s
+        };
+      }),
       ...supplementLogs.map(l => ({
         action: 'supplement_log' as const,
         operation: 'create' as const,
         data: l
       })),
-      ...supplementSections.map(s => ({
-        action: 'section' as const,
-        operation: (s.id && serverSectionIds.has(s.id) ? 'update' : 'create') as const,
-        data: s
-      }))
+      ...supplementSections.map(s => {
+        const operation: 'update' | 'create' = s.id && serverSectionIds.has(s.id) ? 'update' : 'create';
+        return {
+          action: 'section' as const,
+          operation,
+          data: s
+        };
+      })
     ];
 
     if (syncItems.length === 0) {
