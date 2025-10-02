@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { saveAuth } from '../lib/auth';
+import { downloadAllData } from '../services/syncService';
 
 export function LoginView({ onLogin }: { onLogin: () => void }) {
   const [passcode, setPasscode] = useState('');
   const [userId, setUserId] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!userId.trim()) {
       setError('Please enter a User ID');
       return;
@@ -17,8 +19,23 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
       return;
     }
 
+    setLoading(true);
+    setError('');
+
     saveAuth(userId.trim(), passcode.trim());
-    onLogin();
+
+    const result = await downloadAllData();
+
+    setLoading(false);
+
+    if (result.success) {
+      onLogin();
+    } else {
+      setError(result.error || 'Failed to sync data. You can still use the app offline.');
+      setTimeout(() => {
+        onLogin();
+      }, 2000);
+    }
   };
 
   return (
@@ -62,9 +79,10 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
 
           <button
             onClick={handleLogin}
-            className="w-full px-6 py-3 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all duration-300 text-sm sm:text-base"
+            disabled={loading}
+            className="w-full px-6 py-3 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? 'Syncing...' : 'Login'}
           </button>
 
           <p className="text-white/50 text-xs sm:text-sm text-center mt-4">
