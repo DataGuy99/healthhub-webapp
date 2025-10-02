@@ -1,40 +1,37 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { saveAuth } from '../lib/auth';
-import { downloadAllData } from '../services/syncService';
+import { signIn, signUp } from '../lib/auth';
 
 export function LoginView({ onLogin }: { onLogin: () => void }) {
-  const [passcode, setPasscode] = useState('');
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!userId.trim()) {
-      setError('Please enter a User ID');
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      setError('Please enter an email');
       return;
     }
-    if (!passcode.trim()) {
-      setError('Please enter a passcode');
+    if (!password.trim()) {
+      setError('Please enter a password');
       return;
     }
 
     setLoading(true);
     setError('');
 
-    saveAuth(userId.trim(), passcode.trim());
-
-    const result = await downloadAllData();
+    const result = isSignUp
+      ? await signUp(email.trim(), password.trim())
+      : await signIn(email.trim(), password.trim());
 
     if (result.success) {
       setLoading(false);
       onLogin();
     } else {
-      setError(result.error || 'Failed to sync data. You can still use the app offline.');
-      setTimeout(() => {
-        setLoading(false);
-        onLogin();
-      }, 2000);
+      setError(result.error || 'Authentication failed');
+      setLoading(false);
     }
   };
 
@@ -46,30 +43,32 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
         className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 sm:p-8 w-full max-w-md"
       >
         <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 text-center">HealthHub</h1>
-        <p className="text-white/70 text-center mb-6 sm:mb-8 text-sm sm:text-base">Login to sync your data</p>
+        <p className="text-white/70 text-center mb-6 sm:mb-8 text-sm sm:text-base">
+          {isSignUp ? 'Create your account' : 'Sign in to continue'}
+        </p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-white font-semibold mb-2 text-sm sm:text-base">User ID</label>
+            <label className="block text-white font-semibold mb-2 text-sm sm:text-base">Email</label>
             <input
-              type="text"
-              value={userId}
-              onChange={e => setUserId(e.target.value)}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 text-sm sm:text-base"
-              placeholder="Enter your unique ID"
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="your@email.com"
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             />
           </div>
 
           <div>
-            <label className="block text-white font-semibold mb-2 text-sm sm:text-base">Passcode</label>
+            <label className="block text-white font-semibold mb-2 text-sm sm:text-base">Password</label>
             <input
               type="password"
-              value={passcode}
-              onChange={e => setPasscode(e.target.value)}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               className="w-full px-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/50 text-sm sm:text-base"
-              placeholder="Enter your passcode"
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="Enter your password"
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             />
           </div>
 
@@ -78,15 +77,25 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
           )}
 
           <button
-            onClick={handleLogin}
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full px-6 py-3 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Syncing...' : 'Login'}
+            {loading ? (isSignUp ? 'Creating Account...' : 'Signing In...') : (isSignUp ? 'Sign Up' : 'Sign In')}
+          </button>
+
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError('');
+            }}
+            className="w-full text-white/70 hover:text-white text-sm transition-colors"
+          >
+            {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
           </button>
 
           <p className="text-white/50 text-xs sm:text-sm text-center mt-4">
-            Your data is stored locally and synced to the cloud using your credentials
+            Your supplement data is securely stored in the cloud with Supabase
           </p>
         </div>
       </motion.div>

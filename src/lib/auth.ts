@@ -1,44 +1,74 @@
+import { supabase } from './supabase';
+
 export interface AuthState {
   isAuthenticated: boolean;
   userId: string | null;
-  passcode: string | null;
 }
 
-const AUTH_STORAGE_KEY = 'healthhub_auth';
-
-export function saveAuth(userId: string, passcode: string): void {
-  const authData: AuthState = {
-    isAuthenticated: true,
-    userId,
-    passcode
-  };
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-}
-
-export function getAuth(): AuthState | null {
-  const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!stored) return null;
-
+export async function signUp(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Sign up failed'
+    };
   }
 }
 
+export async function signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Sign in failed'
+    };
+  }
+}
+
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
+}
+
+export async function getCurrentUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export function clearAuth(): void {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  signOut();
 }
 
-export function isAuthenticated(): boolean {
-  const auth = getAuth();
-  return auth?.isAuthenticated === true;
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return !!user;
 }
 
-export function getUserId(): string | null {
-  return getAuth()?.userId || null;
+export async function getUserId(): Promise<string | null> {
+  const user = await getCurrentUser();
+  return user?.id || null;
 }
 
+// Legacy compatibility - these can be removed after migration
 export function getPasscode(): string | null {
-  return getAuth()?.passcode || null;
+  return null;
+}
+
+export function getAuth(): AuthState | null {
+  return null;
 }
