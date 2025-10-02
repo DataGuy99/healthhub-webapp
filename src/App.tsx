@@ -10,10 +10,16 @@ function App() {
 
   useEffect(() => {
     // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthenticated(!!session);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setAuthenticated(!!session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Failed to check session:', error);
+        setAuthenticated(false);
+        setLoading(false);
+      });
 
     // Listen for auth changes
     const {
@@ -24,10 +30,6 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const handleLogin = () => {
-    setAuthenticated(true);
-  };
 
   if (loading) {
     return (
@@ -43,7 +45,7 @@ function App() {
   return (
     <>
       <FluidBackground />
-      {authenticated ? <Dashboard /> : <LoginView onLogin={handleLogin} />}
+      {authenticated ? <Dashboard /> : <LoginView onLogin={() => {}} />}
     </>
   );
 }

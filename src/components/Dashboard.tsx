@@ -8,8 +8,8 @@ import { clearAuth } from '../lib/auth';
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'supplements'>('overview');
 
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await clearAuth();
     window.location.reload();
   };
 

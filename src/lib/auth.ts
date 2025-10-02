@@ -42,16 +42,27 @@ export async function signIn(email: string, password: string): Promise<{ success
 }
 
 export async function signOut(): Promise<void> {
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error('Sign out failed:', error);
+    throw error;
+  }
 }
 
 export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (error) {
+    console.error('Get user failed:', error);
+    return null;
+  }
 }
 
-export function clearAuth(): void {
-  signOut();
+export async function clearAuth(): Promise<void> {
+  await signOut();
 }
 
 export async function isAuthenticated(): Promise<boolean> {

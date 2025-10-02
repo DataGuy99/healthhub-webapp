@@ -18,7 +18,7 @@ export interface Supplement {
   dose_unit?: string;
   form?: string;
   section?: string;
-  active_days?: any;
+  active_days?: number[];
   is_stack?: boolean;
   stack_id?: string;
   order?: number;
