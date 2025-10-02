@@ -86,6 +86,14 @@ export async function downloadAllData(): Promise<{ success: boolean; error?: str
     return { success: false, error: 'Not authenticated' };
   }
 
+  const unsyncedItems = await getUnsynced(userId);
+  if (unsyncedItems.length > 0) {
+    const uploadResult = await syncPendingChanges();
+    if (!uploadResult.success) {
+      return { success: false, error: 'Please sync local changes first' };
+    }
+  }
+
   try {
     const response = await fetch(`${API_BASE}/data/all`, {
       method: 'GET',
@@ -157,6 +165,18 @@ export async function uploadAllData(): Promise<{ success: boolean; error?: strin
   }
 
   try {
+    const serverDataResponse = await fetch(`${API_BASE}/data/all`, {
+      method: 'GET',
+      headers: {
+        'X-User-ID': userId,
+        'X-Passcode': passcode
+      }
+    });
+
+    const serverData = serverDataResponse.ok ? await serverDataResponse.json() : { supplements: [], supplementLogs: [], supplementSections: [] };
+    const serverSupplementIds = new Set(serverData.supplements.map((s: any) => s.id));
+    const serverSectionIds = new Set(serverData.supplementSections.map((s: any) => s.id));
+
     const supplements = await db.supplements.toArray();
     const supplementLogs = await db.supplementLogs.toArray();
     const supplementSections = await db.supplementSections.toArray();
@@ -164,7 +184,7 @@ export async function uploadAllData(): Promise<{ success: boolean; error?: strin
     const syncItems = [
       ...supplements.map(s => ({
         action: 'supplement' as const,
-        operation: 'create' as const,
+        operation: (s.id && serverSupplementIds.has(s.id) ? 'update' : 'create') as const,
         data: s
       })),
       ...supplementLogs.map(l => ({
@@ -174,7 +194,7 @@ export async function uploadAllData(): Promise<{ success: boolean; error?: strin
       })),
       ...supplementSections.map(s => ({
         action: 'section' as const,
-        operation: 'create' as const,
+        operation: (s.id && serverSectionIds.has(s.id) ? 'update' : 'create') as const,
         data: s
       }))
     ];

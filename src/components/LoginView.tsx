@@ -26,13 +26,13 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
 
     const result = await downloadAllData();
 
-    setLoading(false);
-
     if (result.success) {
+      setLoading(false);
       onLogin();
     } else {
       setError(result.error || 'Failed to sync data. You can still use the app offline.');
       setTimeout(() => {
+        setLoading(false);
         onLogin();
       }, 2000);
     }

@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import Database from 'better-sqlite3';
+import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -12,6 +14,12 @@ const db = new Database(join(__dirname, 'healthhub.db'));
 
 app.use(cors());
 app.use(express.json());
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many authentication attempts' }
+});
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -45,7 +53,8 @@ db.exec(`
     is_taken INTEGER NOT NULL,
     timestamp DATETIME NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    UNIQUE(user_id, supplement_id, date)
   );
 
   CREATE TABLE IF NOT EXISTS supplement_sections (
@@ -64,7 +73,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sections_user ON supplement_sections(user_id);
 `);
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const userId = req.headers['x-user-id'];
   const passcode = req.headers['x-passcode'];
 
@@ -72,22 +81,44 @@ function authenticate(req, res, next) {
     return res.status(401).json({ error: 'Missing credentials' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE user_id = ? AND passcode = ?').get(userId, passcode);
+  const user = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
 
   if (!user) {
-    const existingUser = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
-    if (existingUser) {
-      return res.status(401).json({ error: 'Invalid passcode' });
-    }
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
 
-    db.prepare('INSERT INTO users (user_id, passcode) VALUES (?, ?)').run(userId, passcode);
+  const isValid = await bcrypt.compare(passcode, user.passcode);
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid credentials' });
   }
 
   req.userId = userId;
   next();
 }
 
-app.post('/api/auth/verify', authenticate, (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
+  const { userId, passcode } = req.body;
+
+  if (!userId || !passcode) {
+    return res.status(400).json({ error: 'Missing userId or passcode' });
+  }
+
+  if (passcode.length < 6) {
+    return res.status(400).json({ error: 'Passcode must be at least 6 characters' });
+  }
+
+  const existing = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
+  if (existing) {
+    return res.status(409).json({ error: 'User already exists' });
+  }
+
+  const hashedPasscode = await bcrypt.hash(passcode, 10);
+  db.prepare('INSERT INTO users (user_id, passcode) VALUES (?, ?)').run(userId, hashedPasscode);
+
+  res.json({ success: true, userId });
+});
+
+app.post('/api/auth/verify', authLimiter, authenticate, (req, res) => {
   res.json({ success: true, userId: req.userId });
 });
 
@@ -122,6 +153,37 @@ app.post('/api/sync', authenticate, (req, res) => {
     return res.status(400).json({ error: 'Invalid sync data' });
   }
 
+  if (items.length > 1000) {
+    return res.status(400).json({ error: 'Batch too large (max 1000 items)' });
+  }
+
+  for (const item of items) {
+    const { action, operation, data } = item;
+
+    if (action === 'supplement') {
+      if (!data.name || typeof data.name !== 'string' || data.name.length > 255) {
+        return res.status(400).json({ error: 'Invalid supplement name' });
+      }
+      if (typeof data.dose !== 'number' || data.dose <= 0) {
+        return res.status(400).json({ error: 'Invalid dose' });
+      }
+      if (typeof data.order !== 'number' || data.order < 0) {
+        return res.status(400).json({ error: 'Invalid order' });
+      }
+    } else if (action === 'supplement_log') {
+      if (typeof data.supplementId !== 'number') {
+        return res.status(400).json({ error: 'Invalid supplement ID' });
+      }
+      if (typeof data.isTaken !== 'boolean') {
+        return res.status(400).json({ error: 'Invalid isTaken value' });
+      }
+    } else if (action === 'section') {
+      if (!data.name || typeof data.name !== 'string') {
+        return res.status(400).json({ error: 'Invalid section name' });
+      }
+    }
+  }
+
   const transaction = db.transaction(() => {
     for (const item of items) {
       const { action, operation, data } = item;
@@ -146,7 +208,7 @@ app.post('/api/sync', authenticate, (req, res) => {
           );
         } else if (operation === 'update') {
           db.prepare(`
-            UPDATE supplements SET name = ?, dose = ?, dose_unit = ?, form = ?, section = ?, active_days = ?, "order" = ?, updated_at = CURRENT_TIMESTAMP
+            UPDATE supplements SET name = ?, dose = ?, dose_unit = ?, form = ?, section = ?, active_days = ?, is_stack = ?, stack_id = ?, "order" = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ? AND user_id = ?
           `).run(
             data.name,
@@ -155,6 +217,8 @@ app.post('/api/sync', authenticate, (req, res) => {
             data.form,
             data.section,
             JSON.stringify(data.activeDays),
+            data.isStack ? 1 : 0,
+            data.stackId || null,
             data.order,
             data.id,
             req.userId
@@ -198,7 +262,7 @@ app.post('/api/sync', authenticate, (req, res) => {
     res.json({ success: true, syncedCount: items.length });
   } catch (error) {
     console.error('Sync error:', error);
-    res.status(500).json({ error: 'Sync failed', message: error.message });
+    res.status(500).json({ error: 'Sync failed' });
   }
 });
 
