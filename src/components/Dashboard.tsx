@@ -3,12 +3,13 @@ import { motion } from 'framer-motion';
 import { SupplementsView } from './SupplementsView';
 import { DailySupplementLogger } from './DailySupplementLogger';
 import { SectionsView } from './SectionsView';
+import { CostCalculator } from './CostCalculator';
 import { AnimatedTitle } from './AnimatedTitle';
 import { clearAuth, getCurrentUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
 
   const handleLogout = async () => {
     await clearAuth();
@@ -127,7 +128,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
               <nav className="flex gap-2 overflow-x-auto">
-                {(['overview', 'supplements', 'sections', 'export'] as const).map(tab => (
+                {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -178,11 +179,20 @@ export function Dashboard() {
               </motion.div>
             )}
 
+            {activeTab === 'costs' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <CostCalculator />
+              </motion.div>
+            )}
+
             {activeTab === 'export' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-4xl mx-auto"
+                className="max-w-2xl mx-auto"
               >
                 <h2 className="text-3xl font-bold text-white mb-6">Export Data</h2>
                 <div className="space-y-4">

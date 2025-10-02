@@ -126,8 +126,18 @@ export function DailySupplementLogger() {
     );
   }
 
+  if (sectionsList.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🕐</div>
+        <h3 className="text-2xl font-bold text-white mb-2">No Sections Yet</h3>
+        <p className="text-white/70">Go to Sections tab to create time sections (Morning, Afternoon, etc)</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-white mb-2">Daily Logger</h2>
         <div className="text-white/70 text-lg">

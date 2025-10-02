@@ -161,7 +161,7 @@ export function SupplementsView() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-white">Supplements</h2>
         <button
