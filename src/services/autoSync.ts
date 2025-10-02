@@ -1,10 +1,12 @@
 import { importHealthData } from '../hooks/useHealthData';
+import { getUserId } from '../lib/auth';
 
-const GITHUB_DATA_URL = 'https://raw.githubusercontent.com/DataGuy99/healthhub-webapp/main/data/health-exports.json';
+const FIREBASE_URL = 'https://healthhub-data-default-rtdb.firebaseio.com';
 
 export async function fetchAndSyncHealthData(): Promise<{ success: boolean; count: number; error?: string }> {
   try {
-    const response = await fetch(GITHUB_DATA_URL);
+    const userId = getUserId() || 'default';
+    const response = await fetch(`${FIREBASE_URL}/users/${userId}/metrics.json`);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -12,7 +14,7 @@ export async function fetchAndSyncHealthData(): Promise<{ success: boolean; coun
 
     const exports = await response.json();
 
-    if (!Array.isArray(exports) || exports.length === 0) {
+    if (!exports || !Array.isArray(exports) || exports.length === 0) {
       return { success: true, count: 0 };
     }
 

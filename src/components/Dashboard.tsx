@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { SupplementsView } from './SupplementsView';
 import { MetricChart } from './MetricChart';
+import { AnimatedTitle } from './AnimatedTitle';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
 import { fetchAndSyncHealthData } from '../services/autoSync';
 import { clearAuth, getUserId } from '../lib/auth';
@@ -27,29 +28,27 @@ export function Dashboard() {
   const activeCaloriesData = useHealthMetrics('active_calories', 7);
   const totalCaloriesData = useHealthMetrics('total_calories', 7);
 
+  // Manual sync function
+  const handleManualSync = async () => {
+    setSyncStatus('syncing');
+    try {
+      const result = await fetchAndSyncHealthData();
+      setSyncStatus(result.success ? 'success' : 'error');
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncStatus('error');
+    }
+
+    // Reset status after 3 seconds
+    setTimeout(() => setSyncStatus('idle'), 3000);
+  };
+
   // Auto-sync on mount and start background sync
   useEffect(() => {
-    let timer: any;
-
-    const sync = async () => {
-      setSyncStatus('syncing');
-      try {
-        const result = await fetchAndSyncHealthData();
-        setSyncStatus(result.success ? 'success' : 'error');
-      } catch (error) {
-        console.error('Sync error:', error);
-        setSyncStatus('error');
-      }
-
-      // Reset status after 3 seconds
-      timer = setTimeout(() => setSyncStatus('idle'), 3000);
-    };
-
-    sync();
+    handleManualSync();
     startBackgroundSync();
 
     return () => {
-      if (timer) clearTimeout(timer);
       stopBackgroundSync();
     };
   }, []);
@@ -72,12 +71,14 @@ export function Dashboard() {
         <header className="p-4 sm:p-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                HealthHub
-              </h1>
-              {syncStatus === 'syncing' && (
-                <span className="text-xs sm:text-sm text-white/70">Syncing...</span>
-              )}
+              <AnimatedTitle />
+              <button
+                onClick={handleManualSync}
+                disabled={syncStatus === 'syncing'}
+                className="px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {syncStatus === 'syncing' ? 'Syncing...' : '⟳ Sync'}
+              </button>
               {syncStatus === 'success' && (
                 <span className="text-xs sm:text-sm text-green-300">✓ Synced</span>
               )}
