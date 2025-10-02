@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 
 const FONTS = [
-  'font-sans',
-  'font-serif',
-  'font-mono',
-  'font-bold',
-  'italic',
-  'tracking-widest',
-  'tracking-tighter',
+  'font-sans font-normal',
+  'font-serif font-extrabold',
+  'font-mono tracking-widest',
+  'font-sans italic font-thin',
+  'font-serif tracking-tighter font-black',
+  'font-mono font-light',
+  'font-sans font-extrabold tracking-wide',
+  'font-serif italic font-semibold',
+  'font-mono font-bold tracking-tight',
+  'font-sans tracking-widest font-medium uppercase',
+  'font-serif font-extralight lowercase',
+  'font-mono font-black tracking-normal',
 ];
 
 export function AnimatedTitle() {
