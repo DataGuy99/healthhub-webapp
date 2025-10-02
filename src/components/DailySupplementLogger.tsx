@@ -12,14 +12,11 @@ export function DailySupplementLogger() {
 
   // Get today's logged supplements
   const todayLogs = useLiveQuery(() => {
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const dateStr = selectedDate.toISOString().split('T')[0];
 
     return db.supplementLogs
-      .where('timestamp')
-      .between(startOfDay, endOfDay)
+      .where('date')
+      .equals(dateStr)
       .toArray();
   }, [selectedDate]);
 
