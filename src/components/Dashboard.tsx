@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FluidBackground } from './FluidBackground';
 import { SupplementsView } from './SupplementsView';
 import { MetricChart } from './MetricChart';
 import { CorrelationView } from './CorrelationView';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
 import { fetchAndSyncHealthData } from '../services/autoSync';
+import { clearAuth, getUserId } from '../lib/auth';
+import { startBackgroundSync, stopBackgroundSync } from '../services/syncService';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'correlations'>('overview');
@@ -27,7 +28,7 @@ export function Dashboard() {
   const activeCaloriesData = useHealthMetrics('active_calories', 7);
   const totalCaloriesData = useHealthMetrics('total_calories', 7);
 
-  // Auto-sync on mount
+  // Auto-sync on mount and start background sync
   useEffect(() => {
     let timer: any;
 
@@ -46,9 +47,11 @@ export function Dashboard() {
     };
 
     sync();
+    startBackgroundSync();
 
     return () => {
       if (timer) clearTimeout(timer);
+      stopBackgroundSync();
     };
   }, []);
 
@@ -58,45 +61,59 @@ export function Dashboard() {
     hour >= 12 && hour < 17 ? 'Good Afternoon' :
     hour >= 17 && hour < 21 ? 'Good Evening' : 'Good Night';
 
+  const handleLogout = () => {
+    clearAuth();
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen relative">
-      <FluidBackground />
-
       <div className="relative z-10 min-h-screen">
         {/* Header */}
-        <header className="p-6">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+        <header className="p-4 sm:p-6">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
                 HealthHub
               </h1>
               {syncStatus === 'syncing' && (
-                <span className="text-sm text-white/70">Syncing...</span>
+                <span className="text-xs sm:text-sm text-white/70">Syncing...</span>
               )}
               {syncStatus === 'success' && (
-                <span className="text-sm text-green-300">✓ Synced</span>
+                <span className="text-xs sm:text-sm text-green-300">✓ Synced</span>
               )}
               {syncStatus === 'error' && (
-                <span className="text-sm text-red-300">Sync failed</span>
+                <span className="text-xs sm:text-sm text-red-300">Sync failed</span>
+              )}
+              {!navigator.onLine && (
+                <span className="text-xs sm:text-sm text-yellow-300">⚠ Offline</span>
               )}
             </div>
-            <nav className="flex gap-4">
-              {(['overview', 'supplements', 'correlations'] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`
-                    px-6 py-2 rounded-xl font-medium transition-all duration-300
-                    ${activeTab === tab
-                      ? 'bg-white/30 backdrop-blur-xl border border-white/40 text-white shadow-lg'
-                      : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:bg-white/20'
-                    }
-                  `}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </nav>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+              <nav className="flex gap-2 overflow-x-auto">
+                {(['overview', 'supplements', 'correlations'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`
+                      px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 whitespace-nowrap text-sm sm:text-base
+                      ${activeTab === tab
+                        ? 'bg-white/30 backdrop-blur-xl border border-white/40 text-white shadow-lg'
+                        : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:bg-white/20'
+                      }
+                    `}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </nav>
+              <button
+                onClick={handleLogout}
+                className="px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm sm:text-base"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </header>
 

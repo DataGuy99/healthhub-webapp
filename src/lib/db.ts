@@ -83,7 +83,7 @@ export class HealthHubDB extends Dexie {
           dose: s.dosage || s.dose || 1,
           doseUnit: s.dosageUnit || s.doseUnit || 'mg',
           form: s.form || (s.category === 'tincture' ? 'Tincture' : 'Capsule'),
-          section: s.section || s.timing || 'Unsorted',
+          section: s.section || s.timing || '',
           activeDays: s.activeDays || (s.isActive ? [0,1,2,3,4,5,6] : []),
           isStack: s.isStack || false,
           stackId: s.stackId,
@@ -104,15 +104,6 @@ export class HealthHubDB extends Dexie {
         }))
       );
 
-      // Initialize default sections
-      const hasUnsorted = await tx.table('supplementSections').where('name').equals('Unsorted').count();
-      if (hasUnsorted === 0) {
-        await tx.table('supplementSections').add({
-          name: 'Unsorted',
-          order: 0,
-          createdAt: new Date()
-        });
-      }
     });
   }
 }
