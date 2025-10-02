@@ -253,12 +253,54 @@ apksigner verify app-release-signed.apk
 - ✅ Generic error messages (no implementation details)
 - ✅ Kept health data logging (personal use, user owns data)
 
+### Cross-Device Sync Implementation (v0.8.0)
+- ✅ Backend Express API server (server/server.js)
+- ✅ SQLite database with better-sqlite3
+- ✅ bcrypt password hashing (salt rounds: 10)
+- ✅ Rate limiting for auth endpoints (100 requests/15min)
+- ✅ Input validation (batch size, data types, string lengths)
+- ✅ Unique constraints on supplement_logs table
+- ✅ Offline sync queue with background sync (60s interval)
+- ✅ Dark vertical timeline UI (slate-900/800/700)
+- ✅ Mobile responsive design (Tailwind breakpoints)
+- ✅ Removed "Unsorted" section requirement
+- ✅ Login/logout with passcode authentication
+- ✅ Data loss prevention (check unsynced before download)
+- ✅ Duplicate prevention (check server before create/update)
+
+### CodeRabbit Security Fixes (v0.8.0)
+1. ✅ Added input validation and batch size limits (1000 items)
+2. ✅ Fixed downloadAllData data loss risk - uploads unsynced changes first
+3. ✅ Implemented bcrypt password hashing - separate registration endpoint
+4. ✅ Fixed uploadAllData duplicates - fetches server data to detect existing items
+5. ✅ Added unique constraint to supplement_logs (user_id, supplement_id, date)
+6. ✅ Fixed LoginView button re-enable during error timeout
+7. ✅ Fixed incomplete supplement update - added isStack and stackId fields
+
+### Backend Server Dependencies
+```json
+{
+  "express": "^4.18.2",
+  "cors": "^2.8.5",
+  "better-sqlite3": "^9.2.2",
+  "bcrypt": "^5.1.1",
+  "express-rate-limit": "^7.1.5"
+}
+```
+
+### API Endpoints
+- `POST /api/auth/register` - Register new user with hashed passcode
+- `POST /api/auth/verify` - Verify user credentials
+- `GET /api/data/all` - Download all user data (supplements, logs, sections)
+- `POST /api/sync` - Upload sync queue items (create/update/delete)
+
 ### Next Steps
+- [ ] Install server dependencies: `cd server && npm install`
+- [ ] Start backend server: `npm start` (runs on port 3001)
 - [ ] Deploy to Netlify via web interface
 - [ ] Update Android app with Netlify endpoint URL
 - [ ] Test health data export from phone to Netlify
-- [ ] Analyze received data structure
-- [ ] Implement proper data storage/display in webapp
+- [ ] Test cross-device sync with same credentials
 
 ## Version History
 - **v0.1.0** (2025-09-29): Project initialization, planning phase complete
@@ -269,6 +311,7 @@ apksigner verify app-release-signed.apk
 - **v0.5.1** (2025-10-01): Security fixes - input validation, CORS restrictions, removed data echo, generic errors
 - **v0.6.0** (2025-10-01): Added Nutrition and Exercise data extraction - 15 total metrics now exported, tested successfully
 - **v0.7.0** (2025-10-01): Webapp complete - Ambient fluid background, auto-sync from Netlify Blobs, all 15 metrics displayed, CodeRabbit approved
+- **v0.8.0** (2025-10-02): Cross-device sync complete - Backend Express API, bcrypt auth, offline sync queue, dark timeline UI, all security issues fixed
 
 ## Notes
 - Health Connect requires Android 9+ (API 28)
