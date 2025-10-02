@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { SupplementsView } from './SupplementsView';
 import { MetricChart } from './MetricChart';
-import { CorrelationView } from './CorrelationView';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
 import { fetchAndSyncHealthData } from '../services/autoSync';
 import { clearAuth, getUserId } from '../lib/auth';
 import { startBackgroundSync, stopBackgroundSync } from '../services/syncService';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'correlations'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supplements'>('overview');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const latestMetrics = useLatestMetrics();
 
@@ -91,7 +90,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
               <nav className="flex gap-2 overflow-x-auto">
-                {(['overview', 'supplements', 'correlations'] as const).map(tab => (
+                {(['overview', 'supplements'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -145,15 +144,6 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <SupplementsView />
-              </motion.div>
-            )}
-
-            {activeTab === 'correlations' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <CorrelationView />
               </motion.div>
             )}
           </div>

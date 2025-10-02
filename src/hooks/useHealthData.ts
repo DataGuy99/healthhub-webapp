@@ -106,7 +106,8 @@ export async function importHealthData(data: any[]) {
       }
     }
 
-    await db.healthMetrics.bulkAdd(metrics);
+    // Use bulkPut to handle duplicates (updates if exists, inserts if new)
+    await db.healthMetrics.bulkPut(metrics);
     totalCount += metrics.length;
   }
 
