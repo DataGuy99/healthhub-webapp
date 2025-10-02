@@ -6,12 +6,19 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types
+export interface Ingredient {
+  name: string;
+  dose: string;
+  dose_unit: string;
+}
+
 export interface Supplement {
   id?: string;
   user_id?: string;
   name: string;
   dose?: string;
   dose_unit?: string;
+  ingredients?: Ingredient[];
   form?: string;
   section?: string;
   active_days?: number[];

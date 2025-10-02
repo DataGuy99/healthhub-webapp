@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, Supplement } from '../lib/supabase';
+import { supabase, Supplement, SupplementSection, Ingredient } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 export function SupplementsView() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [sections, setSections] = useState<SupplementSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingSupplement, setEditingSupplement] = useState<Supplement | null>(null);
@@ -14,27 +15,39 @@ export function SupplementsView() {
   const [dose, setDose] = useState('');
   const [doseUnit, setDoseUnit] = useState('mg');
   const [section, setSection] = useState('Morning');
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+
+  const defaultSections = ['Morning', 'Afternoon', 'Evening', 'Night'];
 
   useEffect(() => {
-    loadSupplements();
+    loadData();
   }, []);
 
-  const loadSupplements = async () => {
+  const loadData = async () => {
     try {
       const user = await getCurrentUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      const { data: supplementsData, error: supplementsError } = await supabase
         .from('supplements')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setSupplements(data || []);
+      if (supplementsError) throw supplementsError;
+
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from('supplement_sections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('order', { ascending: true });
+
+      if (sectionsError) throw sectionsError;
+
+      setSupplements(supplementsData || []);
+      setSections(sectionsData || []);
     } catch (error) {
-      console.error('Error loading supplements:', error);
-      alert('Failed to load supplements. Please refresh the page.');
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -47,11 +60,20 @@ export function SupplementsView() {
       const user = await getCurrentUser();
       if (!user) return;
 
+      const supplementData = {
+        name,
+        dose: ingredients.length > 0 ? null : dose,
+        dose_unit: ingredients.length > 0 ? null : doseUnit,
+        ingredients: ingredients.length > 0 ? ingredients : null,
+        section,
+        active_days: null
+      };
+
       if (editingSupplement) {
         // Update existing
         const { error } = await supabase
           .from('supplements')
-          .update({ name, dose, dose_unit: doseUnit, section })
+          .update(supplementData)
           .eq('id', editingSupplement.id);
 
         if (error) throw error;
@@ -59,7 +81,7 @@ export function SupplementsView() {
         // Create new
         const { error } = await supabase
           .from('supplements')
-          .insert([{ user_id: user.id, name, dose, dose_unit: doseUnit, section }]);
+          .insert([{ user_id: user.id, ...supplementData }]);
 
         if (error) throw error;
       }
@@ -69,11 +91,12 @@ export function SupplementsView() {
       setDose('');
       setDoseUnit('mg');
       setSection('Morning');
+      setIngredients([]);
       setIsAdding(false);
       setEditingSupplement(null);
 
       // Reload
-      await loadSupplements();
+      await loadData();
     } catch (error) {
       console.error('Error saving supplement:', error);
       alert('Failed to save supplement');
@@ -86,7 +109,22 @@ export function SupplementsView() {
     setDose(supplement.dose || '');
     setDoseUnit(supplement.dose_unit || 'mg');
     setSection(supplement.section || 'Morning');
+    setIngredients(supplement.ingredients || []);
     setIsAdding(true);
+  };
+
+  const addIngredient = () => {
+    setIngredients([...ingredients, { name: '', dose: '', dose_unit: 'mg' }]);
+  };
+
+  const removeIngredient = (index: number) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const updateIngredient = (index: number, field: keyof Ingredient, value: string) => {
+    const updated = [...ingredients];
+    updated[index] = { ...updated[index], [field]: value };
+    setIngredients(updated);
   };
 
   const handleDelete = async (id: string) => {
@@ -99,7 +137,7 @@ export function SupplementsView() {
         .eq('id', id);
 
       if (error) throw error;
-      await loadSupplements();
+      await loadData();
     } catch (error) {
       console.error('Error deleting supplement:', error);
       alert('Failed to delete supplement');
@@ -113,6 +151,7 @@ export function SupplementsView() {
     setDose('');
     setDoseUnit('mg');
     setSection('Morning');
+    setIngredients([]);
   };
 
   if (loading) {
@@ -167,38 +206,94 @@ export function SupplementsView() {
                 onChange={(e) => setSection(e.target.value)}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
               >
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
-                <option value="Evening">Evening</option>
-                <option value="Night">Night</option>
+                {defaultSections.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+                {sections.map(s => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
               </select>
             </div>
 
-            <div>
-              <label className="block text-white mb-2">Dose</label>
-              <input
-                type="text"
-                value={dose}
-                onChange={(e) => setDose(e.target.value)}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                placeholder="1000"
-              />
-            </div>
+            {ingredients.length === 0 && (
+              <>
+                <div>
+                  <label className="block text-white mb-2">Dose</label>
+                  <input
+                    type="text"
+                    value={dose}
+                    onChange={(e) => setDose(e.target.value)}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                    placeholder="1000"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-white mb-2">Unit</label>
-              <select
-                value={doseUnit}
-                onChange={(e) => setDoseUnit(e.target.value)}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                <div>
+                  <label className="block text-white mb-2">Unit</label>
+                  <select
+                    value={doseUnit}
+                    onChange={(e) => setDoseUnit(e.target.value)}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                  >
+                    <option value="mg">mg</option>
+                    <option value="mcg">mcg</option>
+                    <option value="g">g</option>
+                    <option value="IU">IU</option>
+                    <option value="mL">mL</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Ingredients Section */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-white">Multi-Ingredient (optional)</label>
+              <button
+                type="button"
+                onClick={addIngredient}
+                className="px-4 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 text-sm transition-all"
               >
-                <option value="mg">mg</option>
-                <option value="mcg">mcg</option>
-                <option value="g">g</option>
-                <option value="IU">IU</option>
-                <option value="mL">mL</option>
-              </select>
+                + Add Ingredient
+              </button>
             </div>
+            {ingredients.map((ingredient, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={ingredient.name}
+                  onChange={(e) => updateIngredient(index, 'name', e.target.value)}
+                  placeholder="Ingredient name"
+                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                />
+                <input
+                  type="text"
+                  value={ingredient.dose}
+                  onChange={(e) => updateIngredient(index, 'dose', e.target.value)}
+                  placeholder="Dose"
+                  className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                />
+                <select
+                  value={ingredient.dose_unit}
+                  onChange={(e) => updateIngredient(index, 'dose_unit', e.target.value)}
+                  className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                >
+                  <option value="mg">mg</option>
+                  <option value="mcg">mcg</option>
+                  <option value="g">g</option>
+                  <option value="IU">IU</option>
+                  <option value="mL">mL</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(index)}
+                  className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
 
           <div className="flex gap-2">
@@ -238,9 +333,18 @@ export function SupplementsView() {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-semibold text-white">{supplement.name}</h3>
-                  <p className="text-white/70 text-sm">
-                    {supplement.dose} {supplement.dose_unit} • {supplement.section}
-                  </p>
+                  {supplement.ingredients && supplement.ingredients.length > 0 ? (
+                    <div className="text-white/70 text-sm">
+                      {supplement.ingredients.map((ing, i) => (
+                        <div key={i}>{ing.name}: {ing.dose} {ing.dose_unit}</div>
+                      ))}
+                      <div className="mt-1">{supplement.section}</div>
+                    </div>
+                  ) : (
+                    <p className="text-white/70 text-sm">
+                      {supplement.dose} {supplement.dose_unit} • {supplement.section}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button

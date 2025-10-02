@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { SupplementsView } from './SupplementsView';
 import { DailySupplementLogger } from './DailySupplementLogger';
+import { SectionsView } from './SectionsView';
 import { AnimatedTitle } from './AnimatedTitle';
 import { clearAuth, getCurrentUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'export'>('overview');
 
   const handleLogout = async () => {
     await clearAuth();
@@ -126,7 +127,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
               <nav className="flex gap-2 overflow-x-auto">
-                {(['overview', 'supplements', 'export'] as const).map(tab => (
+                {(['overview', 'supplements', 'sections', 'export'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -165,6 +166,15 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <SupplementsView />
+              </motion.div>
+            )}
+
+            {activeTab === 'sections' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <SectionsView />
               </motion.div>
             )}
 
