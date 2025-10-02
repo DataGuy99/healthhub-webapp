@@ -15,15 +15,38 @@ const EMOJIS = ['💊', '🏥', '⚕️', '🩺', '💉', '🧬', '🔬', '🌡�
 export function AnimatedTitle() {
   const [letterFonts, setLetterFonts] = useState<number[]>([]);
   const [emoji, setEmoji] = useState('💊');
+  const [flipping, setFlipping] = useState<number>(-1);
   const text = 'Health Hub';
 
   useEffect(() => {
     // Initialize random fonts for each letter
     setLetterFonts(text.split('').map(() => Math.floor(Math.random() * FONTS.length)));
 
-    // Cycle letters (1.5x faster = 2000/1.5 = 1333ms)
+    let currentLetterIndex = 0;
+    const letterCount = text.length;
+    const activeTimeouts: NodeJS.Timeout[] = [];
+
+    // Cycle letters one at a time, left to right
     const letterInterval = setInterval(() => {
-      setLetterFonts(prev => prev.map(() => Math.floor(Math.random() * FONTS.length)));
+      // Skip the space (index 6) - only update the font for non-space characters
+      if (currentLetterIndex !== 6) {
+        // Occasionally do a split-flap effect (20% chance)
+        const useSplitFlap = Math.random() < 0.2;
+
+        if (useSplitFlap) {
+          setFlipping(currentLetterIndex);
+          const timeout = setTimeout(() => setFlipping(-1), 200);
+          activeTimeouts.push(timeout);
+        }
+
+        setLetterFonts(prev => {
+          const next = [...prev];
+          next[currentLetterIndex] = Math.floor(Math.random() * FONTS.length);
+          return next;
+        });
+      }
+
+      currentLetterIndex = (currentLetterIndex + 1) % letterCount;
     }, 1333);
 
     // Cycle emoji (1.5x faster = 5000/1.5 = 3333ms)
@@ -34,6 +57,7 @@ export function AnimatedTitle() {
     return () => {
       clearInterval(letterInterval);
       clearInterval(emojiInterval);
+      activeTimeouts.forEach(clearTimeout);
     };
   }, []);
 
@@ -42,7 +66,13 @@ export function AnimatedTitle() {
       {text.split('').map((char, i) => (
         <span
           key={i}
-          className={`${FONTS[letterFonts[i] || 0]} transition-all duration-200`}
+          className={`${FONTS[letterFonts[i] || 0]} transition-all duration-200 inline-block ${
+            flipping === i ? 'animate-flip' : ''
+          }`}
+          style={{
+            transformStyle: 'preserve-3d',
+            animation: flipping === i ? 'flip 0.2s ease-in-out' : 'none',
+          }}
         >
           {char === ' ' ? (
             <span className="text-3xl sm:text-4xl mx-1">{emoji}</span>
@@ -51,6 +81,13 @@ export function AnimatedTitle() {
           )}
         </span>
       ))}
+      <style>{`
+        @keyframes flip {
+          0% { transform: rotateX(0deg); }
+          50% { transform: rotateX(90deg); }
+          100% { transform: rotateX(0deg); }
+        }
+      `}</style>
     </h1>
   );
 }

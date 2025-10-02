@@ -126,6 +126,48 @@ export function DailySupplementLogger() {
     }
   };
 
+  const toggleSection = async (section: string, newValue: boolean) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const sectionSupplements = groupedSupplements[section] || [];
+
+      // Optimistic update for all supplements in section
+      const updates: Record<string, boolean> = {};
+      sectionSupplements.forEach(supplement => {
+        if (supplement.id) {
+          updates[supplement.id] = newValue;
+        }
+      });
+      setLogs(prev => ({ ...prev, ...updates }));
+
+      // Batch upsert all supplements in section
+      const upsertData = sectionSupplements
+        .filter(s => s.id)
+        .map(supplement => ({
+          user_id: user.id,
+          supplement_id: supplement.id!,
+          date: today,
+          is_taken: newValue,
+          timestamp: new Date().toISOString()
+        }));
+
+      const { error } = await supabase
+        .from('supplement_logs')
+        .upsert(upsertData, {
+          onConflict: 'user_id,supplement_id,date'
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error toggling section:', error);
+      alert('Failed to update section');
+      // Reload to revert optimistic updates
+      await loadData();
+    }
+  };
+
   const groupedSupplements = supplements.reduce((acc, supplement) => {
     const section = supplement.section || (sectionsList[0]?.name || 'Morning');
     if (!acc[section]) acc[section] = [];
@@ -195,16 +237,49 @@ export function DailySupplementLogger() {
             const sectionSupplements = groupedSupplements[section] || [];
             if (sectionSupplements.length === 0) return null;
 
+            const sectionTakenCount = sectionSupplements.filter(s => logs[s.id!]).length;
+            const sectionTotal = sectionSupplements.length;
+            const allTaken = sectionTakenCount === sectionTotal;
+            const someTaken = sectionTakenCount > 0 && sectionTakenCount < sectionTotal;
+
             return (
               <div key={section} className="relative pl-20">
                 {/* Timeline dot */}
-                <div className="absolute left-6 top-2 w-5 h-5 rounded-full bg-white/30 border-4 border-purple-500/50 backdrop-blur-xl" />
+                <div className={`absolute left-6 top-2 w-5 h-5 rounded-full border-4 backdrop-blur-xl ${
+                  allTaken
+                    ? 'bg-green-500 border-green-500/50'
+                    : someTaken
+                    ? 'bg-yellow-500 border-yellow-500/50'
+                    : 'bg-white/30 border-purple-500/50'
+                }`} />
 
-                {/* Section header */}
-                <h3 className="text-2xl font-bold text-white mb-4">{section}</h3>
+                {/* Section header with toggle */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-white">{section}</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSection(section, true);
+                      }}
+                      className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-green-300 text-sm transition-all"
+                    >
+                      ✓ All
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSection(section, false);
+                      }}
+                      className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 text-sm transition-all"
+                    >
+                      ✗ None
+                    </button>
+                  </div>
+                </div>
 
                 {/* Supplements in this section */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {sectionSupplements.map(supplement => {
                     const isTaken = logs[supplement.id!] || false;
 
@@ -212,7 +287,7 @@ export function DailySupplementLogger() {
                       <motion.button
                         key={supplement.id}
                         onClick={() => supplement.id && toggleSupplement(supplement.id)}
-                        className={`w-full p-4 rounded-xl border transition-all text-left ${
+                        className={`w-full p-3 rounded-lg border transition-all text-left ${
                           isTaken
                             ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
                             : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
@@ -220,29 +295,32 @@ export function DailySupplementLogger() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-lg font-semibold text-white">{supplement.name}</div>
+                          <div className="flex-1">
+                            <div className="font-medium text-white">{supplement.name}</div>
                             {supplement.ingredients && supplement.ingredients.length > 0 ? (
-                              <div className="text-white/70 text-sm">
+                              <div className="text-white/60 text-xs mt-0.5">
                                 {supplement.ingredients.map((ing, i) => (
-                                  <div key={i}>{ing.name}: {ing.dose} {ing.dose_unit}</div>
+                                  <span key={i}>
+                                    {i > 0 && ' • '}
+                                    {ing.name}: {ing.dose}{ing.dose_unit}
+                                  </span>
                                 ))}
                               </div>
                             ) : supplement.dose && (
-                              <div className="text-white/70 text-sm">
+                              <div className="text-white/60 text-xs mt-0.5">
                                 {supplement.dose} {supplement.dose_unit}
                               </div>
                             )}
                           </div>
                           <div
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
                               isTaken
                                 ? 'bg-green-500 border-green-500'
                                 : 'border-white/30'
                             }`}
                           >
                             {isTaken && (
-                              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>
                             )}
