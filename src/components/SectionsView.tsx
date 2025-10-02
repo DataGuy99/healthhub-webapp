@@ -23,10 +23,31 @@ export function SectionsView() {
         .from('supplement_sections')
         .select('*')
         .eq('user_id', user.id)
-        .order('order', { ascending: true });
+        .order('order', { ascending: true});
 
       if (error) throw error;
-      setSections(data || []);
+
+      // Add default sections if none exist
+      const allSections = data || [];
+      const defaults = ['Morning', 'Afternoon', 'Evening', 'Night'];
+
+      if (allSections.length === 0) {
+        // Create default sections
+        for (let i = 0; i < defaults.length; i++) {
+          await supabase
+            .from('supplement_sections')
+            .insert([{ user_id: user.id, name: defaults[i], order: i }]);
+        }
+        // Reload after creating defaults
+        const { data: reloadedData } = await supabase
+          .from('supplement_sections')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('order', { ascending: true });
+        setSections(reloadedData || []);
+      } else {
+        setSections(allSections);
+      }
     } catch (error) {
       console.error('Error loading sections:', error);
     } finally {
@@ -166,8 +187,8 @@ export function SectionsView() {
       {sections.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🕐</div>
-          <h3 className="text-2xl font-bold text-white mb-2">No Custom Sections Yet</h3>
-          <p className="text-white/70">Default sections: Morning, Afternoon, Evening, Night</p>
+          <h3 className="text-2xl font-bold text-white mb-2">No Sections Yet</h3>
+          <p className="text-white/70">Click "Add Section" to create your first time section</p>
         </div>
       ) : (
         <div className="space-y-3">

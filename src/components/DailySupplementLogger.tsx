@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, Supplement, SupplementLog } from '../lib/supabase';
+import { supabase, Supplement, SupplementLog, SupplementSection } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 export function DailySupplementLogger() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [sectionsList, setSectionsList] = useState<SupplementSection[]>([]);
   const [logs, setLogs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const today = new Date().toISOString().split('T')[0];
@@ -37,7 +38,17 @@ export function DailySupplementLogger() {
 
       if (logsError) throw logsError;
 
+      // Load sections
+      const { data: sectionsData, error: sectionsError } = await supabase
+        .from('supplement_sections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('order', { ascending: true });
+
+      if (sectionsError) throw sectionsError;
+
       setSupplements(supplementsData || []);
+      setSectionsList(sectionsData || []);
 
       // Build logs lookup
       const logsMap: Record<string, boolean> = {};
@@ -87,13 +98,13 @@ export function DailySupplementLogger() {
   };
 
   const groupedSupplements = supplements.reduce((acc, supplement) => {
-    const section = supplement.section || 'Morning';
+    const section = supplement.section || (sectionsList[0]?.name || 'Morning');
     if (!acc[section]) acc[section] = [];
     acc[section].push(supplement);
     return acc;
   }, {} as Record<string, Supplement[]>);
 
-  const sections = ['Morning', 'Afternoon', 'Evening', 'Night'];
+  const sections = sectionsList.map(s => s.name);
   const totalSupplements = supplements.length;
   const takenCount = Object.values(logs).filter(Boolean).length;
 
@@ -135,59 +146,77 @@ export function DailySupplementLogger() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {sections.map(section => {
-          const sectionSupplements = groupedSupplements[section] || [];
-          if (sectionSupplements.length === 0) return null;
+      {/* Vertical Timeline */}
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-white/20" />
 
-          return (
-            <div key={section}>
-              <h3 className="text-xl font-bold text-white mb-3">{section}</h3>
-              <div className="space-y-2">
-                {sectionSupplements.map(supplement => {
-                  const isTaken = logs[supplement.id!] || false;
+        <div className="space-y-8">
+          {sections.map((section, sectionIndex) => {
+            const sectionSupplements = groupedSupplements[section] || [];
+            if (sectionSupplements.length === 0) return null;
 
-                  return (
-                    <motion.button
-                      key={supplement.id}
-                      onClick={() => supplement.id && toggleSupplement(supplement.id)}
-                      className={`w-full p-4 rounded-xl border transition-all text-left ${
-                        isTaken
-                          ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
-                          : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
-                      }`}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-lg font-semibold text-white">{supplement.name}</div>
-                          {supplement.dose && (
-                            <div className="text-white/70 text-sm">
-                              {supplement.dose} {supplement.dose_unit}
-                            </div>
-                          )}
+            return (
+              <div key={section} className="relative pl-20">
+                {/* Timeline dot */}
+                <div className="absolute left-6 top-2 w-5 h-5 rounded-full bg-white/30 border-4 border-purple-500/50 backdrop-blur-xl" />
+
+                {/* Section header */}
+                <h3 className="text-2xl font-bold text-white mb-4">{section}</h3>
+
+                {/* Supplements in this section */}
+                <div className="space-y-3">
+                  {sectionSupplements.map(supplement => {
+                    const isTaken = logs[supplement.id!] || false;
+
+                    return (
+                      <motion.button
+                        key={supplement.id}
+                        onClick={() => supplement.id && toggleSupplement(supplement.id)}
+                        className={`w-full p-4 rounded-xl border transition-all text-left ${
+                          isTaken
+                            ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
+                            : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
+                        }`}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-semibold text-white">{supplement.name}</div>
+                            {supplement.ingredients && supplement.ingredients.length > 0 ? (
+                              <div className="text-white/70 text-sm">
+                                {supplement.ingredients.map((ing, i) => (
+                                  <div key={i}>{ing.name}: {ing.dose} {ing.dose_unit}</div>
+                                ))}
+                              </div>
+                            ) : supplement.dose && (
+                              <div className="text-white/70 text-sm">
+                                {supplement.dose} {supplement.dose_unit}
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                              isTaken
+                                ? 'bg-green-500 border-green-500'
+                                : 'border-white/30'
+                            }`}
+                          >
+                            {isTaken && (
+                              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
                         </div>
-                        <div
-                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                            isTaken
-                              ? 'bg-green-500 border-green-500'
-                              : 'border-white/30'
-                          }`}
-                        >
-                          {isTaken && (
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                    </motion.button>
-                  );
-                })}
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

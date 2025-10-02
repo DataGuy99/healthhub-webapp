@@ -17,8 +17,6 @@ export function SupplementsView() {
   const [section, setSection] = useState('Morning');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
 
-  const defaultSections = ['Morning', 'Afternoon', 'Evening', 'Night'];
-
   useEffect(() => {
     loadData();
   }, []);
@@ -206,9 +204,6 @@ export function SupplementsView() {
                 onChange={(e) => setSection(e.target.value)}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
               >
-                {defaultSections.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
                 {sections.map(s => (
                   <option key={s.id} value={s.name}>{s.name}</option>
                 ))}
