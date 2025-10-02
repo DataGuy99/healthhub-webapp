@@ -49,6 +49,8 @@ export function CostCalculator() {
   };
 
   const updateCost = async (id: string, field: 'cost' | 'quantity' | 'frequency', value: number) => {
+    const previousValue = supplements.find(s => s.id === id)?.[field];
+
     // Update local state
     setSupplements(prev => prev.map(s =>
       s.id === id ? { ...s, [field]: value } : s
@@ -64,6 +66,11 @@ export function CostCalculator() {
       if (error) throw error;
     } catch (error) {
       console.error('Error updating cost:', error);
+      // Revert optimistic update
+      setSupplements(prev => prev.map(s =>
+        s.id === id ? { ...s, [field]: previousValue } : s
+      ));
+      alert('Failed to update supplement cost data');
     }
   };
 

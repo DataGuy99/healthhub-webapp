@@ -18,11 +18,11 @@ CREATE TABLE IF NOT EXISTS supplements (
   section TEXT,
   active_days JSONB,
   is_stack BOOLEAN DEFAULT false,
-  stack_id UUID,
+  stack_id UUID REFERENCES supplements(id) ON DELETE SET NULL,
   "order" INTEGER DEFAULT 0,
-  cost DECIMAL(10,2),
-  quantity INTEGER,
-  frequency INTEGER DEFAULT 1,
+  cost DECIMAL(10,2) CHECK (cost >= 0),
+  quantity INTEGER CHECK (quantity >= 0),
+  frequency INTEGER DEFAULT 1 CHECK (frequency >= 0),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS supplement_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   supplement_id UUID NOT NULL REFERENCES supplements(id) ON DELETE CASCADE,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   is_taken BOOLEAN DEFAULT false,
   timestamp TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, supplement_id, date)
@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS supplement_sections (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   "order" INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, name)
 );
 
 -- ============================================================================
