@@ -294,20 +294,24 @@ apksigner verify app-release-signed.apk
 - `GET /api/data/all` - Download all user data (supplements, logs, sections)
 - `POST /api/sync` - Upload sync queue items (create/update/delete)
 
-### Deployment Requirements ⚠️
-**CRITICAL**: This webapp CANNOT be fully built/tested locally due to WSL limitations.
+### Deployment to Netlify
+**Deployment Method**: Push to GitHub - Netlify auto-deploys via integration
 
-- **Local development works**: Docker + Vite dev server runs fine on http://localhost:3000
-- **Production builds MUST use Netlify**: TypeScript strict mode and build optimizations only work in Netlify environment
-- **Reason**: WSL environment lacks full Node.js/TypeScript tooling compatibility for production builds
-- **Solution**: Always deploy to Netlify for production testing and final builds
+1. **GitHub Repository**: https://github.com/DataGuy99/healthhub-webapp
+2. **Netlify Setup**: Connected to GitHub repo (auto-deploy on push)
+3. **Build Settings**:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+   - Node version: 22.x
+4. **Environment Variables** (set in Netlify dashboard):
+   - Any required production URLs or API keys
+
+**Backend Server**: Requires separate deployment (not Netlify - needs persistent process for Express API)
 
 ### Next Steps
-- [x] Deploy to Netlify via GitHub integration (automatic on push)
-- [ ] Install server dependencies: `cd server && npm install`
-- [ ] Start backend server: `npm start` (runs on port 3001)
-- [ ] Deploy backend server separately (not on Netlify - needs persistent process)
-- [ ] Update Android app with backend endpoint URL
+- [ ] Push latest changes to GitHub (triggers Netlify auto-deploy)
+- [ ] Deploy backend Express server separately (port 3001)
+- [ ] Update Android app with production backend endpoint URL
 - [ ] Test health data export from phone
 - [ ] Test cross-device sync with same credentials
 
