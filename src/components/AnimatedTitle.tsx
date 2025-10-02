@@ -24,12 +24,12 @@ export function AnimatedTitle() {
     // Cycle letters
     const letterInterval = setInterval(() => {
       setLetterFonts(prev => prev.map(() => Math.floor(Math.random() * FONTS.length)));
-    }, 300);
+    }, 2000);
 
     // Cycle emoji
     const emojiInterval = setInterval(() => {
       setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-    }, 2000);
+    }, 5000);
 
     return () => {
       clearInterval(letterInterval);
