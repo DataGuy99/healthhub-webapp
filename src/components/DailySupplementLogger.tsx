@@ -78,48 +78,68 @@ export function DailySupplementLogger() {
         </button>
       </div>
 
-      {/* Supplement grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {supplements.map((supplement) => {
+      {/* Vertical Timeline */}
+      <div className="relative max-w-2xl mx-auto">
+        {/* Timeline line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-slate-700 via-slate-600 to-slate-700" />
+
+        {supplements.map((supplement, idx) => {
           const isLogged = todayLogs?.some(log => log.supplementId === supplement.id);
 
           return (
-            <motion.div
-              key={supplement.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleToggleSupplement(supplement.id!)}
-              className={`
-                p-6 rounded-2xl cursor-pointer transition-all duration-300
-                backdrop-blur-xl border shadow-2xl
-                ${isLogged
-                  ? 'bg-green-500/20 border-green-400/50'
-                  : 'bg-slate-900/60 border-slate-700/50 hover:bg-slate-800/60'
-                }
-              `}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-white mb-1">
-                    {supplement.name}
-                  </h3>
-                  <p className="text-white/70">
-                    {supplement.dose} {supplement.doseUnit}
-                  </p>
-                  {supplement.section && (
-                    <p className="text-sm text-white/50 mt-1">
-                      {supplement.section}
-                    </p>
-                  )}
+            <div key={supplement.id} className="relative pl-16 pb-6">
+              {/* Timeline dot */}
+              <motion.div
+                className={`absolute left-4 top-3 w-5 h-5 rounded-full border-2 transition-all duration-300 ${
+                  isLogged
+                    ? 'bg-green-500 border-green-400 shadow-lg shadow-green-500/50'
+                    : 'bg-slate-800 border-slate-600'
+                }`}
+                animate={isLogged ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              />
+
+              {/* Supplement card */}
+              <motion.div
+                whileHover={{ x: 4 }}
+                onClick={() => handleToggleSupplement(supplement.id!)}
+                className={`
+                  cursor-pointer transition-all duration-300
+                  backdrop-blur-xl rounded-xl p-4 border-l-4
+                  ${isLogged
+                    ? 'bg-green-500/10 border-green-400 shadow-lg'
+                    : 'bg-slate-900/40 border-slate-700 hover:bg-slate-800/60'
+                  }
+                `}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white">
+                      {supplement.name}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm text-white/60">
+                        {supplement.dose} {supplement.doseUnit}
+                      </span>
+                      {supplement.section && (
+                        <>
+                          <span className="text-white/30">•</span>
+                          <span className="text-sm text-white/50">
+                            {supplement.section}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`
+                    text-xl transition-all duration-300
+                    ${isLogged ? 'text-green-400' : 'text-white/30'}
+                  `}>
+                    {isLogged ? '✓' : '○'}
+                  </div>
                 </div>
-                <div className={`
-                  w-12 h-12 rounded-full flex items-center justify-center text-2xl
-                  ${isLogged ? 'bg-green-500/30' : 'bg-white/10'}
-                `}>
-                  {isLogged ? '✓' : '○'}
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           );
         })}
       </div>
