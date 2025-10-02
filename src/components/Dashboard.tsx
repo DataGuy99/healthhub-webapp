@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { SupplementsView } from './SupplementsView';
+import { DailySupplementLogger } from './DailySupplementLogger';
 import { MetricChart } from './MetricChart';
 import { AnimatedTitle } from './AnimatedTitle';
 import { useHealthMetrics, useLatestMetrics } from '../hooks/useHealthData';
@@ -121,22 +122,7 @@ export function Dashboard() {
         <main className="p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
-              <OverviewTimeline
-                latestMetrics={latestMetrics}
-                heartRateAvgData={heartRateAvgData}
-                heartRateMinData={heartRateMinData}
-                heartRateMaxData={heartRateMaxData}
-                restingHRData={restingHRData}
-                hrvData={hrvData}
-                oxygenData={oxygenData}
-                respiratoryData={respiratoryData}
-                stepsData={stepsData}
-                sleepData={sleepData}
-                weightData={weightData}
-                bodyFatData={bodyFatData}
-                activeCaloriesData={activeCaloriesData}
-                totalCaloriesData={totalCaloriesData}
-              />
+              <DailySupplementLogger />
             )}
 
             {activeTab === 'supplements' && (
