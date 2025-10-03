@@ -268,6 +268,211 @@ export function SupplementsView() {
     setSelectedSupplements(new Set());
   };
 
+  const EditFormComponent = () => (
+    <motion.form
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.3 }}
+      onSubmit={handleSubmit}
+      className="mt-3 p-6 bg-blue-500/10 backdrop-blur-xl rounded-2xl border border-blue-500/30"
+    >
+      <h3 className="text-xl font-bold text-white mb-4">
+        {editingSupplement ? 'Edit Supplement' : 'New Supplement'}
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-white mb-2">Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+            placeholder="Vitamin D"
+          />
+        </div>
+
+        <div>
+          <label className="block text-white mb-2">Section</label>
+          <select
+            value={section}
+            onChange={(e) => setSection(e.target.value)}
+            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+          >
+            {frequencyPattern === 'workout' ? (
+              <>
+                <option value="Pre-Workout">Pre-Workout</option>
+                <option value="Post-Workout">Post-Workout</option>
+              </>
+            ) : (
+              sections.map(s => (
+                <option key={s.id} value={s.name}>{s.name}</option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {ingredients.length === 0 && (
+          <>
+            <div>
+              <label className="block text-white mb-2">Dose</label>
+              <input
+                type="text"
+                value={dose}
+                onChange={(e) => setDose(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+                placeholder="1000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Unit</label>
+              <select
+                value={doseUnit}
+                onChange={(e) => setDoseUnit(e.target.value)}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+              >
+                <option value="mg">mg</option>
+                <option value="mcg">mcg</option>
+                <option value="g">g</option>
+                <option value="IU">IU</option>
+                <option value="mL">mL</option>
+              </select>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Frequency Pattern */}
+      <div className="mb-4">
+        <label className="block text-white mb-2">When to take</label>
+        <select
+          value={frequencyPattern}
+          onChange={(e) => {
+            const newPattern = e.target.value as any;
+            setFrequencyPattern(newPattern);
+            if (newPattern === 'workout') {
+              setSection('Pre-Workout');
+            } else if (frequencyPattern === 'workout') {
+              setSection(sections[0]?.name || '');
+            }
+          }}
+          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white mb-2"
+        >
+          <option value="everyday">Everyday</option>
+          <option value="5/2">Mon-Fri (5/2)</option>
+          <option value="workout">Workout Days Only</option>
+          <option value="custom">Custom Days</option>
+        </select>
+
+        {frequencyPattern === 'custom' && (
+          <div className="flex gap-2 flex-wrap">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => {
+                  if (activeDays.includes(index)) {
+                    setActiveDays(activeDays.filter(d => d !== index));
+                  } else {
+                    setActiveDays([...activeDays, index].sort());
+                  }
+                }}
+                className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                  activeDays.includes(index)
+                    ? 'bg-blue-500/30 border border-blue-500/50 text-blue-200'
+                    : 'bg-white/10 border border-white/20 text-white/60'
+                }`}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Ingredients Section */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-white">Multi-Ingredient (optional)</label>
+          <button
+            type="button"
+            onClick={addIngredient}
+            className="px-4 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 text-sm transition-all"
+          >
+            + Add Ingredient
+          </button>
+        </div>
+        {ingredients.map((ingredient, index) => (
+          <div key={index} className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={ingredient.name}
+              onChange={(e) => updateIngredient(index, 'name', e.target.value)}
+              placeholder="Ingredient name"
+              className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+            />
+            <input
+              type="text"
+              value={ingredient.dose}
+              onChange={(e) => updateIngredient(index, 'dose', e.target.value)}
+              placeholder="Dose"
+              className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+            />
+            <select
+              value={ingredient.dose_unit}
+              onChange={(e) => updateIngredient(index, 'dose_unit', e.target.value)}
+              className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
+            >
+              <option value="mg">mg</option>
+              <option value="mcg">mcg</option>
+              <option value="g">g</option>
+              <option value="IU">IU</option>
+              <option value="mL">mL</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => removeIngredient(index)}
+              className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Notes (Optional) */}
+      <div className="mb-4">
+        <label className="block text-white mb-2">Notes (Optional)</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white resize-none"
+          rows={3}
+          placeholder="Additional details about this supplement..."
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          className="px-6 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-semibold transition-all"
+        >
+          {editingSupplement ? 'Update' : 'Add'}
+        </button>
+        <button
+          type="button"
+          onClick={cancelEdit}
+          className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all"
+        >
+          Cancel
+        </button>
+      </div>
+    </motion.form>
+  );
+
   const cancelEdit = () => {
     setIsAdding(false);
     setEditingSupplement(null);
@@ -343,216 +548,6 @@ export function SupplementsView() {
           )}
         </div>
       </div>
-
-      {/* Inline Edit Form Component */}
-      {(() => {
-        const EditForm = () => (
-          <motion.form
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
-          onSubmit={handleSubmit}
-          className="mt-3 p-6 bg-blue-500/10 backdrop-blur-xl rounded-2xl border border-blue-500/30"
-        >
-          <h3 className="text-xl font-bold text-white mb-4">
-            {editingSupplement ? 'Edit Supplement' : 'New Supplement'}
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-white mb-2">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                placeholder="Vitamin D"
-              />
-            </div>
-
-            <div>
-              <label className="block text-white mb-2">Section</label>
-              <select
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-              >
-                {frequencyPattern === 'workout' ? (
-                  <>
-                    <option value="Pre-Workout">Pre-Workout</option>
-                    <option value="Post-Workout">Post-Workout</option>
-                  </>
-                ) : (
-                  sections.map(s => (
-                    <option key={s.id} value={s.name}>{s.name}</option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {ingredients.length === 0 && (
-              <>
-                <div>
-                  <label className="block text-white mb-2">Dose</label>
-                  <input
-                    type="text"
-                    value={dose}
-                    onChange={(e) => setDose(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                    placeholder="1000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-white mb-2">Unit</label>
-                  <select
-                    value={doseUnit}
-                    onChange={(e) => setDoseUnit(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                  >
-                    <option value="mg">mg</option>
-                    <option value="mcg">mcg</option>
-                    <option value="g">g</option>
-                    <option value="IU">IU</option>
-                    <option value="mL">mL</option>
-                  </select>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Frequency Pattern */}
-          <div className="mb-4">
-            <label className="block text-white mb-2">When to take</label>
-            <select
-              value={frequencyPattern}
-              onChange={(e) => {
-                const newPattern = e.target.value as any;
-                setFrequencyPattern(newPattern);
-                // Auto-set section when switching to/from workout mode
-                if (newPattern === 'workout') {
-                  setSection('Pre-Workout');
-                } else if (frequencyPattern === 'workout') {
-                  setSection(sections[0]?.name || '');
-                }
-              }}
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white mb-2"
-            >
-              <option value="everyday">Everyday</option>
-              <option value="5/2">Mon-Fri (5/2)</option>
-              <option value="workout">Workout Days Only</option>
-              <option value="custom">Custom Days</option>
-            </select>
-
-            {frequencyPattern === 'custom' && (
-              <div className="flex gap-2 flex-wrap">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => {
-                      if (activeDays.includes(index)) {
-                        setActiveDays(activeDays.filter(d => d !== index));
-                      } else {
-                        setActiveDays([...activeDays, index].sort());
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-lg text-sm transition-all ${
-                      activeDays.includes(index)
-                        ? 'bg-blue-500/30 border border-blue-500/50 text-blue-200'
-                        : 'bg-white/10 border border-white/20 text-white/60'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Ingredients Section */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-white">Multi-Ingredient (optional)</label>
-              <button
-                type="button"
-                onClick={addIngredient}
-                className="px-4 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-purple-300 text-sm transition-all"
-              >
-                + Add Ingredient
-              </button>
-            </div>
-            {ingredients.map((ingredient, index) => (
-              <div key={index} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={ingredient.name}
-                  onChange={(e) => updateIngredient(index, 'name', e.target.value)}
-                  placeholder="Ingredient name"
-                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                />
-                <input
-                  type="text"
-                  value={ingredient.dose}
-                  onChange={(e) => updateIngredient(index, 'dose', e.target.value)}
-                  placeholder="Dose"
-                  className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                />
-                <select
-                  value={ingredient.dose_unit}
-                  onChange={(e) => updateIngredient(index, 'dose_unit', e.target.value)}
-                  className="w-24 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
-                >
-                  <option value="mg">mg</option>
-                  <option value="mcg">mcg</option>
-                  <option value="g">g</option>
-                  <option value="IU">IU</option>
-                  <option value="mL">mL</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => removeIngredient(index)}
-                  className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Notes (Optional) */}
-          <div className="mb-4">
-            <label className="block text-white mb-2">Notes (Optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white resize-none"
-              rows={3}
-              placeholder="Additional details about this supplement..."
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-6 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-semibold transition-all"
-            >
-              {editingSupplement ? 'Update' : 'Add'}
-            </button>
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all"
-            >
-              Cancel
-            </button>
-          </div>
-        </motion.form>
-        );
-        return null;
-      })()}
 
       {/* Supplements List */}
       {supplements.length === 0 ? (
@@ -636,7 +631,7 @@ export function SupplementsView() {
               {/* Inline Edit Form */}
               <AnimatePresence>
                 {editingSupplement?.id === supplement.id && (
-                  <EditForm />
+                  <EditFormComponent />
                 )}
               </AnimatePresence>
             </div>
@@ -645,7 +640,7 @@ export function SupplementsView() {
           {/* Add New Form at bottom */}
           <AnimatePresence>
             {isAdding && !editingSupplement && (
-              <EditForm />
+              <EditFormComponent />
             )}
           </AnimatePresence>
         </div>
