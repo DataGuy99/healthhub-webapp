@@ -9,35 +9,46 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Safety timeout - force load after 3 seconds
+    let isMounted = true;
+
+    // Safety timeout - force load after 1 second
     const timeout = setTimeout(() => {
       console.warn('Loading timeout - forcing app to load');
-      setLoading(false);
-    }, 3000);
+      if (isMounted) {
+        setLoading(false);
+      }
+    }, 1000);
 
     // Check current session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         console.log('Session check complete:', session ? 'authenticated' : 'not authenticated');
-        setAuthenticated(!!session);
-        setLoading(false);
-        clearTimeout(timeout);
+        if (isMounted) {
+          setAuthenticated(!!session);
+          setLoading(false);
+          clearTimeout(timeout);
+        }
       })
       .catch((error) => {
         console.error('Failed to check session:', error);
-        setAuthenticated(false);
-        setLoading(false);
-        clearTimeout(timeout);
+        if (isMounted) {
+          setAuthenticated(false);
+          setLoading(false);
+          clearTimeout(timeout);
+        }
       });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthenticated(!!session);
+      if (isMounted) {
+        setAuthenticated(!!session);
+      }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
