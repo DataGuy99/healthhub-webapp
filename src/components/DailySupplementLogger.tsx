@@ -230,9 +230,9 @@ export function DailySupplementLogger() {
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
 
-        {/* Workout Toggle - Mobile Only */}
+        {/* Workout Toggle */}
         {workoutSupplements.length > 0 && (
-          <div className="mt-4 md:hidden">
+          <div className="mt-4">
             <button
               onClick={() => setIsWorkoutMode(!isWorkoutMode)}
               className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
