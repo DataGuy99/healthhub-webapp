@@ -144,24 +144,18 @@ export function DailySupplementLogger() {
       });
       setLogs(prev => ({ ...prev, ...updates }));
 
-      // Batch upsert all supplements in section
-      const upsertData = sectionSupplements
-        .filter(s => s.id)
-        .map(supplement => ({
-          user_id: user.id,
-          supplement_id: supplement.id!,
-          date: today,
-          is_taken: newValue,
-          timestamp: new Date().toISOString()
-        }));
-
-      const { error } = await supabase
-        .from('supplement_logs')
-        .upsert(upsertData, {
-          onConflict: 'user_id,supplement_id,date'
-        });
-
-      if (error) throw error;
+      // Batch upsert all supplements in section using offlineData
+      for (const supplement of sectionSupplements) {
+        if (supplement.id) {
+          await offlineData.logs.upsert({
+            user_id: user.id,
+            supplement_id: supplement.id,
+            date: today,
+            is_taken: newValue,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
     } catch (error) {
       console.error('Error toggling section:', error);
       alert('Failed to update section');
