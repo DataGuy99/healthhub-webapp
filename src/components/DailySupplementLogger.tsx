@@ -339,13 +339,13 @@ export function DailySupplementLogger() {
                           <motion.button
                             key={supplement.id}
                             onClick={() => supplement.id && toggleSupplement(supplement.id)}
-                            className={`w-full p-3 rounded-lg border transition-all text-left ${
+                            className={`w-full p-3 rounded-lg border text-left ${
                               isTaken
                                 ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
-                                : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
+                                : 'bg-white/10 border-white/20 backdrop-blur-xl active:bg-white/20'
                             }`}
-                            whileTap={{ scale: 0.98 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                            whileTap={{ scale: 0.99 }}
+                            transition={{ duration: 0.1 }}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
@@ -466,13 +466,13 @@ export function DailySupplementLogger() {
                         <motion.button
                           key={supplement.id}
                           onClick={() => supplement.id && toggleSupplement(supplement.id)}
-                          className={`w-full p-3 rounded-lg border transition-all text-left ${
+                          className={`w-full p-3 rounded-lg border text-left ${
                             isTaken
                               ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
-                              : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
+                              : 'bg-white/10 border-white/20 backdrop-blur-xl active:bg-white/20'
                           }`}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                          whileTap={{ scale: 0.99 }}
+                          transition={{ duration: 0.1 }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">

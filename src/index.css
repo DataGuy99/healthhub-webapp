@@ -26,7 +26,7 @@ body {
   min-height: 100vh;
   overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
 }
 
 #root {
@@ -36,17 +36,31 @@ body {
 
 /* Performance optimizations */
 .backdrop-blur-xl {
-  will-change: transform;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* Smooth animations */
 button, a {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-/* Fix layout shift during animations */
-motion-div {
-  will-change: opacity, transform;
+/* Prevent layout shift */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Disable momentum scrolling that can cause jitter */
+.no-momentum {
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Force GPU acceleration for smooth scrolling */
+#root {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }

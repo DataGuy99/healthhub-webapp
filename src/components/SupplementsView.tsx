@@ -344,13 +344,16 @@ export function SupplementsView() {
         </div>
       </div>
 
-      {/* Add/Edit Form */}
-      {isAdding && (
-        <motion.form
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+      {/* Inline Edit Form Component */}
+      {(() => {
+        const EditForm = () => (
+          <motion.form
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
           onSubmit={handleSubmit}
-          className="mb-6 p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20"
+          className="mt-3 p-6 bg-blue-500/10 backdrop-blur-xl rounded-2xl border border-blue-500/30"
         >
           <h3 className="text-xl font-bold text-white mb-4">
             {editingSupplement ? 'Edit Supplement' : 'New Supplement'}
@@ -547,7 +550,9 @@ export function SupplementsView() {
             </button>
           </div>
         </motion.form>
-      )}
+        );
+        return null;
+      })()}
 
       {/* Supplements List */}
       {supplements.length === 0 ? (
@@ -559,76 +564,86 @@ export function SupplementsView() {
       ) : (
         <div className="space-y-3">
           {supplements.map((supplement) => (
-            <motion.div
-              key={supplement.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              layout
-              onClick={() => isSelectionMode && supplement.id && toggleSelection(supplement.id)}
-              className={`p-4 rounded-xl border transition-all ${
-                isSelectionMode && selectedSupplements.has(supplement.id!)
-                  ? 'bg-purple-500/20 border-purple-500/40 backdrop-blur-xl'
-                  : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
-              } ${isSelectionMode ? 'cursor-pointer' : ''}`}
-            >
-              <div className="flex justify-between items-center">
-                {isSelectionMode && (
-                  <div className="mr-3">
-                    <div
-                      className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                        selectedSupplements.has(supplement.id!)
-                          ? 'bg-purple-500 border-purple-500'
-                          : 'border-white/30'
-                      }`}
-                    >
-                      {selectedSupplements.has(supplement.id!) && (
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
+            <div key={supplement.id}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                onClick={() => isSelectionMode && supplement.id && toggleSelection(supplement.id)}
+                className={`p-4 rounded-xl border ${
+                  isSelectionMode && selectedSupplements.has(supplement.id!)
+                    ? 'bg-purple-500/20 border-purple-500/40 backdrop-blur-xl'
+                    : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
+                } ${isSelectionMode ? 'cursor-pointer' : ''}`}
+              >
+                <div className="flex justify-between items-center">
+                  {isSelectionMode && (
+                    <div className="mr-3">
+                      <div
+                        className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                          selectedSupplements.has(supplement.id!)
+                            ? 'bg-purple-500 border-purple-500'
+                            : 'border-white/30'
+                        }`}
+                      >
+                        {selectedSupplements.has(supplement.id!) && (
+                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">{supplement.name}</h3>
-                  {supplement.ingredients && supplement.ingredients.length > 0 ? (
-                    <div className="text-white/70 text-sm">
-                      {supplement.ingredients.map((ing, i) => (
-                        <div key={i}>{ing.name}: {ing.dose} {ing.dose_unit}</div>
-                      ))}
-                      <div className="mt-1">{supplement.section}</div>
-                    </div>
-                  ) : (
-                    <p className="text-white/70 text-sm">
-                      {supplement.dose} {supplement.dose_unit} • {supplement.section}
-                    </p>
                   )}
-                  {supplement.notes && (
-                    <p className="text-white/50 text-xs mt-2 italic">
-                      {supplement.notes}
-                    </p>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white">{supplement.name}</h3>
+                    {supplement.ingredients && supplement.ingredients.length > 0 ? (
+                      <div className="text-white/70 text-sm">
+                        {supplement.ingredients.map((ing, i) => (
+                          <div key={i}>{ing.name}: {ing.dose} {ing.dose_unit}</div>
+                        ))}
+                        <div className="mt-1">{supplement.section}</div>
+                      </div>
+                    ) : (
+                      <p className="text-white/70 text-sm">
+                        {supplement.dose} {supplement.dose_unit} • {supplement.section}
+                      </p>
+                    )}
+                    {supplement.notes && (
+                      <p className="text-white/50 text-xs mt-2 italic">
+                        {supplement.notes}
+                      </p>
+                    )}
+                  </div>
+                  {!isSelectionMode && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(supplement)}
+                        className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 transition-all"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => supplement.id && handleDelete(supplement.id)}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
-                {!isSelectionMode && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(supplement)}
-                      className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 transition-all"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => supplement.id && handleDelete(supplement.id)}
-                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+              </motion.div>
+
+              {/* Inline Edit Form */}
+              {editingSupplement?.id === supplement.id && (
+                <EditForm />
+              )}
+            </div>
           ))}
+
+          {/* Add New Form at bottom */}
+          {isAdding && !editingSupplement && (
+            <EditForm />
+          )}
         </div>
       )}
 
