@@ -12,23 +12,48 @@
 
     <!-- Aggressively clear service workers and caches from previous deployments -->
     <script>
-      if ('serviceWorker' in navigator) {
-        // Unregister all service workers
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-        });
+      (function() {
+        const APP_VERSION = 'v2.0.0'; // Increment this to force cache clear
+        const VERSION_KEY = 'app_version';
 
-        // Clear all caches
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
+        // Check if version changed
+        const currentVersion = localStorage.getItem(VERSION_KEY);
+        if (currentVersion !== APP_VERSION) {
+          // Version changed - clear everything
+          localStorage.setItem(VERSION_KEY, APP_VERSION);
+
+          if ('serviceWorker' in navigator) {
+            // Unregister all service workers
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
+            });
+
+            // Clear all caches
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                for (let name of names) {
+                  caches.delete(name);
+                }
+              }).then(function() {
+                // Force reload after clearing
+                window.location.reload(true);
+              });
+            }
+          }
+        } else if ('serviceWorker' in navigator) {
+          // Same version but still check for service workers
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            if (registrations.length > 0) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
+              window.location.reload(true);
             }
           });
         }
-      }
+      })();
     </script>
   </body>
 </html>
