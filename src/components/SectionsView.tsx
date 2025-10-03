@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase, SupplementSection } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
+import { ConfirmModal } from './ConfirmModal';
 
 export function SectionsView() {
   const [sections, setSections] = useState<SupplementSection[]>([]);
@@ -9,6 +10,7 @@ export function SectionsView() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingSection, setEditingSection] = useState<SupplementSection | null>(null);
   const [name, setName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id?: string }>({ isOpen: false });
 
   useEffect(() => {
     loadSections();
@@ -99,15 +101,20 @@ export function SectionsView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this section? Supplements using this section will need to be reassigned.')) return;
+    setDeleteConfirm({ isOpen: true, id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.id) return;
 
     try {
       const { error } = await supabase
         .from('supplement_sections')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteConfirm.id);
 
       if (error) throw error;
+      setDeleteConfirm({ isOpen: false });
       await loadSections();
     } catch (error) {
       console.error('Error deleting section:', error);
@@ -279,6 +286,17 @@ export function SectionsView() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Section?"
+        message="Are you sure you want to delete this section? Supplements using this section will need to be reassigned. This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="warning"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ isOpen: false })}
+      />
     </div>
   );
 }

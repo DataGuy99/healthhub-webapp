@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase, Supplement, SupplementSection, Ingredient } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
+import { ConfirmModal } from './ConfirmModal';
 
 export function SupplementsView() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
@@ -9,6 +10,9 @@ export function SupplementsView() {
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingSupplement, setEditingSupplement] = useState<Supplement | null>(null);
+  const [selectedSupplements, setSelectedSupplements] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id?: string; isBatch?: boolean }>({ isOpen: false });
 
   // Form state
   const [name, setName] = useState('');
@@ -208,20 +212,60 @@ export function SupplementsView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this supplement?')) return;
+    setDeleteConfirm({ isOpen: true, id });
+  };
 
+  const confirmDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('supplements')
-        .delete()
-        .eq('id', id);
+      if (deleteConfirm.isBatch) {
+        const idsToDelete = Array.from(selectedSupplements);
+        const { error } = await supabase
+          .from('supplements')
+          .delete()
+          .in('id', idsToDelete);
 
-      if (error) throw error;
+        if (error) throw error;
+        setSelectedSupplements(new Set());
+        setIsSelectionMode(false);
+      } else if (deleteConfirm.id) {
+        const { error } = await supabase
+          .from('supplements')
+          .delete()
+          .eq('id', deleteConfirm.id);
+
+        if (error) throw error;
+      }
+      setDeleteConfirm({ isOpen: false });
       await loadData();
     } catch (error) {
       console.error('Error deleting supplement:', error);
       alert('Failed to delete supplement');
     }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedSupplements.size === 0) return;
+    setDeleteConfirm({ isOpen: true, isBatch: true });
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedSupplements(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedSupplements(new Set(supplements.map(s => s.id!).filter(Boolean)));
+  };
+
+  const deselectAll = () => {
+    setSelectedSupplements(new Set());
   };
 
   const cancelEdit = () => {
@@ -249,12 +293,55 @@ export function SupplementsView() {
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-white">Supplements</h2>
-        <button
-          onClick={() => setIsAdding(!isAdding)}
-          className="px-6 py-2 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all"
-        >
-          {isAdding ? 'Cancel' : '+ Add Supplement'}
-        </button>
+        <div className="flex gap-2">
+          {!isSelectionMode ? (
+            <>
+              <button
+                onClick={() => setIsSelectionMode(true)}
+                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-300 font-semibold transition-all"
+              >
+                Select
+              </button>
+              <button
+                onClick={() => setIsAdding(!isAdding)}
+                className="px-6 py-2 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all"
+              >
+                {isAdding ? 'Cancel' : '+ Add'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={selectAll}
+                className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-300 text-sm transition-all"
+              >
+                All
+              </button>
+              <button
+                onClick={deselectAll}
+                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white text-sm transition-all"
+              >
+                None
+              </button>
+              <button
+                onClick={handleBatchDelete}
+                disabled={selectedSupplements.size === 0}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-300 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Delete ({selectedSupplements.size})
+              </button>
+              <button
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedSupplements(new Set());
+                }}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-semibold transition-all"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -474,11 +561,35 @@ export function SupplementsView() {
           {supplements.map((supplement) => (
             <motion.div
               key={supplement.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 hover:bg-white/15 transition-all"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              layout
+              onClick={() => isSelectionMode && supplement.id && toggleSelection(supplement.id)}
+              className={`p-4 rounded-xl border transition-all ${
+                isSelectionMode && selectedSupplements.has(supplement.id!)
+                  ? 'bg-purple-500/20 border-purple-500/40 backdrop-blur-xl'
+                  : 'bg-white/10 border-white/20 backdrop-blur-xl hover:bg-white/15'
+              } ${isSelectionMode ? 'cursor-pointer' : ''}`}
             >
               <div className="flex justify-between items-center">
+                {isSelectionMode && (
+                  <div className="mr-3">
+                    <div
+                      className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                        selectedSupplements.has(supplement.id!)
+                          ? 'bg-purple-500 border-purple-500'
+                          : 'border-white/30'
+                      }`}
+                    >
+                      {selectedSupplements.has(supplement.id!) && (
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">{supplement.name}</h3>
                   {supplement.ingredients && supplement.ingredients.length > 0 ? (
@@ -499,25 +610,40 @@ export function SupplementsView() {
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(supplement)}
-                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 transition-all"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => supplement.id && handleDelete(supplement.id)}
-                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
-                  >
-                    Delete
-                  </button>
-                </div>
+                {!isSelectionMode && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(supplement)}
+                      className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 transition-all"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => supplement.id && handleDelete(supplement.id)}
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title={deleteConfirm.isBatch ? 'Delete Supplements?' : 'Delete Supplement?'}
+        message={deleteConfirm.isBatch
+          ? `Are you sure you want to delete ${selectedSupplements.size} supplement(s)? This action cannot be undone.`
+          : 'Are you sure you want to delete this supplement? This action cannot be undone.'}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ isOpen: false })}
+      />
     </div>
   );
 }
