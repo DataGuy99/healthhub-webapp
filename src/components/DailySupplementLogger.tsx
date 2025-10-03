@@ -344,6 +344,11 @@ export function DailySupplementLogger() {
                                   {supplement.dose} {supplement.dose_unit}
                                 </div>
                               )}
+                              {supplement.notes && (
+                                <div className="text-white/50 text-xs mt-1 italic">
+                                  {supplement.notes}
+                                </div>
+                              )}
                             </div>
                             <div
                               className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
@@ -444,6 +449,11 @@ export function DailySupplementLogger() {
                             ) : supplement.dose && (
                               <div className="text-white/60 text-xs mt-0.5">
                                 {supplement.dose} {supplement.dose_unit}
+                              </div>
+                            )}
+                            {supplement.notes && (
+                              <div className="text-white/50 text-xs mt-1 italic">
+                                {supplement.notes}
                               </div>
                             )}
                           </div>
