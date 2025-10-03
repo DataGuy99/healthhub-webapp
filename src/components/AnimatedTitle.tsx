@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const FONTS = [
   'font-sans', 'font-serif', 'font-mono',
@@ -17,6 +17,7 @@ export function AnimatedTitle() {
   const [activeLetterIndex, setActiveLetterIndex] = useState(0);
   const [emoji, setEmoji] = useState('💊');
   const [isSpinning, setIsSpinning] = useState(false);
+  const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const text = 'Health Hub';
 
   useEffect(() => {
@@ -62,21 +63,33 @@ export function AnimatedTitle() {
       if (isLastLetter) {
         setIsSpinning(true);
         let spinCount = 0;
-        const spinInterval = setInterval(() => {
+
+        // Clear any existing spin interval
+        if (spinIntervalRef.current) {
+          clearInterval(spinIntervalRef.current);
+        }
+
+        spinIntervalRef.current = setInterval(() => {
           setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
           spinCount++;
 
-          if (spinCount >= 15) { // More spins: 15
-            clearInterval(spinInterval);
+          if (spinCount >= 15) {
+            if (spinIntervalRef.current) {
+              clearInterval(spinIntervalRef.current);
+              spinIntervalRef.current = null;
+            }
             setIsSpinning(false);
             setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
           }
-        }, 50); // Faster spin: 50ms per emoji
+        }, 50);
       }
     }, 600);
 
     return () => {
       clearInterval(letterInterval);
+      if (spinIntervalRef.current) {
+        clearInterval(spinIntervalRef.current);
+      }
     };
   }, []);
 
