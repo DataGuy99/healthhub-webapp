@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, Supplement, SupplementSection, Ingredient } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { ConfirmModal } from './ConfirmModal';
@@ -634,16 +634,20 @@ export function SupplementsView() {
               </motion.div>
 
               {/* Inline Edit Form */}
-              {editingSupplement?.id === supplement.id && (
-                <EditForm />
-              )}
+              <AnimatePresence>
+                {editingSupplement?.id === supplement.id && (
+                  <EditForm />
+                )}
+              </AnimatePresence>
             </div>
           ))}
 
           {/* Add New Form at bottom */}
-          {isAdding && !editingSupplement && (
-            <EditForm />
-          )}
+          <AnimatePresence>
+            {isAdding && !editingSupplement && (
+              <EditForm />
+            )}
+          </AnimatePresence>
         </div>
       )}
 
