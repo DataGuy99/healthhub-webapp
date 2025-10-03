@@ -12,6 +12,8 @@ export interface Ingredient {
   dose_unit: string;
 }
 
+export type FrequencyPattern = 'everyday' | '5/2' | 'workout' | 'custom';
+
 export interface Supplement {
   id?: string;
   user_id?: string;
@@ -21,13 +23,15 @@ export interface Supplement {
   ingredients?: Ingredient[];
   form?: string;
   section?: string;
-  active_days?: number[];
+  active_days?: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
+  frequency_pattern?: FrequencyPattern;
   is_stack?: boolean;
   stack_id?: string;
   order?: number;
   cost?: number;
   quantity?: number;
-  frequency?: number;
+  frequency?: number; // times per day
+  notes?: string;
   created_at?: string;
 }
 

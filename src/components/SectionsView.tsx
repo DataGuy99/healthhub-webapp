@@ -121,6 +121,33 @@ export function SectionsView() {
     setName('');
   };
 
+  const moveSection = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= sections.length) return;
+
+    const newSections = [...sections];
+    [newSections[index], newSections[newIndex]] = [newSections[newIndex], newSections[index]];
+
+    // Update order in state
+    setSections(newSections);
+
+    // Update order in database
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      for (let i = 0; i < newSections.length; i++) {
+        await supabase
+          .from('supplement_sections')
+          .update({ order: i })
+          .eq('id', newSections[i].id);
+      }
+    } catch (error) {
+      console.error('Error updating section order:', error);
+      await loadSections(); // Reload on error
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -192,7 +219,7 @@ export function SectionsView() {
         </div>
       ) : (
         <div className="space-y-3">
-          {sections.map((section) => (
+          {sections.map((section, index) => (
             <motion.div
               key={section.id}
               initial={{ opacity: 0, x: -20 }}
@@ -200,7 +227,37 @@ export function SectionsView() {
               className="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 hover:bg-white/15 transition-all"
             >
               <div className="flex justify-between items-center">
-                <div>
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => moveSection(index, 'up')}
+                      disabled={index === 0}
+                      className={`p-1 rounded transition-all ${
+                        index === 0
+                          ? 'text-white/20 cursor-not-allowed'
+                          : 'text-white/60 hover:text-white hover:bg-white/10'
+                      }`}
+                      title="Move up"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => moveSection(index, 'down')}
+                      disabled={index === sections.length - 1}
+                      className={`p-1 rounded transition-all ${
+                        index === sections.length - 1
+                          ? 'text-white/20 cursor-not-allowed'
+                          : 'text-white/60 hover:text-white hover:bg-white/10'
+                      }`}
+                      title="Move down"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
                   <h3 className="text-lg font-semibold text-white">{section.name}</h3>
                 </div>
                 <div className="flex gap-2">

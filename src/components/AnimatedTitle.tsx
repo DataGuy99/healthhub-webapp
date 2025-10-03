@@ -14,78 +14,117 @@ const EMOJIS = ['💊', '🏥', '⚕️', '🩺', '💉', '🧬', '🔬', '🌡�
 
 export function AnimatedTitle() {
   const [letterFonts, setLetterFonts] = useState<number[]>([]);
+  const [activeLetterIndex, setActiveLetterIndex] = useState(0);
   const [emoji, setEmoji] = useState('💊');
-  const [flipping, setFlipping] = useState<number>(-1);
+  const [isSpinning, setIsSpinning] = useState(false);
   const text = 'Health Hub';
 
   useEffect(() => {
-    // Initialize random fonts for each letter
-    setLetterFonts(text.split('').map(() => Math.floor(Math.random() * FONTS.length)));
+    // Initialize fonts for each letter (all same to start)
+    setLetterFonts(text.split('').map(() => 0));
 
     let currentLetterIndex = 0;
     const letterCount = text.length;
-    const activeTimeouts: NodeJS.Timeout[] = [];
 
-    // Cycle letters one at a time, left to right
+    // Slightly slower cycle: 600ms
     const letterInterval = setInterval(() => {
-      // Skip the space (index 6) - only update the font for non-space characters
+      // Move to next letter (skip space)
+      const nextIndex = (currentLetterIndex + 1) % letterCount;
+      const finalNextIndex = nextIndex === 6 ? (nextIndex + 1) % letterCount : nextIndex;
+
+      // Check if we just completed a full cycle (reached the end)
+      const isLastLetter = finalNextIndex === 0 && currentLetterIndex === 9; // 'b' is index 9
+
+      // Move underline to new letter
+      setActiveLetterIndex(finalNextIndex);
+
+      // Change the CURRENT letter's font (the one we're on before moving)
       if (currentLetterIndex !== 6) {
-        // Occasionally do a split-flap effect (20% chance)
-        const useSplitFlap = Math.random() < 0.2;
-
-        if (useSplitFlap) {
-          setFlipping(currentLetterIndex);
-          const timeout = setTimeout(() => setFlipping(-1), 200);
-          activeTimeouts.push(timeout);
-        }
-
         setLetterFonts(prev => {
           const next = [...prev];
-          next[currentLetterIndex] = Math.floor(Math.random() * FONTS.length);
+          const currentFont = next[currentLetterIndex];
+          let newFont;
+
+          // Ensure we pick a DIFFERENT font (not the same as current)
+          do {
+            newFont = Math.floor(Math.random() * FONTS.length);
+          } while (newFont === currentFont);
+
+          next[currentLetterIndex] = newFont;
           return next;
         });
       }
 
-      currentLetterIndex = (currentLetterIndex + 1) % letterCount;
-    }, 1333);
+      // Update current index for next iteration
+      currentLetterIndex = finalNextIndex;
 
-    // Cycle emoji (1.5x faster = 5000/1.5 = 3333ms)
-    const emojiInterval = setInterval(() => {
-      setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-    }, 3333);
+      // When reaching the last letter and wrapping around, change the emoji
+      if (isLastLetter) {
+        setIsSpinning(true);
+        let spinCount = 0;
+        const spinInterval = setInterval(() => {
+          setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+          spinCount++;
+
+          if (spinCount >= 15) { // More spins: 15
+            clearInterval(spinInterval);
+            setIsSpinning(false);
+            setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+          }
+        }, 50); // Faster spin: 50ms per emoji
+      }
+    }, 600);
 
     return () => {
       clearInterval(letterInterval);
-      clearInterval(emojiInterval);
-      activeTimeouts.forEach(clearTimeout);
     };
   }, []);
 
   return (
     <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg flex items-center gap-2">
       {text.split('').map((char, i) => (
-        <span
-          key={i}
-          className={`${FONTS[letterFonts[i] || 0]} transition-all duration-200 inline-block ${
-            flipping === i ? 'animate-flip' : ''
-          }`}
-          style={{
-            transformStyle: 'preserve-3d',
-            animation: flipping === i ? 'flip 0.2s ease-in-out' : 'none',
-          }}
-        >
+        <span key={i}>
           {char === ' ' ? (
-            <span className="text-3xl sm:text-4xl mx-1">{emoji}</span>
+            <span
+              className={`text-3xl sm:text-4xl mx-1 inline-block transition-all duration-300 ${
+                isSpinning ? 'animate-spin-fast' : ''
+              }`}
+            >
+              {emoji}
+            </span>
           ) : (
-            char
+            <span className="inline-block relative">
+              <span
+                className={`transition-all duration-500 ${FONTS[letterFonts[i] || 0]} text-white`}
+                style={{
+                  transform: i === activeLetterIndex ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+                }}
+              >
+                {char}
+              </span>
+              {i === activeLetterIndex && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/80 animate-underline" />
+              )}
+            </span>
           )}
         </span>
       ))}
       <style>{`
-        @keyframes flip {
-          0% { transform: rotateX(0deg); }
-          50% { transform: rotateX(90deg); }
-          100% { transform: rotateX(0deg); }
+        @keyframes slideDown {
+          0% { transform: translateY(-100%); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        .animate-spin-fast {
+          animation: slideDown 0.15s ease-out;
+        }
+        @keyframes underline-grow {
+          from { width: 0; }
+          to { width: 100%; }
+        }
+        .animate-underline {
+          animation: underline-grow 0.3s ease-out;
         }
       `}</style>
     </h1>

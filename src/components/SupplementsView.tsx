@@ -14,12 +14,56 @@ export function SupplementsView() {
   const [name, setName] = useState('');
   const [dose, setDose] = useState('');
   const [doseUnit, setDoseUnit] = useState('mg');
-  const [section, setSection] = useState('Morning');
+  const [section, setSection] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [frequencyPattern, setFrequencyPattern] = useState<'everyday' | '5/2' | 'workout' | 'custom'>('everyday');
+  const [activeDays, setActiveDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Set default section when sections load
+  useEffect(() => {
+    if (sections.length > 0 && !section) {
+      setSection(sections[0].name);
+    }
+  }, [sections]);
+
+  // One-time migration: fix old supplements with wrong sections
+  useEffect(() => {
+    const migrateOldSupplements = async () => {
+      if (sections.length === 0 || supplements.length === 0) return;
+
+      const validSectionNames = sections.map(s => s.name);
+      const supplementsToFix = supplements.filter(
+        s => s.section && !validSectionNames.includes(s.section)
+      );
+
+      if (supplementsToFix.length > 0) {
+        console.log('Migrating supplements with invalid sections:', supplementsToFix);
+
+        for (const supplement of supplementsToFix) {
+          const { error } = await supabase
+            .from('supplements')
+            .update({ section: sections[0].name })
+            .eq('id', supplement.id);
+
+          if (error) {
+            console.error('Error migrating supplement:', supplement.id, error);
+          } else {
+            console.log('Migrated supplement:', supplement.name, 'to section:', sections[0].name);
+          }
+        }
+
+        // Reload data to reflect changes
+        await loadData();
+      }
+    };
+
+    migrateOldSupplements();
+  }, [sections, supplements]);
 
   const loadData = async () => {
     try {
@@ -56,7 +100,25 @@ export function SupplementsView() {
 
     try {
       const user = await getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        console.error('No user found');
+        alert('Not authenticated. Please log in again.');
+        return;
+      }
+
+      console.log('Saving supplement:', { name, dose, doseUnit, section, ingredients });
+
+      // Calculate active_days based on frequency pattern
+      let calculatedActiveDays = null;
+      if (frequencyPattern === 'everyday') {
+        calculatedActiveDays = [0, 1, 2, 3, 4, 5, 6];
+      } else if (frequencyPattern === '5/2') {
+        calculatedActiveDays = [1, 2, 3, 4, 5]; // Mon-Fri
+      } else if (frequencyPattern === 'workout') {
+        calculatedActiveDays = null; // Will be handled by workout tracking
+      } else if (frequencyPattern === 'custom') {
+        calculatedActiveDays = activeDays;
+      }
 
       const supplementData = {
         name,
@@ -64,43 +126,57 @@ export function SupplementsView() {
         dose_unit: ingredients.length > 0 ? null : doseUnit,
         ingredients: ingredients.length > 0 ? ingredients : null,
         section,
-        active_days: null,
-        cost: editingSupplement?.cost || null,
-        quantity: editingSupplement?.quantity || null,
-        frequency: editingSupplement?.frequency || 1
+        frequency_pattern: frequencyPattern,
+        active_days: calculatedActiveDays,
+        notes: notes || null
       };
 
       if (editingSupplement) {
         // Update existing (preserve cost data)
+        console.log('Updating supplement:', editingSupplement.id);
         const { error } = await supabase
           .from('supplements')
           .update(supplementData)
           .eq('id', editingSupplement.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        console.log('Updated successfully');
       } else {
         // Create new
-        const { error } = await supabase
+        console.log('Creating new supplement for user:', user.id);
+        const { data, error } = await supabase
           .from('supplements')
-          .insert([{ user_id: user.id, ...supplementData }]);
+          .insert([{ user_id: user.id, ...supplementData }])
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        console.log('Created successfully:', data);
       }
 
       // Reset form
       setName('');
       setDose('');
       setDoseUnit('mg');
-      setSection('Morning');
+      setSection(sections[0]?.name || '');
       setIngredients([]);
+      setFrequencyPattern('everyday');
+      setActiveDays([0, 1, 2, 3, 4, 5, 6]);
+      setNotes('');
       setIsAdding(false);
       setEditingSupplement(null);
 
       // Reload
+      console.log('Reloading data...');
       await loadData();
     } catch (error) {
       console.error('Error saving supplement:', error);
-      alert('Failed to save supplement');
+      alert(`Failed to save supplement: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -111,6 +187,9 @@ export function SupplementsView() {
     setDoseUnit(supplement.dose_unit || 'mg');
     setSection(supplement.section || 'Morning');
     setIngredients(supplement.ingredients || []);
+    setFrequencyPattern(supplement.frequency_pattern || 'everyday');
+    setActiveDays(supplement.active_days || [0, 1, 2, 3, 4, 5, 6]);
+    setNotes(supplement.notes || '');
     setIsAdding(true);
   };
 
@@ -151,8 +230,11 @@ export function SupplementsView() {
     setName('');
     setDose('');
     setDoseUnit('mg');
-    setSection('Morning');
+    setSection(sections[0]?.name || '');
     setIngredients([]);
+    setFrequencyPattern('everyday');
+    setActiveDays([0, 1, 2, 3, 4, 5, 6]);
+    setNotes('');
   };
 
   if (loading) {
@@ -207,9 +289,16 @@ export function SupplementsView() {
                 onChange={(e) => setSection(e.target.value)}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white"
               >
-                {sections.map(s => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
+                {frequencyPattern === 'workout' ? (
+                  <>
+                    <option value="Pre-Workout">Pre-Workout</option>
+                    <option value="Post-Workout">Post-Workout</option>
+                  </>
+                ) : (
+                  sections.map(s => (
+                    <option key={s.id} value={s.name}>{s.name}</option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -241,6 +330,55 @@ export function SupplementsView() {
                   </select>
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Frequency Pattern */}
+          <div className="mb-4">
+            <label className="block text-white mb-2">When to take</label>
+            <select
+              value={frequencyPattern}
+              onChange={(e) => {
+                const newPattern = e.target.value as any;
+                setFrequencyPattern(newPattern);
+                // Auto-set section when switching to/from workout mode
+                if (newPattern === 'workout') {
+                  setSection('Pre-Workout');
+                } else if (frequencyPattern === 'workout') {
+                  setSection(sections[0]?.name || '');
+                }
+              }}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white mb-2"
+            >
+              <option value="everyday">Everyday</option>
+              <option value="5/2">Mon-Fri (5/2)</option>
+              <option value="workout">Workout Days Only</option>
+              <option value="custom">Custom Days</option>
+            </select>
+
+            {frequencyPattern === 'custom' && (
+              <div className="flex gap-2 flex-wrap">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      if (activeDays.includes(index)) {
+                        setActiveDays(activeDays.filter(d => d !== index));
+                      } else {
+                        setActiveDays([...activeDays, index].sort());
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                      activeDays.includes(index)
+                        ? 'bg-blue-500/30 border border-blue-500/50 text-blue-200'
+                        : 'bg-white/10 border border-white/20 text-white/60'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
@@ -294,6 +432,18 @@ export function SupplementsView() {
             ))}
           </div>
 
+          {/* Notes (Optional) */}
+          <div className="mb-4">
+            <label className="block text-white mb-2">Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white resize-none"
+              rows={3}
+              placeholder="Additional details about this supplement..."
+            />
+          </div>
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -329,7 +479,7 @@ export function SupplementsView() {
               className="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 hover:bg-white/15 transition-all"
             >
               <div className="flex justify-between items-center">
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">{supplement.name}</h3>
                   {supplement.ingredients && supplement.ingredients.length > 0 ? (
                     <div className="text-white/70 text-sm">
@@ -341,6 +491,11 @@ export function SupplementsView() {
                   ) : (
                     <p className="text-white/70 text-sm">
                       {supplement.dose} {supplement.dose_unit} • {supplement.section}
+                    </p>
+                  )}
+                  {supplement.notes && (
+                    <p className="text-white/50 text-xs mt-2 italic">
+                      {supplement.notes}
                     </p>
                   )}
                 </div>

@@ -75,46 +75,150 @@ export function Dashboard() {
         .select('*')
         .eq('user_id', user.id);
 
-      const { data: logs } = await supabase
-        .from('supplement_logs')
-        .select('*')
-        .eq('user_id', user.id);
-
-      // Create supplements CSV
-      const supplementsCsvHeader = 'ID,Name,Dose,Dose Unit,Section,Created At\n';
-      const supplementsCsvRows = (supplements || []).map(s =>
-        `${escapeCsvField(s.id)},${escapeCsvField(s.name)},${escapeCsvField(s.dose)},${escapeCsvField(s.dose_unit)},${escapeCsvField(s.section)},${escapeCsvField(s.created_at)}`
+      // Single CSV with all supplement data
+      const csvHeader = 'Name,Dose,Dose Unit,Section,Ingredients (JSON),Notes\n';
+      const csvRows = (supplements || []).map(s =>
+        `${escapeCsvField(s.name)},${escapeCsvField(s.dose || '')},${escapeCsvField(s.dose_unit || '')},${escapeCsvField(s.section || '')},${escapeCsvField(s.ingredients ? JSON.stringify(s.ingredients) : '')},${escapeCsvField(s.notes || '')}`
       ).join('\n');
-      const supplementsCsv = supplementsCsvHeader + supplementsCsvRows;
+      const csv = csvHeader + csvRows;
 
-      // Create logs CSV
-      const logsCsvHeader = 'Supplement ID,Date,Is Taken,Timestamp\n';
-      const logsCsvRows = (logs || []).map(l =>
-        `${escapeCsvField(l.supplement_id)},${escapeCsvField(l.date)},${escapeCsvField(l.is_taken)},${escapeCsvField(l.timestamp)}`
-      ).join('\n');
-      const logsCsv = logsCsvHeader + logsCsvRows;
-
-      // Download supplements CSV
-      const supplementsBlob = new Blob([supplementsCsv], { type: 'text/csv' });
-      const supplementsUrl = URL.createObjectURL(supplementsBlob);
-      const supplementsA = document.createElement('a');
-      supplementsA.href = supplementsUrl;
-      supplementsA.download = `supplements-${new Date().toISOString().split('T')[0]}.csv`;
-      supplementsA.click();
-      URL.revokeObjectURL(supplementsUrl);
-
-      // Download logs CSV
-      const logsBlob = new Blob([logsCsv], { type: 'text/csv' });
-      const logsUrl = URL.createObjectURL(logsBlob);
-      const logsA = document.createElement('a');
-      logsA.href = logsUrl;
-      logsA.download = `supplement-logs-${new Date().toISOString().split('T')[0]}.csv`;
-      logsA.click();
-      URL.revokeObjectURL(logsUrl);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `supplements-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting CSV:', error);
       alert('Failed to export data');
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = `Name,Dose,Dose Unit,Section,Ingredients (JSON),Notes
+Vitamin D,1000,IU,Morning,,Take with food
+Omega-3,2,capsules,Morning,,
+Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"":""IU""},{""name"":""Vitamin C"",""dose"":""500"",""dose_unit"":""mg""}]",Daily multivitamin`;
+
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'supplements-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      // Get available sections
+      const { data: sectionsData } = await supabase
+        .from('supplement_sections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('order', { ascending: true });
+
+      const sections = sectionsData || [];
+
+      if (sections.length === 0) {
+        alert('Please create at least one section before importing supplements.');
+        event.target.value = '';
+        return;
+      }
+
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+
+      const supplements = lines.slice(1).map(line => {
+        const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || [];
+
+        const name = values[0];
+        const dose = values[1] || null;
+        const dose_unit = values[2] || null;
+        let section = values[3] || null;
+        const ingredientsStr = values[4];
+        const notes = values[5] || null;
+
+        // Check if section exists, if not or empty, prompt user
+        if (!section || !sections.find(s => s.name === section)) {
+          section = null; // Will be assigned later
+        }
+
+        let ingredients = null;
+        if (ingredientsStr) {
+          try {
+            ingredients = JSON.parse(ingredientsStr);
+          } catch (e) {
+            console.error('Invalid JSON for ingredients:', ingredientsStr);
+          }
+        }
+
+        return {
+          user_id: user.id,
+          name,
+          dose,
+          dose_unit,
+          section,
+          ingredients,
+          notes,
+          active_days: null
+        };
+      }).filter(s => s.name);
+
+      if (supplements.length === 0) {
+        alert('No valid supplements found in CSV');
+        event.target.value = '';
+        return;
+      }
+
+      // Check if any supplements are missing sections
+      const missingSection = supplements.filter(s => !s.section);
+
+      if (missingSection.length > 0) {
+        const sectionNames = sections.map(s => s.name).join(', ');
+        const selectedSection = prompt(
+          `${missingSection.length} supplement(s) have no section or invalid section.\n\nAvailable sections: ${sectionNames}\n\nEnter section name to assign to all of them:`,
+          sections[0].name
+        );
+
+        if (!selectedSection) {
+          alert('Import cancelled.');
+          event.target.value = '';
+          return;
+        }
+
+        // Verify selected section exists
+        if (!sections.find(s => s.name === selectedSection)) {
+          alert(`Section "${selectedSection}" does not exist. Import cancelled.`);
+          event.target.value = '';
+          return;
+        }
+
+        // Assign section to all missing
+        missingSection.forEach(s => s.section = selectedSection);
+      }
+
+      const { error } = await supabase
+        .from('supplements')
+        .insert(supplements);
+
+      if (error) throw error;
+
+      alert(`Successfully imported ${supplements.length} supplements!`);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      alert('Failed to import supplements. Please check your CSV format.');
+    }
+
+    event.target.value = '';
   };
 
   return (
@@ -194,31 +298,55 @@ export function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-2xl mx-auto"
               >
-                <h2 className="text-3xl font-bold text-white mb-6">Export Data</h2>
+                <h2 className="text-3xl font-bold text-white mb-6">Import / Export</h2>
                 <div className="space-y-4">
+                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
+                    <h3 className="text-xl font-bold text-white mb-2">Import Supplements (CSV)</h3>
+                    <p className="text-white/70 mb-4">
+                      Upload a CSV file to bulk-import supplements. Not sure about the format? Download the template below.
+                    </p>
+                    <div className="flex gap-2">
+                      <label className="px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-300 font-semibold transition-all cursor-pointer">
+                        Upload CSV
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleImportCSV}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        onClick={handleDownloadTemplate}
+                        className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all"
+                      >
+                        Download Template
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
+                    <h3 className="text-xl font-bold text-white mb-2">CSV Export</h3>
+                    <p className="text-white/70 mb-4">
+                      Export supplements as a single CSV file. Perfect for spreadsheet analysis.
+                    </p>
+                    <button
+                      onClick={handleExportCSV}
+                      className="px-6 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-semibold transition-all"
+                    >
+                      Download CSV
+                    </button>
+                  </div>
+
                   <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
                     <h3 className="text-xl font-bold text-white mb-2">JSON Export</h3>
                     <p className="text-white/70 mb-4">
-                      Export all supplements and logs as a single JSON file. Perfect for backups or data portability.
+                      Export all supplements and logs as JSON. Perfect for backups or data portability.
                     </p>
                     <button
                       onClick={handleExportJSON}
                       className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-300 font-semibold transition-all"
                     >
                       Download JSON
-                    </button>
-                  </div>
-
-                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-white mb-2">CSV Export</h3>
-                    <p className="text-white/70 mb-4">
-                      Export as CSV files (supplements + logs). Perfect for spreadsheet analysis.
-                    </p>
-                    <button
-                      onClick={handleExportCSV}
-                      className="px-6 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-semibold transition-all"
-                    >
-                      Download CSV Files
                     </button>
                   </div>
                 </div>

@@ -51,7 +51,7 @@ export function CostCalculator() {
   const updateCost = async (id: string, field: 'cost' | 'quantity' | 'frequency', value: number) => {
     const previousValue = supplements.find(s => s.id === id)?.[field];
 
-    // Update local state
+    // Optimistic update
     setSupplements(prev => prev.map(s =>
       s.id === id ? { ...s, [field]: value } : s
     ));
@@ -66,18 +66,34 @@ export function CostCalculator() {
       if (error) throw error;
     } catch (error) {
       console.error('Error updating cost:', error);
-      // Revert optimistic update
+      // Revert on error
       setSupplements(prev => prev.map(s =>
         s.id === id ? { ...s, [field]: previousValue } : s
       ));
-      alert('Failed to update supplement cost data');
+      alert('Failed to update. Please run the SQL migration in add_cost_columns.sql');
     }
   };
 
   const calculateDailyCost = (supp: SupplementCost): number => {
     if (!supp.cost || !supp.quantity || !supp.frequency) return 0;
     const costPerUnit = supp.cost / supp.quantity;
-    return costPerUnit * supp.frequency;
+    const dailyCost = costPerUnit * supp.frequency;
+
+    // Adjust for frequency pattern
+    if (supp.frequency_pattern === '5/2') {
+      // Mon-Fri only (5 days out of 7)
+      return dailyCost * (5 / 7);
+    } else if (supp.frequency_pattern === 'workout') {
+      // Workout days - assume 3-4 days per week average (3.5/7)
+      return dailyCost * (3.5 / 7);
+    } else if (supp.frequency_pattern === 'custom' && supp.active_days) {
+      // Custom days
+      const activeDaysCount = Array.isArray(supp.active_days) ? supp.active_days.length : 0;
+      return dailyCost * (activeDaysCount / 7);
+    }
+
+    // 'everyday' or no pattern
+    return dailyCost;
   };
 
   const groupedSupplements = supplements.reduce((acc, supplement) => {
