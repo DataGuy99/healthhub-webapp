@@ -467,7 +467,7 @@ export function DailySupplementLogger() {
                 </div>
               </div>
             );
-          })}
+          })
           )}
         </div>
       </div>
