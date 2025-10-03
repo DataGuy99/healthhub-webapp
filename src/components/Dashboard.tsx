@@ -9,7 +9,7 @@ import { clearAuth, getCurrentUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'daily' | 'supplements' | 'settings'>('daily');
 
   const handleLogout = async () => {
     await clearAuth();
@@ -230,38 +230,43 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <AnimatedTitle />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
-              <nav className="flex gap-2 overflow-x-auto">
-                {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`
-                      px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 whitespace-nowrap text-sm sm:text-base
-                      ${activeTab === tab
-                        ? 'bg-white/30 backdrop-blur-xl border border-white/40 text-white shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:bg-white/20'
-                      }
-                    `}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
-              </nav>
-              <button
-                onClick={handleLogout}
-                className="px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm sm:text-base"
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm"
+            >
+              Logout
+            </button>
           </div>
+
+          {/* Mobile Bottom Navigation */}
+          <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 z-50 safe-bottom">
+            <div className="flex justify-around items-center h-16 px-4">
+              {([
+                { id: 'daily', label: 'Daily', icon: '📅' },
+                { id: 'supplements', label: 'Library', icon: '💊' },
+                { id: 'settings', label: 'Settings', icon: '⚙️' }
+              ] as const).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'text-violet-400'
+                      : 'text-white/60'
+                  }`}
+                >
+                  <span className="text-2xl">{tab.icon}</span>
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
         </header>
 
-        {/* Content */}
-        <main className="p-6">
+        {/* Content with bottom padding for mobile nav */}
+        <main className="p-4 pb-20 sm:p-6">
           <div className="max-w-7xl mx-auto">
-            {activeTab === 'overview' && (
+            {activeTab === 'daily' && (
               <DailySupplementLogger />
             )}
 
@@ -274,40 +279,45 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
               </motion.div>
             )}
 
-            {activeTab === 'sections' && (
+            {activeTab === 'settings' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
               >
-                <SectionsView />
-              </motion.div>
-            )}
+                {/* Sections Management */}
+                <div className="bg-white/10 backdrop-blur-xl p-6 rounded-2xl border border-white/20">
+                  <h2 className="text-2xl font-bold text-white mb-4">⏰ Time Sections</h2>
+                  <SectionsView />
+                </div>
 
-            {activeTab === 'costs' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <CostCalculator />
-              </motion.div>
-            )}
+                {/* Cost Calculator */}
+                <div className="bg-white/10 backdrop-blur-xl p-6 rounded-2xl border border-white/20">
+                  <h2 className="text-2xl font-bold text-white mb-4">💰 Cost Calculator</h2>
+                  <CostCalculator />
+                </div>
 
-            {activeTab === 'export' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="max-w-2xl mx-auto"
-              >
-                <h2 className="text-3xl font-bold text-white mb-6">Import / Export</h2>
-                <div className="space-y-4">
-                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-white mb-2">Import Supplements (CSV)</h3>
-                    <p className="text-white/70 mb-4">
-                      Upload a CSV file to bulk-import supplements. Not sure about the format? Download the template below.
-                    </p>
-                    <div className="flex gap-2">
-                      <label className="px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-300 font-semibold transition-all cursor-pointer">
-                        Upload CSV
+                {/* Export/Import */}
+                <div className="bg-white/10 backdrop-blur-xl p-6 rounded-2xl border border-white/20">
+                  <h2 className="text-2xl font-bold text-white mb-4">📤 Export/Import</h2>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={handleExportJSON}
+                        className="flex-1 min-w-[140px] px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-300 font-medium transition-all"
+                      >
+                        📋 Export JSON
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="flex-1 min-w-[140px] px-4 py-3 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-medium transition-all"
+                      >
+                        📊 Export CSV
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <label className="flex-1 min-w-[140px] px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-300 font-medium transition-all cursor-pointer text-center">
+                        📥 Import CSV
                         <input
                           type="file"
                           accept=".csv"
@@ -317,37 +327,11 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                       </label>
                       <button
                         onClick={handleDownloadTemplate}
-                        className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all"
+                        className="flex-1 min-w-[140px] px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 rounded-xl text-orange-300 font-medium transition-all"
                       >
-                        Download Template
+                        📝 Download Template
                       </button>
                     </div>
-                  </div>
-
-                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-white mb-2">CSV Export</h3>
-                    <p className="text-white/70 mb-4">
-                      Export supplements as a single CSV file. Perfect for spreadsheet analysis.
-                    </p>
-                    <button
-                      onClick={handleExportCSV}
-                      className="px-6 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-300 font-semibold transition-all"
-                    >
-                      Download CSV
-                    </button>
-                  </div>
-
-                  <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
-                    <h3 className="text-xl font-bold text-white mb-2">JSON Export</h3>
-                    <p className="text-white/70 mb-4">
-                      Export all supplements and logs as JSON. Perfect for backups or data portability.
-                    </p>
-                    <button
-                      onClick={handleExportJSON}
-                      className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-300 font-semibold transition-all"
-                    >
-                      Download JSON
-                    </button>
                   </div>
                 </div>
               </motion.div>

@@ -73,3 +73,8 @@ input, select, textarea {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Safe bottom padding for mobile nav */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
