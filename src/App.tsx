@@ -16,19 +16,22 @@ function App() {
       .then(async ({ data: { session } }) => {
         setAuthenticated(!!session);
 
-        // Initialize offline database if user is logged in (only once)
-        if (session?.user && !offlineInitialized.current) {
-          console.log('🔧 Initializing offline database...');
-          try {
-            await offlineData.init(session.user.id);
-            offlineInitialized.current = true;
-            console.log('✅ Offline database ready');
-          } catch (error) {
-            console.error('Failed to initialize offline database:', error);
-          }
-        }
-
+        // Always set loading to false first - don't block on offline init
         setLoading(false);
+
+        // Initialize offline database in background (non-blocking)
+        if (session?.user && !offlineInitialized.current) {
+          console.log('🔧 Initializing offline database in background...');
+          offlineData.init(session.user.id)
+            .then(() => {
+              offlineInitialized.current = true;
+              console.log('✅ Offline database ready');
+            })
+            .catch((error) => {
+              console.error('Failed to initialize offline database:', error);
+              // App still works, just no offline support
+            });
+        }
       })
       .catch((error) => {
         console.error('Failed to check session:', error);
@@ -39,17 +42,18 @@ function App() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setAuthenticated(!!session);
 
-      // Initialize offline DB when user logs in (only if not already initialized)
+      // Initialize offline DB in background when user logs in
       if (session?.user && !offlineInitialized.current) {
-        try {
-          await offlineData.init(session.user.id);
-          offlineInitialized.current = true;
-        } catch (error) {
-          console.error('Failed to initialize offline database:', error);
-        }
+        offlineData.init(session.user.id)
+          .then(() => {
+            offlineInitialized.current = true;
+          })
+          .catch((error) => {
+            console.error('Failed to initialize offline database:', error);
+          });
       }
 
       // Reset flag on sign out
