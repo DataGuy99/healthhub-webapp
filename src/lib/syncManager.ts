@@ -17,7 +17,9 @@ class SyncManager {
     console.log('🟢 Connection restored');
     this.isOnline = true;
     this.notifyListeners();
-    this.syncAll();
+    this.syncAll().catch(error => {
+      console.error('Auto-sync failed on reconnection:', error);
+    });
   }
 
   private handleOffline() {
@@ -48,8 +50,8 @@ class SyncManager {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return `local_${crypto.randomUUID()}`;
     }
-    // Fallback for older browsers
-    return `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    // Fallback for older browsers (avoid deprecated substr)
+    return `local_${Date.now()}_${Math.random().toString(36).slice(2, 11)}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   // Sync all pending operations

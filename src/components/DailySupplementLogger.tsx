@@ -55,15 +55,19 @@ export function DailySupplementLogger() {
       // Load sections from IndexedDB
       let sectionsData = await offlineData.sections.getAll(user.id);
 
-      // Create default sections if none exist
-      if (!sectionsData || sectionsData.length === 0) {
+      // Create default sections if they don't exist (idempotent)
+      const defaults = ['Morning', 'Afternoon', 'Evening', 'Night'];
+      const existingNames = new Set((sectionsData || []).map(s => s.name));
+      const missingDefaults = defaults.filter(name => !existingNames.has(name));
+
+      if (missingDefaults.length > 0) {
         try {
-          const defaults = ['Morning', 'Afternoon', 'Evening', 'Night'];
-          for (let i = 0; i < defaults.length; i++) {
+          for (const name of missingDefaults) {
+            const order = defaults.indexOf(name);
             await offlineData.sections.create({
               user_id: user.id,
-              name: defaults[i],
-              order: i
+              name: name,
+              order: order
             });
           }
 
