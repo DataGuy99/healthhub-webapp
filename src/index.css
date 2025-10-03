@@ -26,12 +26,16 @@ body {
   min-height: 100vh;
 
   /* Mobile optimizations */
-  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 
   /* Disable pull-to-refresh on Android Chrome */
   overscroll-behavior-y: contain;
+}
+
+/* Prevent auto-zoom on input focus (iOS) - minimum 16px required */
+input, select, textarea {
+  font-size: max(16px, 1rem);
 }
 
 #root {

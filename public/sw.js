@@ -31,7 +31,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event - cache first, fallback to network
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
@@ -50,13 +50,19 @@ self.addEventListener('fetch', (event) => {
       }
 
       return caches.open(RUNTIME_CACHE).then(cache => {
-        return fetch(event.request).then(response => {
-          // Cache successful responses
-          if (response.status === 200) {
-            cache.put(event.request, response.clone());
-          }
-          return response;
-        });
+        return fetch(event.request)
+          .then(response => {
+            // Cache successful responses (2xx or opaque)
+            if (response.ok || response.status === 0) {
+              cache.put(event.request, response.clone())
+                .catch(err => console.warn('Cache put failed:', err));
+            }
+            return response;
+          })
+          .catch(error => {
+            console.error('Fetch failed:', error);
+            throw error;
+          });
       });
     })
   );
