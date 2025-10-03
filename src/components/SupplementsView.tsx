@@ -269,14 +269,17 @@ export function SupplementsView() {
   };
 
   const EditFormComponent = () => (
-    <motion.form
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.3 }}
-      onSubmit={handleSubmit}
-      className="mt-3 p-6 bg-blue-500/10 backdrop-blur-xl rounded-2xl border border-blue-500/30"
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="mt-3"
     >
+      <form
+        onSubmit={handleSubmit}
+        className="p-6 bg-blue-500/10 backdrop-blur-xl rounded-2xl border border-blue-500/30"
+      >
       <h3 className="text-xl font-bold text-white mb-4">
         {editingSupplement ? 'Edit Supplement' : 'New Supplement'}
       </h3>
@@ -470,7 +473,8 @@ export function SupplementsView() {
           Cancel
         </button>
       </div>
-    </motion.form>
+      </form>
+    </motion.div>
   );
 
   const cancelEdit = () => {

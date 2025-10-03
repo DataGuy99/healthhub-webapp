@@ -269,8 +269,8 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
         </header>
 
         {/* Mobile Bottom Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/10 backdrop-blur-xl border-t border-white/20 z-50">
-          <div className="flex justify-around items-center h-16 px-2">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/10 backdrop-blur-xl border-t border-white/20 z-50 safe-bottom">
+          <div className="flex justify-around items-center h-16 px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <button
               onClick={() => setActiveTab('overview')}
               className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
