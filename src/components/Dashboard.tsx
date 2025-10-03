@@ -10,6 +10,8 @@ import { supabase } from '../lib/supabase';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
+  const [librarySubTab, setLibrarySubTab] = useState<'supplements' | 'sections'>('supplements');
+  const [settingsSubTab, setSettingsSubTab] = useState<'costs' | 'export'>('costs');
 
   const handleLogout = async () => {
     await clearAuth();
@@ -230,7 +232,8 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <AnimatedTitle />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+            {/* Desktop Navigation - Hidden on mobile */}
+            <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
               <nav className="flex gap-2 overflow-x-auto">
                 {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
                   <button
@@ -255,11 +258,57 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                 Logout
               </button>
             </div>
+            {/* Mobile Logout - Top right */}
+            <button
+              onClick={handleLogout}
+              className="md:hidden absolute top-4 right-4 px-3 py-1.5 rounded-lg font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
+        {/* Mobile Bottom Navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 z-50">
+          <div className="flex justify-around items-center h-16 px-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'overview'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">📅</span>
+              <span className="text-xs font-medium">Daily</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(librarySubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'supplements' || activeTab === 'sections'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">💊</span>
+              <span className="text-xs font-medium">Library</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(settingsSubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'costs' || activeTab === 'export'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">⚙️</span>
+              <span className="text-xs font-medium">Settings</span>
+            </button>
+          </div>
+        </nav>
+
         {/* Content */}
-        <main className="p-6">
+        <main className="p-4 pb-24 md:pb-6 md:p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
               <DailySupplementLogger />
@@ -270,6 +319,35 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
+                {/* Mobile Sub-tabs for Library */}
+                <div className="md:hidden mb-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLibrarySubTab('supplements');
+                      setActiveTab('supplements');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      librarySubTab === 'supplements'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Supplements
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLibrarySubTab('sections');
+                      setActiveTab('sections');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      librarySubTab === 'sections'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Sections
+                  </button>
+                </div>
                 <SupplementsView />
               </motion.div>
             )}
@@ -279,6 +357,35 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
+                {/* Mobile Sub-tabs for Library */}
+                <div className="md:hidden mb-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLibrarySubTab('supplements');
+                      setActiveTab('supplements');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      librarySubTab === 'supplements'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Supplements
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLibrarySubTab('sections');
+                      setActiveTab('sections');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      librarySubTab === 'sections'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Sections
+                  </button>
+                </div>
                 <SectionsView />
               </motion.div>
             )}
@@ -288,6 +395,35 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
+                {/* Mobile Sub-tabs for Settings */}
+                <div className="md:hidden mb-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSettingsSubTab('costs');
+                      setActiveTab('costs');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      settingsSubTab === 'costs'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Costs
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSettingsSubTab('export');
+                      setActiveTab('export');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      settingsSubTab === 'export'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Export
+                  </button>
+                </div>
                 <CostCalculator />
               </motion.div>
             )}
@@ -298,6 +434,35 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-2xl mx-auto"
               >
+                {/* Mobile Sub-tabs for Settings */}
+                <div className="md:hidden mb-4 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSettingsSubTab('costs');
+                      setActiveTab('costs');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      settingsSubTab === 'costs'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Costs
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSettingsSubTab('export');
+                      setActiveTab('export');
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                      settingsSubTab === 'export'
+                        ? 'bg-violet-500/30 border border-violet-500/40 text-violet-300'
+                        : 'bg-white/10 border border-white/20 text-white/70'
+                    }`}
+                  >
+                    Export
+                  </button>
+                </div>
                 <h2 className="text-3xl font-bold text-white mb-6">Import / Export</h2>
                 <div className="space-y-4">
                   <div className="p-6 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
