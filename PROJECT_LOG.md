@@ -1,341 +1,327 @@
-# PROJECT_LOG.md - HealthHub Analytics
+# HealthHub Web Application - Project Log
+
+## 🔖 STABLE CHECKPOINT
+**Commit**: `0ad70e0` (2025-10-03)
+**Status**: ✅ Working - Mobile optimized with workout mode
+**Fallback Point**: Use this commit if issues arise
+
+---
 
 ## Project Information
-- **Project Name**: HealthHub Analytics (Android)
-- **Created**: 2025-09-29
-- **Location**: /mnt/c/Users/Samuel/Downloads/Projects/healthhub-android
-- **Purpose**: Privacy-first health analytics platform integrating Health Connect data, supplement tracking, and correlation analysis
-- **Status**: Phase 1 - Complete ✅ | Phase 2 - Ready to Start
+- **Project Name**: HealthHub Web App (Supplement Tracker)
+- **Created**: 2025-10-02
+- **Location**: `/mnt/c/Users/Samuel/Downloads/Projects/healthhub` (Windows: `C:\Users\Samuel\Downloads\Projects\healthhub`)
+- **Repository**: https://github.com/DataGuy99/healthhub-webapp
+- **Production URL**: Deployed on Netlify
+- **Tech Stack**: React 18, TypeScript 5, Vite 6, Supabase, TailwindCSS 3, Framer Motion 11
 
-## Core Principles
-✅ **100% Local Data** - All data stays on Android device
-✅ **Zero Cloud Storage** - No external servers or cloud sync
-✅ **Automatic Sync** - Health Connect data updates via WorkManager (15 min intervals)
-✅ **Offline-First** - Works completely without internet
-✅ **Encrypted Storage** - SQLCipher for database encryption
+## Architecture Overview
 
-## Tech Stack
-- **Language**: Kotlin 1.9.22
-- **UI Framework**: Jetpack Compose (Material 3)
-- **Database**: Room 2.6.1 + SQLCipher 4.5.4
-- **Background Tasks**: WorkManager 2.9.0
-- **Health Data**: Health Connect SDK 1.1.0-alpha10
-- **Charts**: MPAndroidChart 3.1.0 or Vico 2.0.0
-- **Analytics**: Apache Commons Math 3.6.1
-- **Architecture**: MVVM + Clean Architecture
+### Frontend Stack
+- **Framework**: React 18.3+ with TypeScript 5.x
+- **Build Tool**: Vite 6.x (HMR, ESM, optimized builds)
+- **Styling**: TailwindCSS 3.x with custom glassmorphism effects
+- **Animations**: Framer Motion 11.x (page transitions, timeline, buttons)
+- **Database (Cloud)**: Supabase PostgreSQL with Row Level Security (RLS)
+- **State Management**: React hooks (useState, useEffect)
+- **Routing**: Single-page app with tab-based navigation
 
-## Architecture Components
+### Backend Stack
+- **Hosted Database**: Supabase (PostgreSQL 15+)
+- **Authentication**: Supabase Auth (email/password)
+- **API Layer**: Supabase JavaScript client (@supabase/supabase-js)
 
-### Data Layer
-- **Room Database**: Local SQLite with encryption
-- **DAOs**: Type-safe database access
-- **Repositories**: Single source of truth
-- **WorkManager**: Background Health Connect sync
+### Development Environment
+- **Container**: Docker Compose (Vite dev server on port 3000)
+- **Node Version**: 22.x LTS
+- **Package Manager**: npm
+- **IDE**: Claude Code
+- **OS**: WSL2 (Ubuntu) on Windows 11
 
-### Domain Layer
-- **Use Cases**: Business logic
-- **Models**: Domain entities
-- **Correlation Engine**: Statistical analysis
+---
 
-### UI Layer
-- **Jetpack Compose**: Modern declarative UI
-- **ViewModels**: UI state management
-- **Navigation**: Type-safe Compose navigation
+## Current Features (as of checkpoint 0ad70e0)
 
-## Data Sources
-1. **Health Connect API**
-   - Heart rate, HRV, blood oxygen
-   - Sleep stages & quality
-   - Steps, distance, calories
-   - Workouts (type, duration, intensity)
-   - Nutrition (calories, macros, micronutrients)
+### 1. Authentication System
+- Email/password login and signup via Supabase Auth
+- Session persistence with localStorage
+- Row Level Security (RLS) ensures users only see their own data
+- Logout functionality
 
-2. **Manual Input**
-   - Supplements (compound, dosage, timing)
-   - Additional notes and observations
+**Files**: `src/lib/auth.ts`, `src/components/LoginView.tsx`, `src/App.tsx`
 
-## Database Schema
+### 2. Supplement Management
+- Create, edit, delete supplements
+- Single or multi-ingredient supplements
+- Support for different forms (capsule, tablet, powder, etc.)
+- Sections for time-based organization (Morning, Afternoon, Evening, Night)
+- Workout supplements (Pre-Workout, Post-Workout)
+- Frequency patterns: everyday, 5/2, workout, custom
+- Active days selection for custom schedules
+- Cost and quantity tracking
+- **Notes field** for additional details
 
-### Core Tables
-```kotlin
-HealthMetric: timestamp, metricType, value, unit, source
-Supplement: name, compounds, pathways, dosage, unit, notes
-SupplementLog: supplementId, timestamp, dosage, timing
-Correlation: metricA, metricB, coefficient, pValue, calculatedAt
-NutritionLog: timestamp, calories, macros, micronutrients
-WorkoutLog: timestamp, type, duration, intensity, avgHR, maxHR
+**Files**: `src/components/SupplementsView.tsx`
+
+**Database Schema** (`supplements` table):
+```sql
+CREATE TABLE supplements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  dose TEXT,
+  dose_unit TEXT,
+  ingredients JSONB,  -- Array of {name, dose, dose_unit}
+  form TEXT,
+  section TEXT,
+  active_days JSONB,  -- [0,1,2,3,4,5,6] for days of week
+  frequency_pattern TEXT DEFAULT 'everyday'
+    CHECK (frequency_pattern IN ('everyday', '5/2', 'workout', 'custom')),
+  is_stack BOOLEAN DEFAULT false,
+  stack_id UUID REFERENCES supplements(id) ON DELETE SET NULL,
+  "order" INTEGER DEFAULT 0,
+  cost DECIMAL(10,2),
+  quantity INTEGER,
+  frequency INTEGER DEFAULT 1,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-## Implementation Phases
+### 3. Daily Supplement Logging
+- Vertical timeline layout grouped by sections
+- Check off supplements as taken
+- Progress bar showing completion percentage
+- Section-level "✓ All" and "✗ None" buttons
+- **Workout Mode** toggle for pre/post-workout supplements
+- **Notes display** below each supplement card
+- Smooth animations with Framer Motion
 
-### ✅ Phase 1: Foundation (Week 1) - COMPLETE
-- [x] Create project directory
-- [x] Initialize Git repository
-- [x] Create PROJECT_LOG.md
-- [x] Set up Android Studio project structure
-- [x] Configure build.gradle.kts with dependencies
-- [x] Create Room database entities (HealthMetric, Supplement, SupplementLog, Correlation)
-- [x] Create Room DAOs (HealthMetricDao, SupplementDao, SupplementLogDao, CorrelationDao)
-- [x] Create Room database with SQLCipher encryption (HealthDatabase.kt)
-- [x] Create TypeConverters for Instant type
-- [x] Set up Health Connect SDK (HealthConnectManager.kt)
-- [x] Create repositories (HealthRepository, SupplementRepository, CorrelationRepository)
-- [x] Configure WorkManager (HealthSyncWorker, WorkManagerSetup)
-- [x] Create Jetpack Compose UI scaffold
-- [x] Create navigation system (AppNavigation.kt)
-- [x] Create 4 main screens (Dashboard, Metrics, Supplements, Correlations)
-- [x] Create Material 3 theme
-- [x] Configure AndroidManifest.xml (no internet permission)
+**Files**: `src/components/DailySupplementLogger.tsx`
 
-### Phase 2: Health Data Pipeline (Week 2)
-- [ ] Health Connect permissions flow
-- [ ] Background data sync (WorkManager)
-- [ ] Historical data import (30 days)
-- [ ] Basic time-series storage
-- [ ] Simple list UI to verify data
+**Database Schema** (`supplement_logs` table):
+```sql
+CREATE TABLE supplement_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  supplement_id UUID NOT NULL REFERENCES supplements(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  is_taken BOOLEAN DEFAULT false,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, supplement_id, date)
+);
+```
 
-### Phase 3: Supplement System (Week 3)
-- [ ] Supplement database design
-- [ ] CRUD operations for supplements
-- [ ] Daily supplement logging UI
-- [ ] Interaction checker (local rules)
-- [ ] Pathway data structure
+### 4. Section Management
+- Create, edit, delete custom time sections
+- Drag-and-drop reordering
+- Default sections: Morning, Afternoon, Evening, Night
+- Workout sections: Pre-Workout, Post-Workout
 
-### Phase 4: Analytics Engine (Week 4)
-- [ ] Correlation calculation engine
-- [ ] Lag analysis implementation
-- [ ] Statistical significance testing
-- [ ] Correlation heatmap visualization
+**Files**: `src/components/SectionsView.tsx`
 
-### Phase 5: Dashboard & Charts (Week 5)
-- [ ] Main dashboard UI
-- [ ] Time-series charts (MPAndroidChart)
-- [ ] Correlation explorer
-- [ ] Filters and date ranges
-- [ ] Export/import functionality
+**Database Schema** (`supplement_sections` table):
+```sql
+CREATE TABLE supplement_sections (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-## Key Features
+### 5. Cost Calculator
+- Monthly cost projection based on:
+  - Everyday supplements: daily cost × 30
+  - 5/2 supplements: daily cost × (5/7) × 30
+  - Workout supplements: daily cost × (3.5/7) × 30 (assumes 3-4 workouts/week)
+  - Custom schedules: calculated based on active days
+- Total monthly cost summary
 
-### Automatic Background Sync
-- WorkManager polls Health Connect every 15 minutes
-- Battery-optimized scheduling
-- Foreground service notification (Android requirement)
-- Incremental sync (only new data)
+**Files**: `src/components/CostCalculator.tsx`
 
-### Privacy & Security
-- SQLCipher encryption for database
-- Biometric lock for app access
-- No network permissions (offline-only)
-- No analytics or telemetry
-- Manual backup to encrypted file
+### 6. Import/Export
+- **CSV Import**: Bulk import supplements with template
+- **CSV Export**: Download all supplements as CSV
+- **JSON Export**: Download all data (supplements + logs)
+- Formula injection protection
+- Section validation on import
 
-### Analytics Capabilities
-- Pearson correlation (continuous metrics)
-- Spearman correlation (ranked data)
-- Lag analysis (1h, 6h, 24h, 7d)
-- P-value significance testing
-- Time-series trend analysis
+**Files**: `src/components/Dashboard.tsx` (export section)
+
+### 7. Mobile Optimization
+- **Bottom Navigation Bar** (< 768px screens):
+  - 📅 Daily - Daily supplement logger
+  - 💊 Library - Supplements and Sections (sub-tabs)
+  - ⚙️ Settings - Costs and Export (sub-tabs)
+  - Transparent glassmorphism design matching cards
+- **Desktop Navigation** (≥ 768px screens):
+  - Top navigation with 5 tabs: Overview, Supplements, Sections, Costs, Export
+- Logout button in top-right on mobile, top navigation on desktop
+- Touch-optimized interactions
+- Bottom padding to prevent content hiding behind nav
+
+**Files**: `src/components/Dashboard.tsx`
+
+### 8. Animated Title
+- Cycling fonts and styles
+- Emoji slot machine animation
+- Split-flap letter transitions
+- **Memory leak fixed** with proper interval cleanup
+
+**Files**: `src/components/AnimatedTitle.tsx`
+
+### 9. Visual Design
+- Time-based gradient background (FluidBackground)
+- Glassmorphism cards with backdrop blur
+- Smooth transitions and animations
+- Responsive design (mobile-first)
+
+**Files**: `src/components/FluidBackground.tsx`, `src/index.css`
+
+---
+
+## Environment Variables
+
+Required in Netlify (Site configuration → Environment variables):
+
+```bash
+VITE_SUPABASE_URL=https://clxocppshubwtbloefsv.supabase.co
+VITE_SUPABASE_ANON_KEY=[your-anon-key]
+```
+
+See `.env.example` for template.
+
+---
+
+## Deployment
+
+### Netlify Configuration
+**File**: `netlify.toml`
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+### Build Command
+```bash
+npm run build  # Runs: tsc && vite build
+```
+
+---
+
+## Key Fixes and Improvements
+
+### Recent Changes (Oct 2-3, 2025)
+1. **Service Worker Removal**: Removed PWA service worker causing loading hangs
+2. **Version-based Cache Busting**: Auto-clears old caches when version changes
+3. **AnimatedTitle Memory Leak**: Fixed interval cleanup with useRef
+4. **Mobile Navigation**: Added 3-tab bottom nav with sub-tabs
+5. **Workout Mode**: Toggle for pre/post-workout supplements
+6. **Notes Display**: Show supplement notes on daily logger cards
+7. **Transparent Nav**: Mobile nav bar matches glassmorphism design
+
+### Known Issues
+- None at checkpoint 0ad70e0
+
+---
 
 ## File Structure
-```
-healthhub-android/
-├── app/
-│   ├── src/main/
-│   │   ├── java/com/healthhub/
-│   │   │   ├── data/
-│   │   │   │   ├── database/
-│   │   │   │   │   ├── HealthDatabase.kt
-│   │   │   │   │   ├── dao/
-│   │   │   │   │   └── entities/
-│   │   │   │   ├── repository/
-│   │   │   │   └── worker/
-│   │   │   ├── domain/
-│   │   │   │   ├── model/
-│   │   │   │   └── usecase/
-│   │   │   ├── ui/
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── supplements/
-│   │   │   │   ├── analytics/
-│   │   │   │   └── theme/
-│   │   │   └── utils/
-│   │   ├── res/
-│   │   └── AndroidManifest.xml
-│   ├── build.gradle.kts
-│   └── proguard-rules.pro
-├── gradle/
-├── build.gradle.kts
-├── settings.gradle.kts
-├── .gitignore
-└── PROJECT_LOG.md
-```
 
-## Dependencies (Key Libraries)
 ```
-Jetpack Compose: 2024.12.01
-Material 3: 1.3.1
-Room: 2.6.1
-SQLCipher: 4.5.4
-Health Connect: 1.1.0-alpha10
-WorkManager: 2.9.0
-MPAndroidChart: 3.1.0
-Commons Math: 3.6.1
-Kotlinx Coroutines: 1.8.0
+healthhub/
+├── src/
+│   ├── components/
+│   │   ├── AnimatedTitle.tsx          # Animated header
+│   │   ├── CostCalculator.tsx         # Monthly cost projections
+│   │   ├── DailySupplementLogger.tsx  # Daily tracker with workout mode
+│   │   ├── Dashboard.tsx              # Main app with navigation
+│   │   ├── FluidBackground.tsx        # Animated gradient background
+│   │   ├── LoginView.tsx              # Auth login/signup
+│   │   ├── SectionsView.tsx           # Section management
+│   │   └── SupplementsView.tsx        # Supplement CRUD
+│   ├── lib/
+│   │   ├── auth.ts                    # Supabase auth helpers
+│   │   └── supabase.ts                # Supabase client + types
+│   ├── App.tsx                        # App wrapper with auth check
+│   ├── main.tsx                       # React entry point
+│   └── index.css                      # Global styles + Tailwind
+├── public/                            # Static assets (empty after PWA removal)
+├── .env                               # Local environment variables (gitignored)
+├── .env.example                       # Environment template
+├── docker-compose.yml                 # Docker dev environment
+├── Dockerfile                         # Docker image
+├── index.html                         # HTML entry with cache clearing script
+├── netlify.toml                       # Netlify config
+├── package.json                       # Dependencies
+├── PROJECT_LOG.md                     # This file
+├── tsconfig.json                      # TypeScript config
+└── vite.config.ts                     # Vite config
 ```
 
-## Development Environment
-- **IDE**: Android Studio Hedgehog | 2023.1.1+
-- **Min SDK**: 28 (Android 9.0)
-- **Target SDK**: 34 (Android 14)
-- **Compile SDK**: 34
-- **JVM Target**: 17
+---
 
-## Health Connect Export APK Build Process
+## Development Workflow
 
-### Building the APK
+### Local Development (Docker)
 ```bash
-cd /tmp/HealthConnectExports
-./gradlew clean --no-daemon
-./gradlew assembleRelease --no-daemon
-# APK location: app/build/outputs/apk/release/app-release-unsigned.apk
+docker-compose up -d
+# App runs on http://localhost:3000
 ```
 
-### Signing the APK (Requires Android SDK)
-**Note**: `apksigner` and `zipalign` are not available in WSL. Must use Windows Android SDK.
-
+### Git Workflow
 ```bash
-# On Windows with Android SDK installed:
-# 1. Locate build-tools (e.g., C:\Users\Samuel\AppData\Local\Android\Sdk\build-tools\34.0.0\)
-# 2. Align the APK:
-zipalign -v -p 4 app-release-unsigned.apk app-release-aligned.apk
-
-# 3. Sign the APK:
-apksigner sign --ks my-release-key.jks --ks-pass pass:password123 --out app-release-signed.apk app-release-aligned.apk
-
-# 4. Verify signature:
-apksigner verify app-release-signed.apk
+git add -A
+git commit -m "description"
+git push  # Auto-deploys to Netlify
 ```
 
-**Alternative**: Install unsigned APK directly for testing (Android will prompt for install confirmation)
+### Database Changes
+1. Update schema in Supabase dashboard
+2. Update TypeScript interfaces in `src/lib/supabase.ts`
+3. Test locally
+4. Deploy
 
-### Health Connect Permissions Added
-- Steps, Sleep, Heart Rate (original)
-- Active Calories, Total Calories (original)
-- **NEW**: Oxygen Saturation, Weight, Body Fat
-- **NEW**: HRV (RMSSD), Respiratory Rate, Resting HR
-- **NEW**: Nutrition, Exercise (permissions only, data extraction TBD)
+---
 
-### Code Improvements (2025-10-01)
-- ✅ Removed binary artifacts from git (apk_contents/)
-- ✅ Refactored to concurrent async/await (5x performance improvement)
-- ✅ Added error handling to prevent worker crashes
-- ✅ Removed runBlocking (already in suspend context)
-- ✅ CodeRabbit approved (only minor suggestion about null vs 0)
+## Future Enhancements (Not Yet Implemented)
 
-## Netlify Deployment (2025-10-01)
+### Potential Features
+- Offline-first sync with IndexedDB (reverted for stability)
+- Health data import from Android Health Connect
+- Correlation analysis between supplements and metrics
+- AI suggestions based on patterns
+- Dark mode toggle
+- Multiple supplement stacks
+- Reminder notifications
+- Social sharing/export
 
-### Serverless Function Setup
-- Created `netlify.toml` with build config and redirects
-- Created `/netlify/functions/health-export.js` serverless function
-- Function accepts POST requests at `/api/health-export`
-- Logs received Health Connect data (no database storage yet)
-- Returns success response with timestamp
-
-### GitHub Repository
-- Pushed to: https://github.com/DataGuy99/healthhub-webapp
-- Contains: React webapp + Netlify serverless function
-- Ready for Netlify deployment via web interface
-
-### Security Fixes (2025-10-01)
-- ✅ Added input validation (body exists, 1MB size limit, structure check)
-- ✅ Restricted CORS to specific origin (env var configurable)
-- ✅ Added CORS preflight handling (OPTIONS requests)
-- ✅ Removed sensitive data echo from response
-- ✅ Generic error messages (no implementation details)
-- ✅ Kept health data logging (personal use, user owns data)
-
-### Cross-Device Sync Implementation (v0.8.0)
-- ✅ Backend Express API server (server/server.js)
-- ✅ SQLite database with better-sqlite3
-- ✅ bcrypt password hashing (salt rounds: 10)
-- ✅ Rate limiting for auth endpoints (100 requests/15min)
-- ✅ Input validation (batch size, data types, string lengths)
-- ✅ Unique constraints on supplement_logs table
-- ✅ Offline sync queue with background sync (60s interval)
-- ✅ Dark vertical timeline UI (slate-900/800/700)
-- ✅ Mobile responsive design (Tailwind breakpoints)
-- ✅ Removed "Unsorted" section requirement
-- ✅ Login/logout with passcode authentication
-- ✅ Data loss prevention (check unsynced before download)
-- ✅ Duplicate prevention (check server before create/update)
-
-### CodeRabbit Security Fixes (v0.8.0)
-1. ✅ Added input validation and batch size limits (1000 items)
-2. ✅ Fixed downloadAllData data loss risk - uploads unsynced changes first
-3. ✅ Implemented bcrypt password hashing - separate registration endpoint
-4. ✅ Fixed uploadAllData duplicates - fetches server data to detect existing items
-5. ✅ Added unique constraint to supplement_logs (user_id, supplement_id, date)
-6. ✅ Fixed LoginView button re-enable during error timeout
-7. ✅ Fixed incomplete supplement update - added isStack and stackId fields
-
-### Backend Server Dependencies
-```json
-{
-  "express": "^4.18.2",
-  "cors": "^2.8.5",
-  "better-sqlite3": "^9.2.2",
-  "bcrypt": "^5.1.1",
-  "express-rate-limit": "^7.1.5"
-}
-```
-
-### API Endpoints
-- `POST /api/auth/register` - Register new user with hashed passcode
-- `POST /api/auth/verify` - Verify user credentials
-- `GET /api/data/all` - Download all user data (supplements, logs, sections)
-- `POST /api/sync` - Upload sync queue items (create/update/delete)
-
-### Deployment to Netlify
-**Deployment Method**: Push to GitHub - Netlify auto-deploys via integration
-
-1. **GitHub Repository**: https://github.com/DataGuy99/healthhub-webapp
-2. **Netlify Setup**: Connected to GitHub repo (auto-deploy on push)
-3. **Build Settings**:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-   - Node version: 22.x
-4. **Environment Variables** (set in Netlify dashboard):
-   - Any required production URLs or API keys
-
-**Backend Server**: Requires separate deployment (not Netlify - needs persistent process for Express API)
-
-### Next Steps
-- [ ] Push latest changes to GitHub (triggers Netlify auto-deploy)
-- [ ] Deploy backend Express server separately (port 3001)
-- [ ] Update Android app with production backend endpoint URL
-- [ ] Test health data export from phone
-- [ ] Test cross-device sync with same credentials
+---
 
 ## Version History
-- **v0.1.0** (2025-09-29): Project initialization, planning phase complete
-- **v0.2.0** (2025-09-29): Phase 1 foundation complete - database layer, repositories, WorkManager, UI scaffold (33 files)
-- **v0.3.0** (2025-09-30): UI polish - beautiful animations, pull-to-refresh, shimmer effects, haptic feedback (9 new components)
-- **v0.4.0** (2025-10-01): Health Connect export app - Added 8 new health metrics, async/await refactor, CodeRabbit approved
-- **v0.5.0** (2025-10-01): Netlify serverless function added - health data webhook endpoint ready for deployment
-- **v0.5.1** (2025-10-01): Security fixes - input validation, CORS restrictions, removed data echo, generic errors
-- **v0.6.0** (2025-10-01): Added Nutrition and Exercise data extraction - 15 total metrics now exported, tested successfully
-- **v0.7.0** (2025-10-01): Webapp complete - Ambient fluid background, auto-sync from Netlify Blobs, all 15 metrics displayed, CodeRabbit approved
-- **v0.8.0** (2025-10-02): Cross-device sync complete - Backend Express API, bcrypt auth, offline sync queue, dark timeline UI, all security issues fixed
 
-## Notes
-- Health Connect requires Android 9+ (API 28)
-- Background reads require Android 15+ (API 35) for best experience
-- SQLCipher adds ~7MB to APK size (acceptable for security)
-- WorkManager minimum interval is 15 minutes (Android limitation)
-- No Google Play Services required (Health Connect is part of Android)
+- **v2.0.0** (Oct 3, 2025) - Mobile optimization with bottom nav + workout mode ✅ CHECKPOINT
+- **v1.0.0** (Oct 2, 2025) - Initial online-only version with all core features
+- **v0.9.0** (Oct 2, 2025) - PWA features (reverted due to loading issues)
+- **v0.8.0** (Oct 2, 2025) - Supabase integration complete
 
-## Future Enhancements (Post-MVP)
-- [ ] TensorFlow Lite for on-device ML predictions
-- [ ] Optional local web server (Ktor) for tablet access
-- [ ] Export to FHIR format
-- [ ] Supplement interaction warnings via local rule engine
-- [ ] Integration with supplement pathway databases (KEGG, Reactome)
+---
+
+## Support & Documentation
+
+- **GitHub Issues**: Report bugs at repository issues page
+- **Supabase Docs**: https://supabase.com/docs
+- **Vite Docs**: https://vitejs.dev
+- **React Docs**: https://react.dev
+
+---
+
+**Last Updated**: 2025-10-03
+**Stable Checkpoint**: `0ad70e0`
