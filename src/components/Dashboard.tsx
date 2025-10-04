@@ -225,9 +225,48 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
 
   return (
     <div className="min-h-screen h-screen md:h-auto overflow-hidden md:overflow-visible relative">
+      {/* Mobile Bottom Navigation - Outside flex container */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/10 backdrop-blur-xl border-t border-white/20 z-50 safe-bottom">
+        <div className="flex justify-around items-center h-16 px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'overview'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">📅</span>
+              <span className="text-xs font-medium">Daily</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(librarySubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'supplements' || activeTab === 'sections'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">💊</span>
+              <span className="text-xs font-medium">Library</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(settingsSubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'costs' || activeTab === 'export'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">⚙️</span>
+              <span className="text-xs font-medium">Settings</span>
+            </button>
+          </div>
+      </nav>
+
       <div className="relative z-10 h-full md:min-h-screen flex flex-col">
         {/* Header */}
-        <header className="p-4 sm:p-6">
+        <header className="p-4 sm:p-6 flex-shrink-0">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <AnimatedTitle />
@@ -267,45 +306,6 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
             </button>
           </div>
         </header>
-
-        {/* Mobile Bottom Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/10 backdrop-blur-xl border-t border-white/20 z-50 safe-bottom">
-          <div className="flex justify-around items-center h-16 px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-                activeTab === 'overview'
-                  ? 'text-violet-400'
-                  : 'text-white/60'
-              }`}
-            >
-              <span className="text-2xl">📅</span>
-              <span className="text-xs font-medium">Daily</span>
-            </button>
-            <button
-              onClick={() => setActiveTab(librarySubTab)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-                activeTab === 'supplements' || activeTab === 'sections'
-                  ? 'text-violet-400'
-                  : 'text-white/60'
-              }`}
-            >
-              <span className="text-2xl">💊</span>
-              <span className="text-xs font-medium">Library</span>
-            </button>
-            <button
-              onClick={() => setActiveTab(settingsSubTab)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-                activeTab === 'costs' || activeTab === 'export'
-                  ? 'text-violet-400'
-                  : 'text-white/60'
-              }`}
-            >
-              <span className="text-2xl">⚙️</span>
-              <span className="text-xs font-medium">Settings</span>
-            </button>
-          </div>
-        </nav>
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto md:overflow-visible p-4 pb-24 md:pb-6 md:p-6">
