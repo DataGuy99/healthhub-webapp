@@ -8,22 +8,18 @@ interface MobileNavProps {
 export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTab }: MobileNavProps) {
   return (
     <div
-      className="md:hidden"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-[9999]"
       style={{
         position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(255, 0, 0, 0.3)' // DEBUG: Red tint to see navbar
+        willChange: 'transform',
+        transform: 'translateZ(0)',
       }}
     >
       <nav className="bg-white/10 backdrop-blur-xl border-t border-white/20">
-        {/* DEBUG INFO */}
-        <div style={{ fontSize: '10px', color: 'yellow', textAlign: 'center', padding: '2px' }}>
-          NAVBAR - Fixed Bottom (Check if you see this at bottom of screen)
-        </div>
-        <div className="flex justify-around items-center h-16 px-2">
+        <div
+          className="flex justify-around items-center h-16 px-2"
+          style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+        >
           <button
             onClick={() => onTabChange('overview')}
             aria-label="Daily overview"
