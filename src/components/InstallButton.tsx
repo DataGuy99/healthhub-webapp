@@ -12,41 +12,60 @@ export function InstallButton() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Check if already installed (running as standalone)
-    const checkStandalone = () => {
-      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
-                               (window.navigator as any).standalone ||
-                               document.referrer.includes('android-app://');
-      setIsStandalone(isStandaloneMode);
-    };
+    try {
+      // Check if already installed (running as standalone)
+      const checkStandalone = () => {
+        try {
+          const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+                                   (window.navigator as any).standalone ||
+                                   document.referrer.includes('android-app://');
+          setIsStandalone(isStandaloneMode);
+        } catch (err) {
+          console.error('Error checking standalone mode:', err);
+          setIsStandalone(false);
+        }
+      };
 
-    checkStandalone();
+      checkStandalone();
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
+      const handler = (e: Event) => {
+        try {
+          e.preventDefault();
+          setDeferredPrompt(e as BeforeInstallPromptEvent);
+        } catch (err) {
+          console.error('Error handling beforeinstallprompt:', err);
+        }
+      };
 
-    window.addEventListener('beforeinstallprompt', handler);
+      window.addEventListener('beforeinstallprompt', handler);
 
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handler);
+      };
+    } catch (err) {
+      console.error('Error in InstallButton setup:', err);
+    }
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      // Chrome/Edge
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    try {
+      if (deferredPrompt) {
+        // Chrome/Edge
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
 
-      if (outcome === 'accepted') {
-        console.log('PWA installed');
+        if (outcome === 'accepted') {
+          console.log('PWA installed');
+        }
+
+        setDeferredPrompt(null);
+      } else {
+        // Firefox or other browsers - show instructions
+        setShowInstallModal(true);
       }
-
-      setDeferredPrompt(null);
-    } else {
-      // Firefox or other browsers - show instructions
+    } catch (err) {
+      console.error('Error during install:', err);
+      // Fallback to showing instructions modal
       setShowInstallModal(true);
     }
   };

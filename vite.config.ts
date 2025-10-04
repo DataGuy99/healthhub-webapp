@@ -59,7 +59,7 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false // Disable in dev to prevent Firefox crashes
       }
     })
   ],
