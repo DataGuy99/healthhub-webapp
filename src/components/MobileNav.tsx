@@ -1,5 +1,5 @@
 interface MobileNavProps {
-  activeTab: string;
+  activeTab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export';
   onTabChange: (tab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export') => void;
   librarySubTab: 'supplements' | 'sections';
   settingsSubTab: 'costs' | 'export';
@@ -21,6 +21,8 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
         <div className="flex justify-around items-center h-16 px-2">
           <button
             onClick={() => onTabChange('overview')}
+            aria-label="Daily overview"
+            aria-current={activeTab === 'overview' ? 'page' : undefined}
             className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
               activeTab === 'overview'
                 ? 'text-violet-400'
@@ -32,6 +34,8 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
           </button>
           <button
             onClick={() => onTabChange(librarySubTab)}
+            aria-label="Library"
+            aria-current={activeTab === 'supplements' || activeTab === 'sections' ? 'page' : undefined}
             className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
               activeTab === 'supplements' || activeTab === 'sections'
                 ? 'text-violet-400'
@@ -43,6 +47,8 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
           </button>
           <button
             onClick={() => onTabChange(settingsSubTab)}
+            aria-label="Settings"
+            aria-current={activeTab === 'costs' || activeTab === 'export' ? 'page' : undefined}
             className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
               activeTab === 'costs' || activeTab === 'export'
                 ? 'text-violet-400'
