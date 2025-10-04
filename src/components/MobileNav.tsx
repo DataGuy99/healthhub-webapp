@@ -14,10 +14,15 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 9999
+        zIndex: 9999,
+        backgroundColor: 'rgba(255, 0, 0, 0.3)' // DEBUG: Red tint to see navbar
       }}
     >
       <nav className="bg-white/10 backdrop-blur-xl border-t border-white/20">
+        {/* DEBUG INFO */}
+        <div style={{ fontSize: '10px', color: 'yellow', textAlign: 'center', padding: '2px' }}>
+          NAVBAR - Fixed Bottom (Check if you see this at bottom of screen)
+        </div>
         <div className="flex justify-around items-center h-16 px-2">
           <button
             onClick={() => onTabChange('overview')}

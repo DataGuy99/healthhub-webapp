@@ -59,11 +59,11 @@ button, a {
   -webkit-overflow-scrolling: auto;
 }
 
-/* Force GPU acceleration for smooth scrolling */
-body {
+/* Force GPU acceleration for smooth scrolling - REMOVED: breaks position:fixed */
+/* body {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-}
+} */
 
 /* Ensure fixed positioning works on mobile */
 .fixed {
