@@ -3,6 +3,7 @@ import { Dashboard } from './components/Dashboard';
 import { FluidBackground } from './components/FluidBackground';
 import { LoginView } from './components/LoginView';
 import { MobileNav } from './components/MobileNav';
+import { InstallPrompt } from './components/InstallPrompt';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -64,12 +65,15 @@ function App() {
         )}
       </div>
       {authenticated && (
-        <MobileNav
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          librarySubTab={librarySubTab}
-          settingsSubTab={settingsSubTab}
-        />
+        <>
+          <MobileNav
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            librarySubTab={librarySubTab}
+            settingsSubTab={settingsSubTab}
+          />
+          <InstallPrompt />
+        </>
       )}
     </>
   );
