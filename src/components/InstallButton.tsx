@@ -65,7 +65,7 @@ export function InstallButton() {
     <>
       <button
         onClick={handleInstall}
-        className="md:hidden absolute top-4 right-20 px-3 py-1.5 rounded-lg font-medium transition-all duration-300 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm"
+        className="md:hidden absolute top-4 right-24 px-3 py-1.5 rounded-lg font-medium transition-all duration-300 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm"
       >
         Install
       </button>
