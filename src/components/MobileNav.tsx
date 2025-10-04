@@ -1,0 +1,59 @@
+interface MobileNavProps {
+  activeTab: string;
+  onTabChange: (tab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export') => void;
+  librarySubTab: 'supplements' | 'sections';
+  settingsSubTab: 'costs' | 'export';
+}
+
+export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTab }: MobileNavProps) {
+  return (
+    <div
+      className="md:hidden"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999
+      }}
+    >
+      <nav className="bg-white/10 backdrop-blur-xl border-t border-white/20">
+        <div className="flex justify-around items-center h-16 px-2">
+          <button
+            onClick={() => onTabChange('overview')}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+              activeTab === 'overview'
+                ? 'text-violet-400'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-2xl">📅</span>
+            <span className="text-xs font-medium">Daily</span>
+          </button>
+          <button
+            onClick={() => onTabChange(librarySubTab)}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+              activeTab === 'supplements' || activeTab === 'sections'
+                ? 'text-violet-400'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-2xl">💊</span>
+            <span className="text-xs font-medium">Library</span>
+          </button>
+          <button
+            onClick={() => onTabChange(settingsSubTab)}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+              activeTab === 'costs' || activeTab === 'export'
+                ? 'text-violet-400'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-2xl">⚙️</span>
+            <span className="text-xs font-medium">Settings</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}

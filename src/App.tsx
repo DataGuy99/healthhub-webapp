@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { FluidBackground } from './components/FluidBackground';
 import { LoginView } from './components/LoginView';
+import { MobileNav } from './components/MobileNav';
 import { supabase } from './lib/supabase';
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
+  const [librarySubTab, setLibrarySubTab] = useState<'supplements' | 'sections'>('supplements');
+  const [settingsSubTab, setSettingsSubTab] = useState<'costs' | 'export'>('costs');
 
   useEffect(() => {
     // Check current session
@@ -46,8 +50,27 @@ function App() {
     <div className="relative min-h-screen">
       <FluidBackground />
       <div className="relative z-10">
-        {authenticated ? <Dashboard /> : <LoginView onLogin={() => {}} />}
+        {authenticated ? (
+          <Dashboard
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            librarySubTab={librarySubTab}
+            setLibrarySubTab={setLibrarySubTab}
+            settingsSubTab={settingsSubTab}
+            setSettingsSubTab={setSettingsSubTab}
+          />
+        ) : (
+          <LoginView onLogin={() => {}} />
+        )}
       </div>
+      {authenticated && (
+        <MobileNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          librarySubTab={librarySubTab}
+          settingsSubTab={settingsSubTab}
+        />
+      )}
     </div>
   );
 }
