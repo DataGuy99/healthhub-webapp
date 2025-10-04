@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HealthHub Icon Generator</title>
+</head>
+<body>
+  <h1>HealthHub PWA Icon Generator</h1>
+  <p>Right-click each canvas and "Save image as..." to download the icon.</p>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+
+    sizes.forEach(size => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient (purple theme)
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#8b5cf6');
+      gradient.addColorStop(1, '#6366f1');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Draw pill/capsule icon
+      ctx.fillStyle = 'white';
+      const pillWidth = size * 0.5;
+      const pillHeight = size * 0.7;
+      const x = (size - pillWidth) / 2;
+      const y = (size - pillHeight) / 2;
+      const radius = pillWidth / 2;
+
+      // Rounded rectangle (pill shape)
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + pillWidth - radius, y);
+      ctx.arc(x + pillWidth - radius, y + radius, radius, -Math.PI/2, Math.PI/2);
+      ctx.lineTo(x + radius, y + pillHeight);
+      ctx.arc(x + radius, y + pillHeight - radius, radius, Math.PI/2, -Math.PI/2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add dividing line
+      ctx.strokeStyle = '#8b5cf6';
+      ctx.lineWidth = size * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(x, y + pillHeight / 2);
+      ctx.lineTo(x + pillWidth, y + pillHeight / 2);
+      ctx.stroke();
+
+      // Add small dot
+      ctx.fillStyle = '#8b5cf6';
+      ctx.beginPath();
+      ctx.arc(x + pillWidth/2, y + pillHeight/4, size * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+
+      const container = document.createElement('div');
+      container.style.margin = '20px';
+      container.innerHTML = `<h3>icon-${size}x${size}.png</h3>`;
+      container.appendChild(canvas);
+      document.body.appendChild(container);
+    });
+
+    // Create maskable icon (512x512 with safe zone)
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+    gradient.addColorStop(0, '#8b5cf6');
+    gradient.addColorStop(1, '#6366f1');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Draw pill in safe zone (80% of canvas)
+    ctx.fillStyle = 'white';
+    const pillWidth = 512 * 0.4;
+    const pillHeight = 512 * 0.56;
+    const x = (512 - pillWidth) / 2;
+    const y = (512 - pillHeight) / 2;
+    const radius = pillWidth / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + pillWidth - radius, y);
+    ctx.arc(x + pillWidth - radius, y + radius, radius, -Math.PI/2, Math.PI/2);
+    ctx.lineTo(x + radius, y + pillHeight);
+    ctx.arc(x + radius, y + pillHeight - radius, radius, Math.PI/2, -Math.PI/2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 25;
+    ctx.beginPath();
+    ctx.moveTo(x, y + pillHeight / 2);
+    ctx.lineTo(x + pillWidth, y + pillHeight / 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8b5cf6';
+    ctx.beginPath();
+    ctx.arc(x + pillWidth/2, y + pillHeight/4, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    const container = document.createElement('div');
+    container.style.margin = '20px';
+    container.innerHTML = '<h3>icon-512x512-maskable.png</h3>';
+    container.appendChild(canvas);
+    document.body.appendChild(container);
+  </script>
+</body>
+</html>
