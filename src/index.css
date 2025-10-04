@@ -31,13 +31,13 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
-  position: relative;
+  /* position: relative; - REMOVED: breaks position:fixed for navbar */
 }
 
-/* Performance optimizations */
+/* Performance optimizations - REMOVED transform: breaks position:fixed */
 .backdrop-blur-xl {
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  /* transform: translateZ(0);
+  -webkit-transform: translateZ(0); */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
