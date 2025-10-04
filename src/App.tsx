@@ -47,9 +47,9 @@ function App() {
   }
 
   return (
-    <div className="relative min-h-screen">
+    <>
       <FluidBackground />
-      <div className="relative z-10">
+      <div className="relative z-10 min-h-screen">
         {authenticated ? (
           <Dashboard
             activeTab={activeTab}
@@ -71,7 +71,7 @@ function App() {
           settingsSubTab={settingsSubTab}
         />
       )}
-    </div>
+    </>
   );
 }
 
