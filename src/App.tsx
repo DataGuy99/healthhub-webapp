@@ -43,9 +43,9 @@ function App() {
   }
 
   return (
-    <div className="relative h-screen md:h-auto overflow-hidden md:overflow-visible">
+    <div className="relative min-h-screen">
       <FluidBackground />
-      <div className="relative z-10 h-full">
+      <div className="relative z-10">
         {authenticated ? <Dashboard /> : <LoginView onLogin={() => {}} />}
       </div>
     </div>

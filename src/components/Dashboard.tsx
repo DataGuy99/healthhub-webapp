@@ -224,9 +224,9 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
   };
 
   return (
-    <div className="h-full md:min-h-screen flex flex-col">
+    <div className="min-h-screen md:min-h-0">
       {/* Header */}
-      <header className="p-4 sm:p-6 flex-shrink-0">
+      <header className="p-4 sm:p-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <AnimatedTitle />
@@ -268,7 +268,7 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto md:overflow-visible p-4 pb-24 md:pb-6 md:p-6">
+      <main className="p-4 pb-24 md:pb-6 md:p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
               <DailySupplementLogger />
@@ -481,7 +481,7 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
         </main>
 
       {/* Mobile Bottom Navigation - Fixed to viewport */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/10 backdrop-blur-xl border-t border-white/20 z-[100] safe-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/10 backdrop-blur-xl border-t border-white/20 z-[9999]" style={{ position: 'fixed' }}>
         <div className="flex justify-around items-center h-16 px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <button
             onClick={() => setActiveTab('overview')}
