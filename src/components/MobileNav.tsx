@@ -7,7 +7,13 @@ interface MobileNavProps {
 
 export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTab }: MobileNavProps) {
   return (
-    <div className="md:hidden mobile-nav-fixed z-[9999]">
+    <div
+      className="md:hidden mobile-nav-fixed z-[9999]"
+      style={{
+        // Use max() to handle Safari's dynamic viewport
+        bottom: 'max(0px, env(safe-area-inset-bottom, 0px))',
+      }}
+    >
       <nav className="bg-white/10 backdrop-blur-xl border-t border-white/20">
         <div
           className="flex justify-around items-center h-16 px-2"

@@ -74,6 +74,18 @@ button, a {
 
 /* Mobile navbar - absolutely no movement during scroll */
 @media (max-width: 768px) {
+  html {
+    /* Prevent address bar from affecting layout */
+    overflow: auto;
+    height: 100%;
+  }
+
+  body {
+    /* Fixed height prevents jump when address bar hides */
+    height: 100dvh; /* Dynamic viewport height */
+    overflow: auto;
+  }
+
   .mobile-nav-fixed {
     position: fixed !important;
     bottom: 0 !important;
@@ -83,5 +95,7 @@ button, a {
     /* Force compositor layer without breaking position:fixed */
     -webkit-transform: translateZ(0) !important;
     transform: translateZ(0) !important;
+    /* Disable pointer events on navbar during scroll to prevent jitter */
+    pointer-events: auto !important;
   }
 }
