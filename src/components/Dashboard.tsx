@@ -224,51 +224,52 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
   };
 
   return (
-    <div className="min-h-screen md:min-h-0">
-      {/* Header */}
-      <header className="p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-              <AnimatedTitle />
-            </div>
-            {/* Desktop Navigation - Hidden on mobile */}
-            <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
-              <nav className="flex gap-2 overflow-x-auto">
-                {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`
-                      px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 whitespace-nowrap text-sm sm:text-base
-                      ${activeTab === tab
-                        ? 'bg-white/30 backdrop-blur-xl border border-white/40 text-white shadow-lg'
-                        : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:bg-white/20'
-                      }
-                    `}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
-              </nav>
+    <>
+      <div className="min-h-screen pb-20 md:pb-0 md:min-h-0">
+        {/* Header */}
+        <header className="p-4 sm:p-6">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <AnimatedTitle />
+              </div>
+              {/* Desktop Navigation - Hidden on mobile */}
+              <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+                <nav className="flex gap-2 overflow-x-auto">
+                  {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`
+                        px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 whitespace-nowrap text-sm sm:text-base
+                        ${activeTab === tab
+                          ? 'bg-white/30 backdrop-blur-xl border border-white/40 text-white shadow-lg'
+                          : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:bg-white/20'
+                        }
+                      `}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </nav>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm sm:text-base"
+                >
+                  Logout
+                </button>
+              </div>
+              {/* Mobile Logout - Top right */}
               <button
                 onClick={handleLogout}
-                className="px-4 sm:px-6 py-2 rounded-xl font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm sm:text-base"
+                className="md:hidden absolute top-4 right-4 px-3 py-1.5 rounded-lg font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm"
               >
                 Logout
               </button>
             </div>
-            {/* Mobile Logout - Top right */}
-            <button
-              onClick={handleLogout}
-              className="md:hidden absolute top-4 right-4 px-3 py-1.5 rounded-lg font-medium transition-all duration-300 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm"
-            >
-              Logout
-            </button>
-          </div>
-      </header>
+        </header>
 
-      {/* Content */}
-      <main className="p-4 pb-24 md:pb-6 md:p-6">
+        {/* Content */}
+        <main className="p-4 md:p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
               <DailySupplementLogger />
@@ -479,45 +480,48 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
             )}
           </div>
         </main>
+      </div>
 
       {/* Mobile Bottom Navigation - Fixed to viewport */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/10 backdrop-blur-xl border-t border-white/20 z-[9999]" style={{ position: 'fixed' }}>
-        <div className="flex justify-around items-center h-16 px-2" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'overview'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">📅</span>
-            <span className="text-xs font-medium">Daily</span>
-          </button>
-          <button
-            onClick={() => setActiveTab(librarySubTab)}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'supplements' || activeTab === 'sections'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">💊</span>
-            <span className="text-xs font-medium">Library</span>
-          </button>
-          <button
-            onClick={() => setActiveTab(settingsSubTab)}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'costs' || activeTab === 'export'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">⚙️</span>
-            <span className="text-xs font-medium">Settings</span>
-          </button>
-        </div>
-      </nav>
-    </div>
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-[9999]" style={{ position: 'fixed', bottom: 0, left: 0, right: 0 }}>
+        <nav className="bg-white/10 backdrop-blur-xl border-t border-white/20">
+          <div className="flex justify-around items-center h-16 px-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'overview'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">📅</span>
+              <span className="text-xs font-medium">Daily</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(librarySubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'supplements' || activeTab === 'sections'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">💊</span>
+              <span className="text-xs font-medium">Library</span>
+            </button>
+            <button
+              onClick={() => setActiveTab(settingsSubTab)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === 'costs' || activeTab === 'export'
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">⚙️</span>
+              <span className="text-xs font-medium">Settings</span>
+            </button>
+          </div>
+        </nav>
+      </div>
+    </>
   );
 }

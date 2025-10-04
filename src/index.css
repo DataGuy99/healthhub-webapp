@@ -64,3 +64,10 @@ body {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
+
+/* Ensure fixed positioning works on mobile */
+.fixed {
+  position: fixed !important;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
