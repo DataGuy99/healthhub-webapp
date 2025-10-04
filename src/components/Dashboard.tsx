@@ -5,6 +5,7 @@ import { DailySupplementLogger } from './DailySupplementLogger';
 import { SectionsView } from './SectionsView';
 import { CostCalculator } from './CostCalculator';
 import { AnimatedTitle } from './AnimatedTitle';
+import { InstallButton } from './InstallButton';
 import { clearAuth, getCurrentUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
@@ -270,6 +271,8 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
               >
                 Logout
               </button>
+              {/* Mobile Install Button - Next to Logout */}
+              <InstallButton />
             </div>
         </header>
 
