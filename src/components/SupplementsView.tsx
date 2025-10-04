@@ -185,6 +185,12 @@ export function SupplementsView() {
   };
 
   const handleEdit = (supplement: Supplement) => {
+    // If clicking edit on already-editing supplement, close it
+    if (editingSupplement?.id === supplement.id) {
+      cancelEdit();
+      return;
+    }
+
     setEditingSupplement(supplement);
     setName(supplement.name);
     setDose(supplement.dose || '');

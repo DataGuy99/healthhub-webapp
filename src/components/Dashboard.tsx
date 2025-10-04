@@ -224,8 +224,8 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
   };
 
   return (
-    <div className="min-h-screen relative">
-      <div className="relative z-10 min-h-screen">
+    <div className="min-h-screen h-screen md:h-auto overflow-hidden md:overflow-visible relative">
+      <div className="relative z-10 h-full md:min-h-screen flex flex-col">
         {/* Header */}
         <header className="p-4 sm:p-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -308,7 +308,7 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
         </nav>
 
         {/* Content */}
-        <main className="p-4 pb-24 md:pb-6 md:p-6">
+        <main className="flex-1 overflow-y-auto md:overflow-visible p-4 pb-24 md:pb-6 md:p-6">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
               <DailySupplementLogger />
