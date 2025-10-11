@@ -193,3 +193,13 @@ export interface CategoryBudget {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface TransactionRule {
+  id?: string;
+  user_id?: string;
+  keyword: string;
+  category: string;
+  template: 'market' | 'covenant' | 'chronicle' | 'treasury';
+  created_at?: string;
+  updated_at?: string;
+}

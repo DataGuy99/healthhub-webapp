@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, BankAccount, Transaction, CategoryBudget } from '../lib/supabase';
+import { supabase, BankAccount, Transaction, CategoryBudget, TransactionRule } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
 import { ChronicleTemplate } from './ChronicleTemplate';
 import { TreasuryTemplate } from './TreasuryTemplate';
+import { parseBankCSV, validateCSVFile, downloadCSVTemplate, type ParsedTransaction } from '../utils/csvParser';
+import { CSVImportModal, type MappedTransaction } from './CSVImportModal';
+import { MerchantRulesModal } from './MerchantRulesModal';
 
 type Category = {
   id: string;
@@ -40,6 +43,10 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [loading, setLoading] = useState(true);
   const [showBudgetPlanner, setShowBudgetPlanner] = useState(false);
   const [budgetInputs, setBudgetInputs] = useState<Map<string, string>>(new Map());
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
+  const [showMerchantRules, setShowMerchantRules] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -153,6 +160,133 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      const result = parseBankCSV(content);
+
+      if (result.errors.length > 0) {
+        console.warn('CSV parsing errors:', result.errors);
+      }
+
+      setParsedTransactions(result.transactions);
+      setShowImportPreview(true);
+    } catch (error) {
+      console.error('Error reading CSV:', error);
+      alert('Failed to read CSV file');
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImport = async (mappedTransactions: MappedTransaction[]) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      // Save transaction rules for transactions marked "saveRule"
+      const rulesToSave = mappedTransactions
+        .filter(tx => tx.saveRule)
+        .map(tx => ({
+          user_id: user.id,
+          keyword: tx.merchant.split(' ')[0], // Use first word as keyword
+          category: tx.category,
+          template: tx.template,
+        }));
+
+      if (rulesToSave.length > 0) {
+        const { error: rulesError } = await supabase
+          .from('transaction_rules')
+          .upsert(rulesToSave, { onConflict: 'user_id,keyword', ignoreDuplicates: true });
+
+        if (rulesError) throw rulesError;
+      }
+
+      // Expand transactions with splits into multiple entries
+      const expandedTransactions: Array<{ merchant: string; category: string; amount: number; date: string; bankCategory: string }> = [];
+
+      for (const tx of mappedTransactions) {
+        if (tx.splits && tx.splits.length > 0) {
+          // Add each split as separate transaction
+          for (const split of tx.splits) {
+            expandedTransactions.push({
+              merchant: `${tx.merchant} (split)`,
+              category: split.category,
+              amount: split.amount,
+              date: tx.date,
+              bankCategory: tx.bankCategory,
+            });
+          }
+        } else {
+          // Add as single transaction
+          expandedTransactions.push({
+            merchant: tx.merchant,
+            category: tx.category,
+            amount: tx.amount,
+            date: tx.date,
+            bankCategory: tx.bankCategory,
+          });
+        }
+      }
+
+      // Create category_items for each unique merchant-category pair
+      const itemsToCreate = expandedTransactions.map(tx => ({
+        user_id: user.id,
+        category: tx.category,
+        name: tx.merchant,
+        description: `Imported from CSV on ${new Date().toISOString().slice(0, 10)}`,
+        amount: tx.amount,
+        frequency: 'one-time' as const,
+        is_active: true,
+      }));
+
+      const { data: createdItems, error: itemsError } = await supabase
+        .from('category_items')
+        .upsert(itemsToCreate, { onConflict: 'user_id,category,name', ignoreDuplicates: false })
+        .select('id, name, category');
+
+      if (itemsError) throw itemsError;
+
+      // Create category_logs for each transaction
+      const logsToCreate = expandedTransactions.map((tx, index) => {
+        const matchingItem = createdItems?.find(item => item.name === tx.merchant && item.category === tx.category);
+        return {
+          user_id: user.id,
+          category_item_id: matchingItem?.id || createdItems?.[index]?.id,
+          date: tx.date,
+          actual_amount: tx.amount,
+          notes: `Imported: ${tx.bankCategory}`,
+          is_planned: false,
+        };
+      });
+
+      const { error: logsError } = await supabase
+        .from('category_logs')
+        .insert(logsToCreate);
+
+      if (logsError) throw logsError;
+
+      setShowImportPreview(false);
+      setParsedTransactions([]);
+      loadData();
+      alert(`Successfully imported ${expandedTransactions.length} transaction logs from ${mappedTransactions.length} transactions!`);
+    } catch (error) {
+      console.error('Error importing transactions:', error);
+      alert('Failed to import transactions');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -233,13 +367,59 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
           <h1 className="text-3xl font-bold text-white mb-2">LifeDashHub</h1>
           <p className="text-white/60">Your complete financial overview</p>
         </div>
-        <button
-          onClick={() => setShowBudgetPlanner(!showBudgetPlanner)}
-          className="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-medium transition-all"
-        >
-          {showBudgetPlanner ? '✕ Close Planner' : '📊 Budget Planner'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowBudgetPlanner(!showBudgetPlanner)}
+            className="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-medium transition-all"
+          >
+            {showBudgetPlanner ? '✕ Close Planner' : '📊 Budget Planner'}
+          </button>
+          <button
+            onClick={() => setShowMerchantRules(true)}
+            className="px-4 py-2 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-300 font-medium transition-all"
+          >
+            🏪 Rules
+          </button>
+          <button
+            onClick={downloadCSVTemplate}
+            className="px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 font-medium transition-all"
+          >
+            📥 Template
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 font-medium transition-all"
+          >
+            📤 Import CSV
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
       </div>
+
+      {/* CSV Import Modal */}
+      {showImportPreview && parsedTransactions.length > 0 && (
+        <CSVImportModal
+          transactions={parsedTransactions}
+          onClose={() => {
+            setShowImportPreview(false);
+            setParsedTransactions([]);
+          }}
+          onImport={handleImport}
+        />
+      )}
+
+      {/* Merchant Rules Modal */}
+      {showMerchantRules && (
+        <MerchantRulesModal
+          onClose={() => setShowMerchantRules(false)}
+        />
+      )}
 
       {/* Budget Planner */}
       {showBudgetPlanner && (
