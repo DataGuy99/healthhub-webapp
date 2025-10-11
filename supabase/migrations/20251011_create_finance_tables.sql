@@ -2,11 +2,14 @@
 -- Created: 2025-10-11
 -- Purpose: Add finance tracking with Plaid integration, custom categories, and transaction itemization
 
+-- Enable UUID extension (gen_random_uuid is built-in to PostgreSQL 13+)
+-- No extension needed
+
 -- ============================================================================
 -- 1. USER SETTINGS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS user_settings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- Supplement auto-log settings
@@ -26,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 -- 2. BANK ACCOUNTS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS bank_accounts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   plaid_access_token TEXT NOT NULL,
   plaid_item_id TEXT NOT NULL,
@@ -51,7 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_bank_accounts_active ON bank_accounts(user_id, is
 -- 3. BUDGET CATEGORIES TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS budget_categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   icon TEXT, -- emoji or icon identifier
@@ -72,7 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_budget_categories_parent ON budget_categories(par
 -- 4. TRANSACTIONS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   bank_account_id UUID REFERENCES bank_accounts(id) ON DELETE CASCADE,
   plaid_transaction_id TEXT,
@@ -113,7 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_recurring ON transactions(recurring_
 -- 5. TRANSACTION ITEMS TABLE (for itemized receipts)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS transaction_items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
@@ -141,7 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_transaction_items_category ON transaction_items(c
 -- 6. BUDGET GOALS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS budget_goals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   category_id UUID REFERENCES budget_categories(id) ON DELETE CASCADE,
 
@@ -171,7 +174,7 @@ CREATE INDEX IF NOT EXISTS idx_budget_goals_active ON budget_goals(user_id, is_a
 -- 7. PLAID SYNC CURSOR TABLE (for incremental syncs)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS plaid_sync_cursors (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE CASCADE,
   cursor TEXT NOT NULL,
