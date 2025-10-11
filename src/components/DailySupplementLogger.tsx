@@ -2,22 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase, Supplement, SupplementLog, SupplementSection } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
-import { TimeEditModal } from './TimeEditModal';
 
 export function DailySupplementLogger() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [sectionsList, setSectionsList] = useState<SupplementSection[]>([]);
-  const [logs, setLogs] = useState<Record<string, boolean>>({});
+  const [logs, setLogs] = useState<Record<string, boolean>>({}); // What's selected (not yet saved)
   const [loading, setLoading] = useState(true);
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
-  const [selectedSupplements, setSelectedSupplements] = useState<Set<string>>(new Set());
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [timeEditModal, setTimeEditModal] = useState<{
-    isOpen: boolean;
-    supplementId: string | null;
-    supplementName: string;
-  }>({ isOpen: false, supplementId: null, supplementName: '' });
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Update current date every minute to ensure it stays fresh
@@ -115,68 +107,26 @@ export function DailySupplementLogger() {
     }
   };
 
-  const toggleSelection = (supplementId: string) => {
-    setSelectedSupplements(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(supplementId)) {
-        newSet.delete(supplementId);
-      } else {
-        newSet.add(supplementId);
-      }
-      return newSet;
-    });
+  // Just toggle visual selection (doesn't save to database)
+  const toggleSupplement = (supplementId: string) => {
+    setLogs(prev => ({
+      ...prev,
+      [supplementId]: !prev[supplementId]
+    }));
   };
 
-  const logSupplementWithCustomTime = async (supplementId: string, date: string, time: string) => {
+  // Save all currently selected supplements to database
+  const logAllSelected = async () => {
     try {
       const user = await getCurrentUser();
       if (!user) return;
 
-      // Combine date and time into ISO timestamp
-      const timestamp = new Date(`${date}T${time}`).toISOString();
+      // Get all supplements that are checked
+      const selectedIds = Object.keys(logs).filter(id => logs[id]);
+      if (selectedIds.length === 0) return;
 
-      // Optimistic update
-      setLogs(prev => ({ ...prev, [supplementId]: true }));
-
-      // Upsert with custom timestamp
-      const { error } = await supabase
-        .from('supplement_logs')
-        .upsert({
-          user_id: user.id,
-          supplement_id: supplementId,
-          date: date,
-          is_taken: true,
-          timestamp: timestamp
-        }, {
-          onConflict: 'user_id,supplement_id,date'
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error logging supplement with custom time:', error);
-      alert('Failed to log supplement with custom time');
-      // Revert optimistic update
-      setLogs(prev => ({ ...prev, [supplementId]: false }));
-    }
-  };
-
-  const logSelectedSupplements = async () => {
-    try {
-      const user = await getCurrentUser();
-      if (!user) return;
-
-      const supplementsToLog = Array.from(selectedSupplements);
-      if (supplementsToLog.length === 0) return;
-
-      // Optimistic update
-      const updates: Record<string, boolean> = {};
-      supplementsToLog.forEach(id => {
-        updates[id] = true;
-      });
-      setLogs(prev => ({ ...prev, ...updates }));
-
-      // Batch upsert
-      const upsertData = supplementsToLog.map(supplementId => ({
+      // Batch upsert to database
+      const upsertData = selectedIds.map(supplementId => ({
         user_id: user.id,
         supplement_id: supplementId,
         date: currentDate,
@@ -192,98 +142,23 @@ export function DailySupplementLogger() {
 
       if (error) throw error;
 
-      // Clear selection and exit selection mode
-      setSelectedSupplements(new Set());
-      setIsSelectionMode(false);
+      alert(`Logged ${selectedIds.length} supplements!`);
     } catch (error) {
       console.error('Error logging supplements:', error);
-      alert('Failed to log selected supplements');
-      // Reload to revert optimistic updates
-      await loadData();
+      alert('Failed to log supplements');
     }
   };
 
-  const toggleSupplement = async (supplementId: string) => {
-    // If in selection mode, just toggle selection
-    if (isSelectionMode) {
-      toggleSelection(supplementId);
-      return;
-    }
-
-    // Otherwise, immediately log/unlog
-    try {
-      const user = await getCurrentUser();
-      if (!user) return;
-
-      const currentValue = logs[supplementId] || false;
-      const newValue = !currentValue;
-
-      // Optimistic update
-      setLogs(prev => ({ ...prev, [supplementId]: newValue }));
-
-      // Upsert: insert or update based on unique constraint
-      const { error } = await supabase
-        .from('supplement_logs')
-        .upsert({
-          user_id: user.id,
-          supplement_id: supplementId,
-          date: currentDate,
-          is_taken: newValue,
-          timestamp: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,supplement_id,date'
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error toggling supplement:', error);
-      // Revert optimistic update on error
-      const currentValue = logs[supplementId] || false;
-      setLogs(prev => ({ ...prev, [supplementId]: !currentValue }));
-      alert('Failed to update supplement log');
-    }
-  };
-
-  const toggleSection = async (section: string, newValue: boolean) => {
-    try {
-      const user = await getCurrentUser();
-      if (!user) return;
-
-      const sectionSupplements = groupedSupplements[section] || [];
-
-      // Optimistic update for all supplements in section
-      const updates: Record<string, boolean> = {};
-      sectionSupplements.forEach(supplement => {
-        if (supplement.id) {
-          updates[supplement.id] = newValue;
-        }
-      });
-      setLogs(prev => ({ ...prev, ...updates }));
-
-      // Batch upsert all supplements in section
-      const upsertData = sectionSupplements
-        .filter(s => s.id)
-        .map(supplement => ({
-          user_id: user.id,
-          supplement_id: supplement.id!,
-          date: currentDate,
-          is_taken: newValue,
-          timestamp: new Date().toISOString()
-        }));
-
-      const { error } = await supabase
-        .from('supplement_logs')
-        .upsert(upsertData, {
-          onConflict: 'user_id,supplement_id,date'
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error toggling section:', error);
-      alert('Failed to update section');
-      // Reload to revert optimistic updates
-      await loadData();
-    }
+  // Toggle all supplements in a section (just visual, doesn't save)
+  const toggleSection = (section: string, newValue: boolean) => {
+    const sectionSupplements = groupedSupplements[section] || [];
+    const updates: Record<string, boolean> = {};
+    sectionSupplements.forEach(supplement => {
+      if (supplement.id) {
+        updates[supplement.id] = newValue;
+      }
+    });
+    setLogs(prev => ({ ...prev, ...updates }));
   };
 
   // Filter supplements by workout mode
@@ -363,52 +238,17 @@ export function DailySupplementLogger() {
           </div>
         )}
 
-        {/* Bulk Selection Controls */}
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => {
-              setIsSelectionMode(!isSelectionMode);
-              setSelectedSupplements(new Set());
-            }}
-            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
-              isSelectionMode
-                ? 'bg-blue-500/30 border border-blue-500/40 text-blue-300'
-                : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
-            }`}
-          >
-            {isSelectionMode ? '✓ Selection Mode' : '☐ Select Multiple'}
-          </button>
-
-          {isSelectionMode && selectedSupplements.size > 0 && (
-            <>
-              <button
-                onClick={logSelectedSupplements}
-                className="px-6 py-3 rounded-xl font-medium bg-green-500/30 border border-green-500/40 text-green-300 hover:bg-green-500/40 transition-all duration-300"
-              >
-                Log {selectedSupplements.size} ✓
-              </button>
-              {selectedSupplements.size === 1 && (
-                <button
-                  onClick={() => {
-                    const supplementId = Array.from(selectedSupplements)[0];
-                    const supplement = supplements.find(s => s.id === supplementId);
-                    if (supplement && supplement.id) {
-                      setTimeEditModal({
-                        isOpen: true,
-                        supplementId: supplement.id,
-                        supplementName: supplement.name
-                      });
-                    }
-                  }}
-                  className="px-4 py-3 rounded-xl font-medium bg-purple-500/30 border border-purple-500/40 text-purple-300 hover:bg-purple-500/40 transition-all duration-300"
-                  title="Log with custom date/time"
-                >
-                  🕒
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        {/* Log Selected Button */}
+        {Object.values(logs).some(val => val) && (
+          <div className="mt-4">
+            <button
+              onClick={logAllSelected}
+              className="w-full px-4 py-3 rounded-xl font-medium bg-green-500/30 border border-green-500/40 text-green-300 hover:bg-green-500/40 transition-all duration-300"
+            >
+              💾 Log All Selected ({Object.values(logs).filter(v => v).length})
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20">
           <div className="text-2xl font-bold text-white">
@@ -497,16 +337,13 @@ export function DailySupplementLogger() {
                     <div className="space-y-2">
                       {sectionSupplements.map(supplement => {
                         const isTaken = logs[supplement.id!] || false;
-                        const isSelected = supplement.id ? selectedSupplements.has(supplement.id) : false;
 
                         return (
                           <motion.button
                             key={supplement.id}
                             onClick={() => supplement.id && toggleSupplement(supplement.id)}
                             className={`w-full p-3 rounded-lg border text-left ${
-                              isSelectionMode && isSelected
-                                ? 'bg-blue-500/20 border-blue-500/30 backdrop-blur-xl'
-                                : isTaken
+                              isTaken
                                 ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
                                 : 'bg-white/10 border-white/20 backdrop-blur-xl active:bg-white/20'
                             }`}
@@ -537,15 +374,13 @@ export function DailySupplementLogger() {
                                 )}
                               </div>
                               <div
-                                className={`w-6 h-6 ${isSelectionMode ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
-                                  isSelectionMode && isSelected
-                                    ? 'bg-blue-500 border-blue-500'
-                                    : isTaken
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
+                                  isTaken
                                     ? 'bg-green-500 border-green-500'
                                     : 'border-white/30'
                                 }`}
                               >
-                                {(isTaken || (isSelectionMode && isSelected)) && (
+                                {isTaken && (
                                   <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                   </svg>
@@ -629,16 +464,13 @@ export function DailySupplementLogger() {
                   <div className="space-y-2">
                     {sectionSupplements.map(supplement => {
                       const isTaken = logs[supplement.id!] || false;
-                      const isSelected = supplement.id ? selectedSupplements.has(supplement.id) : false;
 
                       return (
                         <motion.button
                           key={supplement.id}
                           onClick={() => supplement.id && toggleSupplement(supplement.id)}
                           className={`w-full p-3 rounded-lg border text-left ${
-                            isSelectionMode && isSelected
-                              ? 'bg-blue-500/20 border-blue-500/30 backdrop-blur-xl'
-                              : isTaken
+                            isTaken
                               ? 'bg-green-500/20 border-green-500/30 backdrop-blur-xl'
                               : 'bg-white/10 border-white/20 backdrop-blur-xl active:bg-white/20'
                           }`}
@@ -669,15 +501,13 @@ export function DailySupplementLogger() {
                               )}
                             </div>
                             <div
-                              className={`w-6 h-6 ${isSelectionMode ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
-                                isSelectionMode && isSelected
-                                  ? 'bg-blue-500 border-blue-500'
-                                  : isTaken
+                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${
+                                isTaken
                                   ? 'bg-green-500 border-green-500'
                                   : 'border-white/30'
                               }`}
                             >
-                              {(isTaken || (isSelectionMode && isSelected)) && (
+                              {isTaken && (
                                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
@@ -695,24 +525,6 @@ export function DailySupplementLogger() {
           )}
         </div>
       </div>
-
-      {/* Time Edit Modal */}
-      <TimeEditModal
-        isOpen={timeEditModal.isOpen}
-        onClose={() => {
-          setTimeEditModal({ isOpen: false, supplementId: null, supplementName: '' });
-          setSelectedSupplements(new Set());
-          setIsSelectionMode(false);
-        }}
-        onConfirm={(date, time) => {
-          if (timeEditModal.supplementId) {
-            logSupplementWithCustomTime(timeEditModal.supplementId, date, time);
-            setSelectedSupplements(new Set());
-            setIsSelectionMode(false);
-          }
-        }}
-        supplementName={timeEditModal.supplementName}
-      />
     </div>
   );
 }
