@@ -5,6 +5,7 @@ import { getCurrentUser } from '../lib/auth';
 import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
 import { ChronicleTemplate } from './ChronicleTemplate';
+import { TreasuryTemplate } from './TreasuryTemplate';
 
 type Category = {
   id: string;
@@ -107,6 +108,19 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     if (selectedCategory.id === 'misc-shop' || selectedCategory.id === 'misc-health' || selectedCategory.id === 'home-garden') {
       return (
         <ChronicleTemplate
+          category={selectedCategory.id}
+          categoryName={selectedCategory.name}
+          icon={selectedCategory.icon}
+          color={selectedCategory.color}
+          onBack={() => setSelectedCategory(null)}
+        />
+      );
+    }
+
+    // Use TREASURY template for investment
+    if (selectedCategory.id === 'investment') {
+      return (
+        <TreasuryTemplate
           category={selectedCategory.id}
           categoryName={selectedCategory.name}
           icon={selectedCategory.icon}
