@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, BankAccount, Transaction } from '../lib/supabase';
+import { supabase, BankAccount, Transaction, CategoryBudget } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
@@ -35,7 +35,11 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categorySpending, setCategorySpending] = useState<Map<string, number>>(new Map());
+  const [categoryBudgets, setCategoryBudgets] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [showBudgetPlanner, setShowBudgetPlanner] = useState(false);
+  const [budgetInputs, setBudgetInputs] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     loadData();
@@ -45,6 +49,10 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     try {
       const user = await getCurrentUser();
       if (!user) return;
+
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const startDate = `${currentMonth}-01`;
+      const endDate = `${currentMonth}-31`;
 
       // Load bank accounts
       const { data: accounts, error: accountsError } = await supabase
@@ -67,10 +75,81 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       if (txnsError) throw txnsError;
       setTransactions(txns || []);
 
+      // Load category spending for current month
+      const { data: logsData, error: logsError } = await supabase
+        .from('category_logs')
+        .select('*, category_items!inner(category)')
+        .eq('user_id', user.id)
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (logsError) throw logsError;
+
+      // Aggregate spending by category
+      const spendingMap = new Map<string, number>();
+      logsData?.forEach((log: any) => {
+        const category = log.category_items?.category;
+        if (category) {
+          const currentSpend = spendingMap.get(category) || 0;
+          spendingMap.set(category, currentSpend + (log.actual_amount || 0));
+        }
+      });
+      setCategorySpending(spendingMap);
+
+      // Load budgets for current month
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('category_budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_year', currentMonth);
+
+      if (budgetsError) throw budgetsError;
+
+      const budgetsMap = new Map<string, number>();
+      const inputsMap = new Map<string, string>();
+      budgetsData?.forEach((budget: CategoryBudget) => {
+        budgetsMap.set(budget.category, budget.target_amount);
+        inputsMap.set(budget.category, budget.target_amount.toString());
+      });
+      setCategoryBudgets(budgetsMap);
+      setBudgetInputs(inputsMap);
+
       setLoading(false);
     } catch (error) {
       console.error('Error loading finance data:', error);
       setLoading(false);
+    }
+  };
+
+  const saveBudgets = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const budgetsToSave = CATEGORIES.map((category) => {
+        const value = budgetInputs.get(category.id);
+        const amount = value ? parseFloat(value) : 0;
+        return {
+          user_id: user.id,
+          category: category.id,
+          month_year: currentMonth,
+          target_amount: amount
+        };
+      }).filter((budget) => budget.target_amount > 0);
+
+      const { error } = await supabase
+        .from('category_budgets')
+        .upsert(budgetsToSave, { onConflict: 'user_id,category,month_year' });
+
+      if (error) throw error;
+
+      setShowBudgetPlanner(false);
+      loadData();
+      alert('Budgets saved successfully!');
+    } catch (error) {
+      console.error('Error saving budgets:', error);
+      alert('Failed to save budgets');
     }
   };
 
@@ -154,51 +233,135 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
           <h1 className="text-3xl font-bold text-white mb-2">LifeDashHub</h1>
           <p className="text-white/60">Your complete financial overview</p>
         </div>
+        <button
+          onClick={() => setShowBudgetPlanner(!showBudgetPlanner)}
+          className="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-medium transition-all"
+        >
+          {showBudgetPlanner ? '✕ Close Planner' : '📊 Budget Planner'}
+        </button>
       </div>
+
+      {/* Budget Planner */}
+      {showBudgetPlanner && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
+        >
+          <h3 className="text-lg font-semibold text-white mb-4">Set Monthly Budgets</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CATEGORIES.map((category) => (
+              <div key={category.id} className="flex items-center gap-3">
+                <span className="text-2xl">{category.icon}</span>
+                <div className="flex-1">
+                  <label className="text-sm text-white/60 mb-1 block">{category.name}</label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={budgetInputs.get(category.id) || ''}
+                    onChange={(e) => {
+                      const newInputs = new Map(budgetInputs);
+                      newInputs.set(category.id, e.target.value);
+                      setBudgetInputs(newInputs);
+                    }}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-6">
+            <button
+              onClick={saveBudgets}
+              className="px-6 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 font-medium transition-all"
+            >
+              Save Budgets
+            </button>
+            <button
+              onClick={() => setShowBudgetPlanner(false)}
+              className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Category Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {CATEGORIES.map((category) => (
-          <motion.button
-            key={category.id}
-            onClick={() => setSelectedCategory(category)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`relative overflow-hidden bg-gradient-to-br ${category.color} backdrop-blur-xl rounded-2xl border p-6 text-left transition-all hover:shadow-lg`}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <span className="text-5xl">{category.icon}</span>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-white">$0</div>
-                <div className="text-xs text-white/60">This month</div>
+        {CATEGORIES.map((category) => {
+          const spent = categorySpending.get(category.id) || 0;
+          const budget = categoryBudgets.get(category.id) || 0;
+          const percentUsed = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+
+          return (
+            <motion.button
+              key={category.id}
+              onClick={() => setSelectedCategory(category)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`relative overflow-hidden bg-gradient-to-br ${category.color} backdrop-blur-xl rounded-2xl border p-6 text-left transition-all hover:shadow-lg`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <span className="text-5xl">{category.icon}</span>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-white">${spent.toFixed(2)}</div>
+                  <div className="text-xs text-white/60">This month</div>
+                </div>
               </div>
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-1">{category.name}</h3>
-            <p className="text-sm text-white/60">Budget: $0 / $0</p>
-            <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-white/30 rounded-full" style={{ width: '0%' }}></div>
-            </div>
-          </motion.button>
-        ))}
+              <h3 className="text-lg font-semibold text-white mb-1">{category.name}</h3>
+              <p className="text-sm text-white/60">
+                Budget: ${spent.toFixed(2)} / ${budget.toFixed(2)}
+              </p>
+              <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    percentUsed > 90 ? 'bg-red-400' : percentUsed > 75 ? 'bg-yellow-400' : 'bg-green-400'
+                  }`}
+                  style={{ width: `${percentUsed}%` }}
+                ></div>
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
           <h3 className="text-white/60 text-sm font-medium mb-2">Total Spent (Month)</h3>
-          <p className="text-3xl font-bold text-white">$0.00</p>
+          <p className="text-3xl font-bold text-white">
+            ${Array.from(categorySpending.values()).reduce((sum, val) => sum + val, 0).toFixed(2)}
+          </p>
           <p className="text-xs text-white/40 mt-2">Across all categories</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
           <h3 className="text-white/60 text-sm font-medium mb-2">Budget Remaining</h3>
-          <p className="text-3xl font-bold text-green-400">$0.00</p>
-          <p className="text-xs text-white/40 mt-2">0% of monthly budget</p>
+          <p className="text-3xl font-bold text-green-400">
+            ${Math.max(
+              Array.from(categoryBudgets.values()).reduce((sum, val) => sum + val, 0) -
+              Array.from(categorySpending.values()).reduce((sum, val) => sum + val, 0),
+              0
+            ).toFixed(2)}
+          </p>
+          <p className="text-xs text-white/40 mt-2">
+            {Array.from(categoryBudgets.values()).reduce((sum, val) => sum + val, 0) > 0
+              ? Math.round(
+                  ((Array.from(categoryBudgets.values()).reduce((sum, val) => sum + val, 0) -
+                    Array.from(categorySpending.values()).reduce((sum, val) => sum + val, 0)) /
+                    Array.from(categoryBudgets.values()).reduce((sum, val) => sum + val, 0)) *
+                    100
+                )
+              : 0}% of monthly budget
+          </p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
           <h3 className="text-white/60 text-sm font-medium mb-2">Total Budget</h3>
-          <p className="text-3xl font-bold text-white">$0.00</p>
+          <p className="text-3xl font-bold text-white">
+            ${Array.from(categoryBudgets.values()).reduce((sum, val) => sum + val, 0).toFixed(2)}
+          </p>
           <p className="text-xs text-white/40 mt-2">Set monthly targets</p>
         </div>
       </div>
