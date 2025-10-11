@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase, BankAccount, Transaction } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
+import { CategoryHub } from './CategoryHub';
 
 type Category = {
   id: string;
@@ -28,6 +29,7 @@ interface FinanceViewProps {
 }
 
 export function FinanceView({ onCategorySelect }: FinanceViewProps) {
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,26 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     );
   }
 
+  // If a category is selected, show CategoryHub
+  if (selectedCategory) {
+    if (selectedCategory.id === 'supplements') {
+      // Navigate to supplements hub
+      onCategorySelect('overview');
+      setSelectedCategory(null);
+      return null;
+    }
+
+    return (
+      <CategoryHub
+        category={selectedCategory.id}
+        categoryName={selectedCategory.name}
+        icon={selectedCategory.icon}
+        color={selectedCategory.color}
+        onBack={() => setSelectedCategory(null)}
+      />
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -96,14 +118,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
         {CATEGORIES.map((category) => (
           <motion.button
             key={category.id}
-            onClick={() => {
-              if (category.id === 'supplements') {
-                onCategorySelect('overview'); // Go to existing supplements hub
-              } else {
-                // TODO: Navigate to category-specific hub
-                alert(`${category.name} hub coming soon!`);
-              }
-            }}
+            onClick={() => setSelectedCategory(category)}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`relative overflow-hidden bg-gradient-to-br ${category.color} backdrop-blur-xl rounded-2xl border p-6 text-left transition-all hover:shadow-lg`}
