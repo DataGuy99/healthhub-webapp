@@ -53,6 +53,18 @@ export interface SupplementSection {
 }
 
 // ============================================================================
+// User Settings Types
+// ============================================================================
+
+export interface UserSettings {
+  id?: string;
+  user_id?: string;
+  supplement_auto_log_time: string; // HH:MM:SS format
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ============================================================================
 // Finance Module Types
 // ============================================================================
 

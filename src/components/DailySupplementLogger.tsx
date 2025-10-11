@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, Supplement, SupplementLog, SupplementSection } from '../lib/supabase';
+import { supabase, Supplement, SupplementLog, SupplementSection, UserSettings } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 export function DailySupplementLogger() {
@@ -12,10 +12,7 @@ export function DailySupplementLogger() {
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [autoLogTime, setAutoLogTime] = useState(() => {
-    // Load from localStorage or default to midnight
-    return localStorage.getItem('autoLogTime') || '00:00';
-  });
+  const [autoLogTime, setAutoLogTime] = useState('00:00'); // Will be loaded from DB
   const [isHistoryMode, setIsHistoryMode] = useState(false);
   const [viewingDate, setViewingDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -46,10 +43,25 @@ export function DailySupplementLogger() {
     return () => clearInterval(interval);
   }, [currentDate, autoLogTime, logs]);
 
-  // Save auto-log time to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('autoLogTime', autoLogTime);
-  }, [autoLogTime]);
+  // Save auto-log time to database when it changes
+  const updateAutoLogTime = async (newTime: string) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          supplement_auto_log_time: newTime + ':00' // Convert HH:MM to HH:MM:SS
+        }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      setAutoLogTime(newTime);
+    } catch (error) {
+      console.error('Error updating auto-log time:', error);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -79,6 +91,31 @@ export function DailySupplementLogger() {
         .eq('date', dateToLoad);
 
       if (logsError) throw logsError;
+
+      // Load user settings (including auto-log time)
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (settingsError) throw settingsError;
+
+      // If settings exist, use them; otherwise create default
+      if (settingsData) {
+        // Convert HH:MM:SS to HH:MM for time input
+        const timeStr = settingsData.supplement_auto_log_time.substring(0, 5);
+        setAutoLogTime(timeStr);
+      } else {
+        // Create default settings
+        await supabase
+          .from('user_settings')
+          .insert({
+            user_id: user.id,
+            supplement_auto_log_time: '00:00:00'
+          });
+        setAutoLogTime('00:00');
+      }
 
       // Load sections
       let { data: sectionsData, error: sectionsError } = await supabase
@@ -372,7 +409,7 @@ export function DailySupplementLogger() {
                 <input
                   type="time"
                   value={autoLogTime}
-                  onChange={(e) => setAutoLogTime(e.target.value)}
+                  onChange={(e) => updateAutoLogTime(e.target.value)}
                   className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                 />
               </div>

@@ -3,7 +3,27 @@
 -- Purpose: Add finance tracking with Plaid integration, custom categories, and transaction itemization
 
 -- ============================================================================
--- 1. BANK ACCOUNTS TABLE
+-- 1. USER SETTINGS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS user_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Supplement auto-log settings
+  supplement_auto_log_time TIME DEFAULT '00:00:00',
+
+  -- Future settings can be added here
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+
+-- ============================================================================
+-- 2. BANK ACCOUNTS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS bank_accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -28,7 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_bank_accounts_user_id ON bank_accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_active ON bank_accounts(user_id, is_active);
 
 -- ============================================================================
--- 2. BUDGET CATEGORIES TABLE
+-- 3. BUDGET CATEGORIES TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS budget_categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -49,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_budget_categories_user_id ON budget_categories(us
 CREATE INDEX IF NOT EXISTS idx_budget_categories_parent ON budget_categories(parent_category_id);
 
 -- ============================================================================
--- 3. TRANSACTIONS TABLE
+-- 4. TRANSACTIONS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -90,7 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_bank_account ON transactions(bank_ac
 CREATE INDEX IF NOT EXISTS idx_transactions_recurring ON transactions(recurring_series_id) WHERE recurring_series_id IS NOT NULL;
 
 -- ============================================================================
--- 4. TRANSACTION ITEMS TABLE (for itemized receipts)
+-- 5. TRANSACTION ITEMS TABLE (for itemized receipts)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS transaction_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -118,7 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_transaction_items_user ON transaction_items(user_
 CREATE INDEX IF NOT EXISTS idx_transaction_items_category ON transaction_items(category_id);
 
 -- ============================================================================
--- 5. BUDGET GOALS TABLE
+-- 6. BUDGET GOALS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS budget_goals (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -148,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_budget_goals_category ON budget_goals(category_id
 CREATE INDEX IF NOT EXISTS idx_budget_goals_active ON budget_goals(user_id, is_active);
 
 -- ============================================================================
--- 6. PLAID SYNC CURSOR TABLE (for incremental syncs)
+-- 7. PLAID SYNC CURSOR TABLE (for incremental syncs)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS plaid_sync_cursors (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -167,12 +187,26 @@ CREATE INDEX IF NOT EXISTS idx_plaid_sync_cursors_account ON plaid_sync_cursors(
 -- ============================================================================
 
 -- Enable RLS on all tables
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bank_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budget_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transaction_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budget_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plaid_sync_cursors ENABLE ROW LEVEL SECURITY;
+
+-- User Settings Policies
+CREATE POLICY "Users can view their own settings"
+  ON user_settings FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own settings"
+  ON user_settings FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own settings"
+  ON user_settings FOR UPDATE
+  USING (auth.uid() = user_id);
 
 -- Bank Accounts Policies
 CREATE POLICY "Users can view their own bank accounts"
@@ -285,6 +319,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply to all tables with updated_at
+CREATE TRIGGER update_user_settings_updated_at
+  BEFORE UPDATE ON user_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_bank_accounts_updated_at
   BEFORE UPDATE ON bank_accounts
   FOR EACH ROW
