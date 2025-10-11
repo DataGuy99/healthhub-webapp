@@ -4,6 +4,7 @@ import { supabase, BankAccount, Transaction } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
+import { ChronicleTemplate } from './ChronicleTemplate';
 
 type Category = {
   id: string;
@@ -93,6 +94,19 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     if (selectedCategory.id === 'rent' || selectedCategory.id === 'bills') {
       return (
         <CovenantTemplate
+          category={selectedCategory.id}
+          categoryName={selectedCategory.name}
+          icon={selectedCategory.icon}
+          color={selectedCategory.color}
+          onBack={() => setSelectedCategory(null)}
+        />
+      );
+    }
+
+    // Use CHRONICLE template for misc categories
+    if (selectedCategory.id === 'misc-shop' || selectedCategory.id === 'misc-health' || selectedCategory.id === 'home-garden') {
+      return (
+        <ChronicleTemplate
           category={selectedCategory.id}
           categoryName={selectedCategory.name}
           icon={selectedCategory.icon}
