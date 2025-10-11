@@ -12,13 +12,16 @@ const FONTS = [
 
 const EMOJIS = ['💊', '🏥', '⚕️', '🩺', '💉', '🧬', '🔬', '🌡️', '💪', '🧘', '🏃', '🥗', '🍎', '🥤', '💙', '✨', '⭐', '🌟'];
 
-export function AnimatedTitle() {
+interface AnimatedTitleProps {
+  text: string;
+}
+
+export function AnimatedTitle({ text }: AnimatedTitleProps) {
   const [letterFonts, setLetterFonts] = useState<number[]>([]);
   const [activeLetterIndex, setActiveLetterIndex] = useState(0);
   const [emoji, setEmoji] = useState('💊');
   const [isSpinning, setIsSpinning] = useState(false);
   const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const text = 'Health Hub';
 
   useEffect(() => {
     // Initialize fonts for each letter (all same to start)
@@ -29,18 +32,24 @@ export function AnimatedTitle() {
 
     // Slightly slower cycle: 600ms
     const letterInterval = setInterval(() => {
-      // Move to next letter (skip space)
-      const nextIndex = (currentLetterIndex + 1) % letterCount;
-      const finalNextIndex = nextIndex === 6 ? (nextIndex + 1) % letterCount : nextIndex;
+      // Move to next letter
+      let nextIndex = (currentLetterIndex + 1) % letterCount;
+
+      // Skip space if present
+      if (text[nextIndex] === ' ') {
+        nextIndex = (nextIndex + 1) % letterCount;
+      }
+      const finalNextIndex = nextIndex;
 
       // Check if we just completed a full cycle (reached the end)
-      const isLastLetter = finalNextIndex === 0 && currentLetterIndex === 9; // 'b' is index 9
+      const isLastLetter = finalNextIndex === 0 && currentLetterIndex === letterCount - 1;
 
       // Move underline to new letter
       setActiveLetterIndex(finalNextIndex);
 
       // Change the CURRENT letter's font (the one we're on before moving)
-      if (currentLetterIndex !== 6) {
+      // Skip if current character is a space
+      if (text[currentLetterIndex] !== ' ') {
         setLetterFonts(prev => {
           const next = [...prev];
           const currentFont = next[currentLetterIndex];
@@ -91,7 +100,7 @@ export function AnimatedTitle() {
         clearInterval(spinIntervalRef.current);
       }
     };
-  }, []);
+  }, [text]);
 
   return (
     <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg flex items-center gap-2">

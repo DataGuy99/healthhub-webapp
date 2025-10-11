@@ -1,11 +1,18 @@
+type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
+
 interface MobileNavProps {
-  activeTab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export';
-  onTabChange: (tab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export') => void;
-  librarySubTab: 'supplements' | 'sections';
-  settingsSubTab: 'costs' | 'export';
+  activeTab: CategoryTab;
+  onTabChange: (tab: CategoryTab) => void;
 }
 
-export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTab }: MobileNavProps) {
+const NAV_ITEMS: Array<{ id: CategoryTab; label: string; icon: string }> = [
+  { id: 'overview', label: 'Overview', icon: '💰' },
+  { id: 'supplements', label: 'Supps', icon: '💊' },
+  { id: 'grocery', label: 'Grocery', icon: '🛒' },
+  { id: 'auto', label: 'Auto', icon: '🚗' },
+];
+
+export function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
   return (
     <div
       className="md:hidden mobile-nav-fixed z-[9999]"
@@ -19,58 +26,22 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
           className="flex justify-around items-center h-16 px-2"
           style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
         >
-          <button
-            onClick={() => onTabChange('overview')}
-            aria-label="Daily overview"
-            aria-current={activeTab === 'overview' ? 'page' : undefined}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'overview'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">📅</span>
-            <span className="text-xs font-medium">Daily</span>
-          </button>
-          <button
-            onClick={() => onTabChange('finance')}
-            aria-label="Finance"
-            aria-current={activeTab === 'finance' ? 'page' : undefined}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'finance'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">💰</span>
-            <span className="text-xs font-medium">Finance</span>
-          </button>
-          <button
-            onClick={() => onTabChange(librarySubTab)}
-            aria-label="Library"
-            aria-current={activeTab === 'supplements' || activeTab === 'sections' ? 'page' : undefined}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'supplements' || activeTab === 'sections'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">💊</span>
-            <span className="text-xs font-medium">Library</span>
-          </button>
-          <button
-            onClick={() => onTabChange(settingsSubTab)}
-            aria-label="Settings"
-            aria-current={activeTab === 'costs' || activeTab === 'export' ? 'page' : undefined}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
-              activeTab === 'costs' || activeTab === 'export'
-                ? 'text-violet-400'
-                : 'text-white/60'
-            }`}
-          >
-            <span className="text-2xl">⚙️</span>
-            <span className="text-xs font-medium">Settings</span>
-          </button>
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              aria-label={item.label}
+              aria-current={activeTab === item.id ? 'page' : undefined}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+                activeTab === item.id
+                  ? 'text-violet-400'
+                  : 'text-white/60'
+              }`}
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     </div>

@@ -6,12 +6,12 @@ import { MobileNav } from './components/MobileNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
 
+type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
+
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
-  const [librarySubTab, setLibrarySubTab] = useState<'supplements' | 'sections'>('supplements');
-  const [settingsSubTab, setSettingsSubTab] = useState<'costs' | 'export'>('costs');
+  const [activeTab, setActiveTab] = useState<CategoryTab>('overview');
 
   useEffect(() => {
     // Check current session
@@ -55,10 +55,6 @@ function App() {
           <Dashboard
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            librarySubTab={librarySubTab}
-            setLibrarySubTab={setLibrarySubTab}
-            settingsSubTab={settingsSubTab}
-            setSettingsSubTab={setSettingsSubTab}
           />
         ) : (
           <LoginView onLogin={() => {}} />
@@ -68,8 +64,6 @@ function App() {
         <MobileNav
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          librarySubTab={librarySubTab}
-          settingsSubTab={settingsSubTab}
         />
       )}
     </ErrorBoundary>
