@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { supabase, BankAccount, Transaction } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { CategoryHub } from './CategoryHub';
+import { CovenantTemplate } from './CovenantTemplate';
 
 type Category = {
   id: string;
@@ -79,7 +80,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     );
   }
 
-  // If a category is selected, show CategoryHub
+  // If a category is selected, show appropriate template
   if (selectedCategory) {
     if (selectedCategory.id === 'supplements') {
       // Navigate to supplements hub
@@ -88,6 +89,20 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       return null;
     }
 
+    // Use COVENANT template for bills and rent
+    if (selectedCategory.id === 'rent' || selectedCategory.id === 'bills') {
+      return (
+        <CovenantTemplate
+          category={selectedCategory.id}
+          categoryName={selectedCategory.name}
+          icon={selectedCategory.icon}
+          color={selectedCategory.color}
+          onBack={() => setSelectedCategory(null)}
+        />
+      );
+    }
+
+    // Use MARKET template for grocery and auto
     return (
       <CategoryHub
         category={selectedCategory.id}
