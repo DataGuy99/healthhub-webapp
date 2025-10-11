@@ -12,11 +12,28 @@ export function DailySupplementLogger() {
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [autoLogTime, setAutoLogTime] = useState(() => {
+    // Load from localStorage or default to midnight
+    return localStorage.getItem('autoLogTime') || '00:00';
+  });
 
-  // Update current date every minute to ensure it stays fresh
+  // Auto-log timer - checks every minute if it's time to auto-log
   useEffect(() => {
     const interval = setInterval(() => {
-      const newDate = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const newDate = now.toISOString().split('T')[0];
+
+      // Check if it's time to auto-log
+      if (currentTime === autoLogTime) {
+        const selectedIds = Object.keys(logs).filter(id => logs[id]);
+        if (selectedIds.length > 0) {
+          console.log('Auto-logging', selectedIds.length, 'supplements at', currentTime);
+          logAllSelected();
+        }
+      }
+
+      // Check if date changed (midnight passed)
       if (newDate !== currentDate) {
         setCurrentDate(newDate);
         setLogs({}); // Clear visual selections for new day
@@ -25,7 +42,12 @@ export function DailySupplementLogger() {
     }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [currentDate]);
+  }, [currentDate, autoLogTime, logs]);
+
+  // Save auto-log time to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('autoLogTime', autoLogTime);
+  }, [autoLogTime]);
 
   useEffect(() => {
     loadData();
@@ -237,6 +259,22 @@ export function DailySupplementLogger() {
         <h2 className="text-3xl font-bold text-white mb-2">Daily Logger</h2>
         <div className="text-white/70 text-lg">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+
+        {/* Auto-log Time Setting */}
+        <div className="mt-4 p-3 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-white/70 text-sm">⏰ Auto-log at:</span>
+              <input
+                type="time"
+                value={autoLogTime}
+                onChange={(e) => setAutoLogTime(e.target.value)}
+                className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
+            <span className="text-white/50 text-xs">Selections auto-save at this time</span>
+          </div>
         </div>
 
         {/* Workout Toggle */}
