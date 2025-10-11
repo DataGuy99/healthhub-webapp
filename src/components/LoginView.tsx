@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { signIn, signUp } from '../lib/auth';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export function LoginView({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState('');
@@ -8,6 +9,14 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [configError, setConfigError] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setConfigError(true);
+      setError('⚠️ Database connection not configured. Please check environment variables.');
+    }
+  }, []);
 
   const handleSubmit = async () => {
     if (!email.trim()) {
@@ -73,12 +82,22 @@ export function LoginView({ onLogin }: { onLogin: () => void }) {
           </div>
 
           {error && (
-            <p className="text-red-300 text-sm text-center">{error}</p>
+            <div className={`p-3 rounded-lg text-sm ${configError ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300' : 'bg-red-500/20 border border-red-500/30 text-red-300'}`}>
+              <div className="font-semibold mb-1">{configError ? 'Configuration Error' : 'Error'}</div>
+              <div>{error}</div>
+              {configError && (
+                <div className="mt-2 text-xs">
+                  <strong>Fix:</strong> Set environment variables in Netlify:
+                  <br />• VITE_SUPABASE_URL
+                  <br />• VITE_SUPABASE_ANON_KEY
+                </div>
+              )}
+            </div>
           )}
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || configError}
             className="w-full px-6 py-3 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (isSignUp ? 'Creating Account...' : 'Signing In...') : (isSignUp ? 'Sign Up' : 'Sign In')}

@@ -40,6 +40,7 @@ export function CSVImportModal({ transactions, onClose, onImport }: CSVImportMod
   const [mappedTransactions, setMappedTransactions] = useState<MappedTransaction[]>([]);
   const [rules, setRules] = useState<TransactionRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [splittingIndex, setSplittingIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -102,6 +103,7 @@ export function CSVImportModal({ transactions, onClose, onImport }: CSVImportMod
       setLoading(false);
     } catch (error) {
       console.error('Error loading rules:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load transaction rules');
       setLoading(false);
     }
   };
@@ -199,6 +201,26 @@ export function CSVImportModal({ transactions, onClose, onImport }: CSVImportMod
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8">
           <div className="text-white">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="text-red-300 text-center">
+            <div className="text-2xl mb-2">⚠️</div>
+            <div className="font-semibold mb-2">Import Error</div>
+            <div className="text-sm mb-4">{error}</div>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg transition-all"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     );

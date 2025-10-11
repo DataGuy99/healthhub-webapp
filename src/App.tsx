@@ -3,6 +3,7 @@ import { Dashboard } from './components/Dashboard';
 import { FluidBackground } from './components/FluidBackground';
 import { LoginView } from './components/LoginView';
 import { MobileNav } from './components/MobileNav';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
 
 function App() {
@@ -47,7 +48,7 @@ function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <FluidBackground />
       <div className="relative z-10 min-h-screen">
         {authenticated ? (
@@ -71,7 +72,7 @@ function App() {
           settingsSubTab={settingsSubTab}
         />
       )}
-    </>
+    </ErrorBoundary>
   );
 }
 

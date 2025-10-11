@@ -41,6 +41,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [categorySpending, setCategorySpending] = useState<Map<string, number>>(new Map());
   const [categoryBudgets, setCategoryBudgets] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showBudgetPlanner, setShowBudgetPlanner] = useState(false);
   const [budgetInputs, setBudgetInputs] = useState<Map<string, string>>(new Map());
   const [showImportPreview, setShowImportPreview] = useState(false);
@@ -124,6 +125,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       setLoading(false);
     } catch (error) {
       console.error('Error loading finance data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load finance data');
       setLoading(false);
     }
   };
@@ -313,6 +315,30 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-white/70">Loading finance data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-6 max-w-md">
+          <div className="text-red-300 text-center">
+            <div className="text-2xl mb-2">⚠️</div>
+            <div className="font-semibold mb-2">Failed to Load Finance Data</div>
+            <div className="text-sm mb-4">{error}</div>
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                loadData();
+              }}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
