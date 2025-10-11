@@ -16,6 +16,8 @@ export function DailySupplementLogger() {
     // Load from localStorage or default to midnight
     return localStorage.getItem('autoLogTime') || '00:00';
   });
+  const [isHistoryMode, setIsHistoryMode] = useState(false);
+  const [viewingDate, setViewingDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Auto-log timer - checks every minute if it's time to auto-log
   useEffect(() => {
@@ -51,7 +53,7 @@ export function DailySupplementLogger() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [viewingDate]); // Reload when viewing date changes
 
   const loadData = async () => {
     try {
@@ -68,12 +70,13 @@ export function DailySupplementLogger() {
 
       if (supplementsError) throw supplementsError;
 
-      // Load today's logs
+      // Load logs for viewing date (either today or historical)
+      const dateToLoad = isHistoryMode ? viewingDate : currentDate;
       const { data: logsData, error: logsError } = await supabase
         .from('supplement_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', currentDate);
+        .eq('date', dateToLoad);
 
       if (logsError) throw logsError;
 
@@ -136,12 +139,52 @@ export function DailySupplementLogger() {
     }
   };
 
-  // Just toggle visual selection (doesn't save to database)
-  const toggleSupplement = (supplementId: string) => {
-    setLogs(prev => ({
-      ...prev,
-      [supplementId]: !prev[supplementId]
-    }));
+  // Toggle visual selection (today mode) or directly save (history mode)
+  const toggleSupplement = async (supplementId: string) => {
+    if (isHistoryMode) {
+      // In history mode, directly toggle the database entry for that date
+      try {
+        const user = await getCurrentUser();
+        if (!user) return;
+
+        const isCurrentlyTaken = savedLogs.has(supplementId);
+        const newValue = !isCurrentlyTaken;
+
+        const { error } = await supabase
+          .from('supplement_logs')
+          .upsert({
+            user_id: user.id,
+            supplement_id: supplementId,
+            date: viewingDate,
+            is_taken: newValue,
+            timestamp: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,supplement_id,date'
+          });
+
+        if (error) throw error;
+
+        // Update savedLogs to reflect change
+        setSavedLogs(prev => {
+          const newSet = new Set(prev);
+          if (newValue) {
+            newSet.add(supplementId);
+          } else {
+            newSet.delete(supplementId);
+          }
+          return newSet;
+        });
+      } catch (error) {
+        console.error('Error toggling historical supplement:', error);
+        alert('Failed to update supplement log');
+      }
+    } else {
+      // In today mode, just toggle visual selection (doesn't save)
+      setLogs(prev => ({
+        ...prev,
+        [supplementId]: !prev[supplementId]
+      }));
+    }
   };
 
   // Save all currently selected supplements to database
@@ -256,26 +299,87 @@ export function DailySupplementLogger() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-white mb-2">Daily Logger</h2>
-        <div className="text-white/70 text-lg">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-3xl font-bold text-white">Daily Logger</h2>
+          <button
+            onClick={() => {
+              setIsHistoryMode(!isHistoryMode);
+              if (!isHistoryMode) {
+                setViewingDate(currentDate);
+              }
+            }}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              isHistoryMode
+                ? 'bg-blue-500/30 border border-blue-500/40 text-blue-300'
+                : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+            }`}
+          >
+            📅 {isHistoryMode ? 'Exit History' : 'View History'}
+          </button>
         </div>
 
-        {/* Auto-log Time Setting */}
-        <div className="mt-4 p-3 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-white/70 text-sm">⏰ Auto-log at:</span>
-              <input
-                type="time"
-                value={autoLogTime}
-                onChange={(e) => setAutoLogTime(e.target.value)}
-                className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              />
-            </div>
-            <span className="text-white/50 text-xs">Selections auto-save at this time</span>
+        {/* Date Display and Navigation */}
+        {isHistoryMode ? (
+          <div className="flex items-center justify-between bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-3">
+            <button
+              onClick={() => {
+                const date = new Date(viewingDate);
+                date.setDate(date.getDate() - 1);
+                setViewingDate(date.toISOString().split('T')[0]);
+              }}
+              className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all"
+            >
+              ← Previous
+            </button>
+            <input
+              type="date"
+              value={viewingDate}
+              onChange={(e) => setViewingDate(e.target.value)}
+              max={currentDate}
+              className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <button
+              onClick={() => {
+                const date = new Date(viewingDate);
+                date.setDate(date.getDate() + 1);
+                const newDate = date.toISOString().split('T')[0];
+                if (newDate <= currentDate) {
+                  setViewingDate(newDate);
+                }
+              }}
+              disabled={viewingDate >= currentDate}
+              className={`px-3 py-1 rounded-lg transition-all ${
+                viewingDate >= currentDate
+                  ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+            >
+              Next →
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className="text-white/70 text-lg">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        )}
+
+        {/* Auto-log Time Setting - Only show in today mode */}
+        {!isHistoryMode && (
+          <div className="mt-4 p-3 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-white/70 text-sm">⏰ Auto-log at:</span>
+                <input
+                  type="time"
+                  value={autoLogTime}
+                  onChange={(e) => setAutoLogTime(e.target.value)}
+                  className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                />
+              </div>
+              <span className="text-white/50 text-xs">Selections auto-save at this time</span>
+            </div>
+          </div>
+        )}
 
         {/* Workout Toggle */}
         {workoutSupplements.length > 0 && (
@@ -391,7 +495,10 @@ export function DailySupplementLogger() {
                   {!hiddenSections.has(section) && (
                     <div className="space-y-2">
                       {sectionSupplements.map(supplement => {
-                        const isTaken = logs[supplement.id!] || false;
+                        // In history mode, show what's saved. In today mode, show visual selections
+                        const isTaken = isHistoryMode
+                          ? (supplement.id ? savedLogs.has(supplement.id) : false)
+                          : (logs[supplement.id!] || false);
 
                         return (
                           <motion.button
@@ -518,7 +625,10 @@ export function DailySupplementLogger() {
                 {!hiddenSections.has(section) && (
                   <div className="space-y-2">
                     {sectionSupplements.map(supplement => {
-                      const isTaken = logs[supplement.id!] || false;
+                      // In history mode, show what's saved. In today mode, show visual selections
+                      const isTaken = isHistoryMode
+                        ? (supplement.id ? savedLogs.has(supplement.id) : false)
+                        : (logs[supplement.id!] || false);
 
                       return (
                         <motion.button
