@@ -198,12 +198,18 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       // Save transaction rules for transactions marked "saveRule"
       const rulesToSave = mappedTransactions
         .filter(tx => tx.saveRule)
-        .map(tx => ({
-          user_id: user.id,
-          keyword: tx.merchant.split(' ')[0], // Use first word as keyword
-          category: tx.category,
-          template: tx.template,
-        }));
+        .map(tx => {
+          const trimmed = tx.merchant.trim();
+          const firstWord = trimmed.split(/\s+/)[0];
+          const keyword = (firstWord || trimmed || 'UNKNOWN').toUpperCase();
+
+          return {
+            user_id: user.id,
+            keyword,
+            category: tx.category,
+            template: tx.template,
+          };
+        });
 
       if (rulesToSave.length > 0) {
         const { error: rulesError } = await supabase
@@ -253,23 +259,39 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
 
       const { data: createdItems, error: itemsError } = await supabase
         .from('category_items')
-        .upsert(itemsToCreate, { onConflict: 'user_id,category,name', ignoreDuplicates: false })
+        .upsert(itemsToCreate, { onConflict: 'user_id,category,name', ignoreDuplicates: true })
         .select('id, name, category');
 
       if (itemsError) throw itemsError;
 
-      // Create category_logs for each transaction
-      const logsToCreate = expandedTransactions.map((tx, index) => {
-        const matchingItem = createdItems?.find(item => item.name === tx.merchant && item.category === tx.category);
-        return {
-          user_id: user.id,
-          category_item_id: matchingItem?.id || createdItems?.[index]?.id,
-          date: tx.date,
-          actual_amount: tx.amount,
-          notes: `Imported: ${tx.bankCategory}`,
-          is_planned: false,
-        };
+      // Create lookup map for efficient matching
+      const itemLookup = new Map<string, string>();
+      createdItems?.forEach(item => {
+        const key = `${item.name}|${item.category}`;
+        itemLookup.set(key, item.id);
       });
+
+      // Create category_logs for each transaction
+      const logsToCreate = expandedTransactions
+        .map((tx) => {
+          const key = `${tx.merchant}|${tx.category}`;
+          const category_item_id = itemLookup.get(key);
+
+          if (!category_item_id) {
+            console.error(`No matching item found for transaction: ${tx.merchant} in ${tx.category}`);
+            return null;
+          }
+
+          return {
+            user_id: user.id,
+            category_item_id,
+            date: tx.date,
+            actual_amount: tx.amount,
+            notes: `Imported: ${tx.bankCategory}`,
+            is_planned: false,
+          };
+        })
+        .filter((log): log is NonNullable<typeof log> => log !== null);
 
       const { error: logsError } = await supabase
         .from('category_logs')

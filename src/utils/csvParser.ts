@@ -1,5 +1,5 @@
 // CSV parser for bank transaction imports
-// Supports the bank's 14-column format and extracts essential data
+// Requires at least 11 columns; extracts Date(0), Name(5), Amount(7), Description(8), Category(9)
 
 export interface ParsedTransaction {
   date: string;           // YYYY-MM-DD

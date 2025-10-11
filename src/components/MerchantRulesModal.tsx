@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, TransactionRule } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
+import { TEMPLATE_MAP } from '../constants/templates';
 
 interface MerchantRulesModalProps {
   onClose: () => void;
@@ -18,18 +19,6 @@ const CATEGORY_OPTIONS = [
   { id: 'misc-health', name: 'Misc Health', icon: '🏥' },
   { id: 'home-garden', name: 'Home & Garden', icon: '🌱' },
 ];
-
-const TEMPLATE_MAP: Record<string, 'market' | 'covenant' | 'chronicle' | 'treasury'> = {
-  'grocery': 'market',
-  'auto': 'market',
-  'rent': 'covenant',
-  'bills': 'covenant',
-  'investment': 'treasury',
-  'supplements': 'market',
-  'misc-shop': 'chronicle',
-  'misc-health': 'chronicle',
-  'home-garden': 'chronicle',
-};
 
 export function MerchantRulesModal({ onClose }: MerchantRulesModalProps) {
   const [rules, setRules] = useState<TransactionRule[]>([]);
@@ -110,7 +99,12 @@ export function MerchantRulesModal({ onClose }: MerchantRulesModalProps) {
     }
   };
 
-  const deleteRule = async (ruleId: string) => {
+  const deleteRule = async (ruleId: string | undefined) => {
+    if (!ruleId) {
+      alert('Cannot delete rule: missing ID');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this rule?')) return;
 
     try {
@@ -277,7 +271,7 @@ export function MerchantRulesModal({ onClose }: MerchantRulesModalProps) {
                               Edit
                             </button>
                             <button
-                              onClick={() => deleteRule(rule.id!)}
+                              onClick={() => deleteRule(rule.id)}
                               className="text-red-400 hover:text-red-300 text-sm"
                             >
                               Delete

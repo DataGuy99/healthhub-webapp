@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, TransactionRule } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { mapBankCategory, type ParsedTransaction } from '../utils/csvParser';
+import { TEMPLATE_MAP } from '../constants/templates';
 
 interface CSVImportModalProps {
   transactions: ParsedTransaction[];
@@ -22,18 +23,6 @@ export interface TransactionSplit {
   category: string;
   template: 'market' | 'covenant' | 'chronicle' | 'treasury';
 }
-
-const TEMPLATE_MAP: Record<string, 'market' | 'covenant' | 'chronicle' | 'treasury'> = {
-  'grocery': 'market',
-  'auto': 'market',
-  'rent': 'covenant',
-  'bills': 'covenant',
-  'investment': 'treasury',
-  'supplements': 'market',
-  'misc-shop': 'chronicle',
-  'misc-health': 'chronicle',
-  'home-garden': 'chronicle',
-};
 
 const CATEGORY_OPTIONS = [
   { id: 'grocery', name: 'Grocery', icon: '🛒' },

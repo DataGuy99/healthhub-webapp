@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS transaction_rules (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   keyword TEXT NOT NULL,
   category TEXT NOT NULL,
-  template TEXT NOT NULL,
+  template TEXT NOT NULL CHECK (template IN ('market', 'covenant', 'chronicle', 'treasury')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, keyword)

@@ -1,6 +1,6 @@
 interface MobileNavProps {
-  activeTab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export';
-  onTabChange: (tab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export') => void;
+  activeTab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export';
+  onTabChange: (tab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export') => void;
   librarySubTab: 'supplements' | 'sections';
   settingsSubTab: 'costs' | 'export';
 }
@@ -31,6 +31,19 @@ export function MobileNav({ activeTab, onTabChange, librarySubTab, settingsSubTa
           >
             <span className="text-2xl">📅</span>
             <span className="text-xs font-medium">Daily</span>
+          </button>
+          <button
+            onClick={() => onTabChange('finance')}
+            aria-label="Finance"
+            aria-current={activeTab === 'finance' ? 'page' : undefined}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all duration-300 ${
+              activeTab === 'finance'
+                ? 'text-violet-400'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-2xl">💰</span>
+            <span className="text-xs font-medium">Finance</span>
           </button>
           <button
             onClick={() => onTabChange(librarySubTab)}
