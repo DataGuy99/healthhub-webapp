@@ -152,3 +152,44 @@ export interface PlaidSyncCursor {
   cursor: string;
   last_synced_at?: string;
 }
+
+// ============================================================================
+// Category Hub Types
+// ============================================================================
+
+export interface CategoryItem {
+  id?: string;
+  user_id?: string;
+  category: string;
+  name: string;
+  description?: string;
+  amount?: number;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'one-time';
+  subcategory?: string;
+  tags?: string[];
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CategoryLog {
+  id?: string;
+  user_id?: string;
+  category_item_id: string;
+  date: string;
+  actual_amount?: number;
+  notes?: string;
+  timestamp?: string;
+  is_planned?: boolean;
+}
+
+export interface CategoryBudget {
+  id?: string;
+  user_id?: string;
+  category: string;
+  month_year: string; // Format: 'YYYY-MM'
+  target_amount: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
