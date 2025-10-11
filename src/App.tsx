@@ -8,7 +8,7 @@ import { supabase } from './lib/supabase';
 function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export'>('overview');
   const [librarySubTab, setLibrarySubTab] = useState<'supplements' | 'sections'>('supplements');
   const [settingsSubTab, setSettingsSubTab] = useState<'costs' | 'export'>('costs');
 

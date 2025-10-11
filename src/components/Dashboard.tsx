@@ -4,14 +4,15 @@ import { SupplementsView } from './SupplementsView';
 import { DailySupplementLogger } from './DailySupplementLogger';
 import { SectionsView } from './SectionsView';
 import { CostCalculator } from './CostCalculator';
+import { FinanceView } from './FinanceView';
 import { AnimatedTitle } from './AnimatedTitle';
 import { InstallButton } from './InstallButton';
 import { clearAuth, getCurrentUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 interface DashboardProps {
-  activeTab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export';
-  setActiveTab: (tab: 'overview' | 'supplements' | 'sections' | 'costs' | 'export') => void;
+  activeTab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export';
+  setActiveTab: (tab: 'overview' | 'finance' | 'supplements' | 'sections' | 'costs' | 'export') => void;
   librarySubTab: 'supplements' | 'sections';
   setLibrarySubTab: (tab: 'supplements' | 'sections') => void;
   settingsSubTab: 'costs' | 'export';
@@ -241,7 +242,7 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
               {/* Desktop Navigation - Hidden on mobile */}
               <div className="hidden md:flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
                 <nav className="flex gap-2 overflow-x-auto">
-                  {(['overview', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
+                  {(['overview', 'finance', 'supplements', 'sections', 'costs', 'export'] as const).map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -281,6 +282,10 @@ Multi-Vitamin,,,Morning,"[{""name"":""Vitamin A"",""dose"":""5000"",""dose_unit"
           <div className="max-w-7xl mx-auto">
             {activeTab === 'overview' && (
               <DailySupplementLogger />
+            )}
+
+            {activeTab === 'finance' && (
+              <FinanceView onCategorySelect={setActiveTab} />
             )}
 
             {activeTab === 'supplements' && (
