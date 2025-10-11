@@ -7,6 +7,7 @@ export function DailySupplementLogger() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [sectionsList, setSectionsList] = useState<SupplementSection[]>([]);
   const [logs, setLogs] = useState<Record<string, boolean>>({}); // What's selected (not yet saved)
+  const [savedLogs, setSavedLogs] = useState<Set<string>>(new Set()); // What's actually saved in DB
   const [loading, setLoading] = useState(true);
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
@@ -18,6 +19,7 @@ export function DailySupplementLogger() {
       const newDate = new Date().toISOString().split('T')[0];
       if (newDate !== currentDate) {
         setCurrentDate(newDate);
+        setLogs({}); // Clear visual selections for new day
         loadData(); // Reload logs for new day
       }
     }, 60000); // Check every minute
@@ -94,12 +96,17 @@ export function DailySupplementLogger() {
       setSupplements(supplementsData || []);
       setSectionsList(sectionsData || []);
 
-      // Build logs lookup
-      const logsMap: Record<string, boolean> = {};
+      // Load what's been SAVED to database (for progress counter)
+      const savedIds = new Set<string>();
       (logsData || []).forEach((log: SupplementLog) => {
-        logsMap[log.supplement_id] = log.is_taken;
+        if (log.is_taken) {
+          savedIds.add(log.supplement_id);
+        }
       });
-      setLogs(logsMap);
+      setSavedLogs(savedIds);
+
+      // Don't load into visual selection state
+      // logs state is ONLY for what user has checked today (not yet saved)
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -141,6 +148,16 @@ export function DailySupplementLogger() {
         });
 
       if (error) throw error;
+
+      // Update savedLogs to reflect what's now in database
+      setSavedLogs(prev => {
+        const newSet = new Set(prev);
+        selectedIds.forEach(id => newSet.add(id));
+        return newSet;
+      });
+
+      // Clear visual selections after logging
+      setLogs({});
 
       alert(`Logged ${selectedIds.length} supplements!`);
     } catch (error) {
@@ -184,7 +201,7 @@ export function DailySupplementLogger() {
   const sections = sectionsList.map(s => s.name);
   const activeSupplements = isWorkoutMode ? workoutSupplements : regularSupplements;
   const totalSupplements = activeSupplements.length;
-  const takenCount = activeSupplements.filter(s => logs[s.id!]).length;
+  const takenCount = activeSupplements.filter(s => s.id && savedLogs.has(s.id)).length;
 
   if (loading) {
     return (
