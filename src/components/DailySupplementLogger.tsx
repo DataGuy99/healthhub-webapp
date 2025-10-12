@@ -368,13 +368,21 @@ export function DailySupplementLogger() {
             >
               ← Previous
             </button>
-            <input
-              type="date"
-              value={viewingDate}
-              onChange={(e) => setViewingDate(e.target.value)}
-              max={currentDate}
-              className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={viewingDate}
+                onChange={(e) => setViewingDate(e.target.value)}
+                max={currentDate}
+                className="px-3 py-2 pl-10 bg-gradient-to-r from-white/10 to-white/5 border border-white/30 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 hover:border-white/40 transition-all cursor-pointer backdrop-blur-sm"
+                style={{
+                  colorScheme: 'dark',
+                }}
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                📅
+              </span>
+            </div>
             <button
               onClick={() => {
                 const date = new Date(viewingDate);

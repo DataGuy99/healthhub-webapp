@@ -230,12 +230,18 @@ export function BudgetSettingsModal({ isOpen, onClose, onSave }: BudgetSettingsM
                   <label className="block text-sm font-medium text-white/80 mb-2">
                     Period Start Date
                   </label>
-                  <input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-4 py-2 pl-10 bg-gradient-to-r from-white/10 to-white/5 border border-white/30 rounded-xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 hover:border-white/40 transition-all cursor-pointer backdrop-blur-sm"
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                      📅
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">
