@@ -104,7 +104,7 @@ export function SpendingTracker({ category, categoryName, icon, color, onBack }:
           user_id: user.id,
           category_item_id: itemData.id,
           date: newExpenseDate,
-          amount_logged: parseFloat(newExpenseAmount),
+          actual_amount: parseFloat(newExpenseAmount),
           notes: JSON.stringify(metadata),
           timestamp: new Date().toISOString()
         });
@@ -140,7 +140,7 @@ export function SpendingTracker({ category, categoryName, icon, color, onBack }:
   };
 
   // Calculate totals
-  const totalSpent = expenses.reduce((sum, exp) => sum + (exp.amount_logged || 0), 0);
+  const totalSpent = expenses.reduce((sum, exp) => sum + (exp.actual_amount || 0), 0);
   const averagePerExpense = expenses.length > 0 ? totalSpent / expenses.length : 0;
 
   if (loading) {
@@ -312,7 +312,7 @@ export function SpendingTracker({ category, categoryName, icon, color, onBack }:
                     </div>
                     <div className="ml-11">
                       <div className="text-2xl font-bold text-green-400">
-                        ${(expense.amount_logged || 0).toFixed(2)}
+                        ${(expense.actual_amount || 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
