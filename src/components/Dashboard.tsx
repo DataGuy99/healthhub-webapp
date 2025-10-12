@@ -12,6 +12,7 @@ import { TreasuryTemplate } from './TreasuryTemplate';
 import { AnimatedTitle } from './AnimatedTitle';
 import { CryptoMetalsTracker } from './CryptoMetalsTracker';
 import { BillsDueDateTracker } from './BillsDueDateTracker';
+import { RecurringItemTracker } from './RecurringItemTracker';
 import { clearAuth } from '../lib/auth';
 
 type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
@@ -364,10 +365,21 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
-      if (grocerySubTab === 'costs' || grocerySubTab === 'common') {
+      if (grocerySubTab === 'common') {
+        return (
+          <CategoryHub
+            category="grocery-common"
+            categoryName="Common Purchases"
+            icon="⭐"
+            color="from-green-500/20 to-emerald-500/20 border-green-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      if (grocerySubTab === 'costs') {
         return (
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-            <h2 className="text-2xl font-bold text-white">{grocerySubTab === 'costs' ? 'Grocery Costs' : 'Common Purchases'}</h2>
+            <h2 className="text-2xl font-bold text-white">Grocery Costs</h2>
             <p className="text-white/60 mt-2">Feature coming soon...</p>
           </div>
         );
@@ -376,14 +388,13 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Auto category with sub-tabs
     if (activeTab === 'auto') {
-      const config = CATEGORY_CONFIG[activeTab];
       if (autoSubTab === 'maintenance') {
         return (
           <CategoryHub
-            category={activeTab}
-            categoryName={config.name}
-            icon={config.icon}
-            color={config.color}
+            category="auto-maintenance"
+            categoryName="Maintenance"
+            icon="🔧"
+            color="from-red-500/20 to-rose-500/20 border-red-500/30"
             onBack={() => setActiveTab('overview')}
           />
         );
