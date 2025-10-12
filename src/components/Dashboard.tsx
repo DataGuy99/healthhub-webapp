@@ -13,6 +13,7 @@ import { AnimatedTitle } from './AnimatedTitle';
 import { CryptoMetalsTracker } from './CryptoMetalsTracker';
 import { BillsDueDateTracker } from './BillsDueDateTracker';
 import { RecurringItemTracker } from './RecurringItemTracker';
+import { SpendingTracker } from './SpendingTracker';
 import { clearAuth } from '../lib/auth';
 
 type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
@@ -380,9 +381,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       }
       if (grocerySubTab === 'costs') {
         return (
-          <TreasuryTemplate
+          <SpendingTracker
             category="grocery-costs"
-            categoryName="Grocery Costs"
+            categoryName="Grocery Spending"
             icon="💰"
             color="from-green-500/20 to-emerald-500/20 border-green-500/30"
             onBack={() => setActiveTab('overview')}
@@ -417,9 +418,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       }
       if (autoSubTab === 'costs') {
         return (
-          <TreasuryTemplate
+          <SpendingTracker
             category="auto-costs"
-            categoryName="Auto Costs"
+            categoryName="Auto Spending"
             icon="💰"
             color="from-red-500/20 to-rose-500/20 border-red-500/30"
             onBack={() => setActiveTab('overview')}
