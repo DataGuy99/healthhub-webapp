@@ -341,12 +341,14 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         return <CostCalculator />;
       }
       if (supplementsSubTab === 'export') {
-        // TODO: Create export component
         return (
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-            <h2 className="text-2xl font-bold text-white">Import / Export</h2>
-            <p className="text-white/60 mt-2">Export functionality coming soon...</p>
-          </div>
+          <ChronicleTemplate
+            category="supplements-export"
+            categoryName="Import / Export"
+            icon="📤"
+            color="from-purple-500/20 to-pink-500/20 border-purple-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
         );
       }
     }
@@ -378,10 +380,13 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       }
       if (grocerySubTab === 'costs') {
         return (
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-            <h2 className="text-2xl font-bold text-white">Grocery Costs</h2>
-            <p className="text-white/60 mt-2">Feature coming soon...</p>
-          </div>
+          <TreasuryTemplate
+            category="grocery-costs"
+            categoryName="Grocery Costs"
+            icon="💰"
+            color="from-green-500/20 to-emerald-500/20 border-green-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
         );
       }
     }
@@ -399,12 +404,26 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
-      if (autoSubTab === 'gas' || autoSubTab === 'costs') {
+      if (autoSubTab === 'gas') {
         return (
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-            <h2 className="text-2xl font-bold text-white">{autoSubTab === 'gas' ? 'Gas Prices' : 'Auto Costs'}</h2>
-            <p className="text-white/60 mt-2">Feature coming soon...</p>
-          </div>
+          <ChronicleTemplate
+            category="auto-gas"
+            categoryName="Gas Fill-ups"
+            icon="⛽"
+            color="from-red-500/20 to-rose-500/20 border-red-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      if (autoSubTab === 'costs') {
+        return (
+          <TreasuryTemplate
+            category="auto-costs"
+            categoryName="Auto Costs"
+            icon="💰"
+            color="from-red-500/20 to-rose-500/20 border-red-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
         );
       }
     }
@@ -423,12 +442,27 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
-      // Lease and History placeholders
+      // Lease info using CategoryHub (store lease terms as items)
+      if (rentSubTab === 'lease') {
+        return (
+          <CategoryHub
+            category="rent-lease"
+            categoryName="Lease Information"
+            icon="📋"
+            color="from-blue-500/20 to-cyan-500/20 border-blue-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      // Payment history using ChronicleTemplate
       return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🏠 {rentSubTab === 'lease' ? 'Lease Information' : 'Payment History'}</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
+        <ChronicleTemplate
+          category="rent-history"
+          categoryName="Payment History"
+          icon="📜"
+          color="from-blue-500/20 to-cyan-500/20 border-blue-500/30"
+          onBack={() => setActiveTab('overview')}
+        />
       );
     }
 
@@ -437,12 +471,27 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       if (billsSubTab === 'due-dates') {
         return <BillsDueDateTracker />;
       }
-      // Tracker and Providers placeholders for now
+      // Payment tracker using ChronicleTemplate
+      if (billsSubTab === 'tracker') {
+        return (
+          <ChronicleTemplate
+            category="bills-tracker"
+            categoryName="Payment Tracker"
+            icon="✅"
+            color="from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      // Service providers using CategoryHub
       return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">💡 {billsSubTab === 'tracker' ? 'Payment Tracker' : 'Service Providers'}</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
+        <CategoryHub
+          category="bills-providers"
+          categoryName="Service Providers"
+          icon="🏢"
+          color="from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
+          onBack={() => setActiveTab('overview')}
+        />
       );
     }
 
@@ -451,12 +500,27 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       if (investmentSubTab === 'crypto-metals') {
         return <CryptoMetalsTracker />;
       }
-      // Portfolio and Performance placeholders for now
+      // Portfolio using CategoryHub (track investments as items)
+      if (investmentSubTab === 'portfolio') {
+        return (
+          <CategoryHub
+            category="investment-portfolio"
+            categoryName="Investment Portfolio"
+            icon="💼"
+            color="from-indigo-500/20 to-violet-500/20 border-indigo-500/30"
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      // Performance using TreasuryTemplate (track gains/losses)
       return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">📈 {investmentSubTab === 'portfolio' ? 'Investment Portfolio' : 'Performance Analysis'}</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
+        <TreasuryTemplate
+          category="investment-performance"
+          categoryName="Performance Analysis"
+          icon="📊"
+          color="from-indigo-500/20 to-violet-500/20 border-indigo-500/30"
+          onBack={() => setActiveTab('overview')}
+        />
       );
     }
 
@@ -486,11 +550,15 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
+      // Returns using ChronicleTemplate
       return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🛍️ Returns & Exchanges</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
+        <ChronicleTemplate
+          category="misc-shop-returns"
+          categoryName="Returns & Exchanges"
+          icon="🔄"
+          color={config.color}
+          onBack={() => setActiveTab('overview')}
+        />
       );
     }
 
@@ -519,11 +587,15 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
+      // Insurance using CategoryHub
       return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🏥 Insurance Info</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
+        <CategoryHub
+          category="misc-health-insurance"
+          categoryName="Insurance Info"
+          icon="🛡️"
+          color={config.color}
+          onBack={() => setActiveTab('overview')}
+        />
       );
     }
 
