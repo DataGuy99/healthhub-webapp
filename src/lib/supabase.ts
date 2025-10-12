@@ -221,3 +221,27 @@ export interface BudgetSettings {
   created_at?: string;
   updated_at?: string;
 }
+
+export type CategoryTemplate = 'checklist' | 'spending' | 'events' | 'investments' | 'custom';
+
+export interface UserCategory {
+  id?: string;
+  user_id?: string;
+  name: string; // Display name (e.g., "Grocery", "Auto")
+  slug: string; // URL-safe identifier (e.g., "grocery", "auto")
+  icon: string; // Emoji icon
+  color: string; // Tailwind gradient classes
+  template: CategoryTemplate; // Which template to use
+  order: number; // Display order
+  is_active: boolean; // Show/hide
+  sub_tabs?: SubTabConfig[]; // Optional sub-tabs
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SubTabConfig {
+  id: string; // Unique ID for this sub-tab
+  name: string; // Display name
+  icon: string; // Emoji icon
+  template: CategoryTemplate; // Template type for this sub-tab
+}
