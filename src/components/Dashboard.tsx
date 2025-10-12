@@ -11,6 +11,7 @@ import { ChronicleTemplate } from './ChronicleTemplate';
 import { TreasuryTemplate } from './TreasuryTemplate';
 import { AnimatedTitle } from './AnimatedTitle';
 import { CryptoMetalsTracker } from './CryptoMetalsTracker';
+import { BillsDueDateTracker } from './BillsDueDateTracker';
 import { clearAuth } from '../lib/auth';
 
 type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
@@ -409,9 +410,13 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Bills category with sub-tabs
     if (activeTab === 'bills') {
+      if (billsSubTab === 'due-dates') {
+        return <BillsDueDateTracker />;
+      }
+      // Tracker and Providers placeholders for now
       return (
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">💡 {billsSubTab === 'due-dates' ? 'Bill Due Dates' : billsSubTab === 'tracker' ? 'Payment Tracker' : 'Service Providers'}</h2>
+          <h2 className="text-2xl font-bold text-white">💡 {billsSubTab === 'tracker' ? 'Payment Tracker' : 'Service Providers'}</h2>
           <p className="text-white/60 mt-2">Feature coming soon...</p>
         </div>
       );
