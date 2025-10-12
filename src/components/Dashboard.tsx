@@ -411,9 +411,22 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Rent category with sub-tabs
     if (activeTab === 'rent') {
+      const config = CATEGORY_CONFIG[activeTab];
+      if (rentSubTab === 'payments') {
+        return (
+          <CovenantTemplate
+            category={activeTab}
+            categoryName={config.name}
+            icon={config.icon}
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      // Lease and History placeholders
       return (
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🏠 {rentSubTab === 'payments' ? 'Rent Payments' : rentSubTab === 'lease' ? 'Lease Information' : 'Payment History'}</h2>
+          <h2 className="text-2xl font-bold text-white">🏠 {rentSubTab === 'lease' ? 'Lease Information' : 'Payment History'}</h2>
           <p className="text-white/60 mt-2">Feature coming soon...</p>
         </div>
       );
@@ -449,9 +462,33 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Misc Shop category with sub-tabs
     if (activeTab === 'misc-shop') {
+      const config = CATEGORY_CONFIG[activeTab];
+      if (miscShopSubTab === 'purchases') {
+        return (
+          <ChronicleTemplate
+            category="misc-shop-purchases"
+            categoryName="Purchases"
+            icon="🛍️"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      // Wishlist and Returns use CategoryHub
+      if (miscShopSubTab === 'wishlist') {
+        return (
+          <CategoryHub
+            category="misc-shop-wishlist"
+            categoryName="Wish List"
+            icon="⭐"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
       return (
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🛍️ {miscShopSubTab === 'purchases' ? 'Purchases' : miscShopSubTab === 'wishlist' ? 'Wish List' : 'Returns & Exchanges'}</h2>
+          <h2 className="text-2xl font-bold text-white">🛍️ Returns & Exchanges</h2>
           <p className="text-white/60 mt-2">Feature coming soon...</p>
         </div>
       );
@@ -459,9 +496,32 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Misc Health category with sub-tabs
     if (activeTab === 'misc-health') {
+      const config = CATEGORY_CONFIG[activeTab];
+      if (miscHealthSubTab === 'appointments') {
+        return (
+          <CategoryHub
+            category="misc-health-appointments"
+            categoryName="Appointments"
+            icon="📆"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      if (miscHealthSubTab === 'records') {
+        return (
+          <ChronicleTemplate
+            category="misc-health-records"
+            categoryName="Medical Records"
+            icon="📋"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
       return (
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🏥 {miscHealthSubTab === 'appointments' ? 'Doctor Appointments' : miscHealthSubTab === 'records' ? 'Medical Records' : 'Insurance Info'}</h2>
+          <h2 className="text-2xl font-bold text-white">🏥 Insurance Info</h2>
           <p className="text-white/60 mt-2">Feature coming soon...</p>
         </div>
       );
@@ -469,12 +529,40 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Home & Garden category with sub-tabs
     if (activeTab === 'home-garden') {
-      return (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">🌱 {homeGardenSubTab === 'projects' ? 'Home Projects' : homeGardenSubTab === 'maintenance' ? 'Maintenance Schedule' : 'Purchases'}</h2>
-          <p className="text-white/60 mt-2">Feature coming soon...</p>
-        </div>
-      );
+      const config = CATEGORY_CONFIG[activeTab];
+      if (homeGardenSubTab === 'projects') {
+        return (
+          <ChronicleTemplate
+            category="home-garden-projects"
+            categoryName="Home Projects"
+            icon="🔨"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      if (homeGardenSubTab === 'maintenance') {
+        return (
+          <CategoryHub
+            category="home-garden-maintenance"
+            categoryName="Maintenance"
+            icon="🔧"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
+      if (homeGardenSubTab === 'purchases') {
+        return (
+          <ChronicleTemplate
+            category="home-garden-purchases"
+            categoryName="Purchases"
+            icon="🛒"
+            color={config.color}
+            onBack={() => setActiveTab('overview')}
+          />
+        );
+      }
     }
 
     return null;
