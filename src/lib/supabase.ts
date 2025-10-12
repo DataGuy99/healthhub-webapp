@@ -210,3 +210,14 @@ export interface TransactionRule {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface BudgetSettings {
+  id?: string;
+  user_id?: string;
+  period_type: 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  period_start_day?: number; // 0-6 for weekly (0=Sunday), 1-31 for monthly
+  period_start_date?: string; // For custom periods
+  period_length_days?: number; // For custom periods
+  created_at?: string;
+  updated_at?: string;
+}

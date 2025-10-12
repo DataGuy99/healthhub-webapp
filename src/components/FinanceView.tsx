@@ -9,6 +9,7 @@ import { TreasuryTemplate } from './TreasuryTemplate';
 import { parseBankCSV, validateCSVFile, downloadCSVTemplate, type ParsedTransaction } from '../utils/csvParser';
 import { CSVImportModal, type MappedTransaction } from './CSVImportModal';
 import { MerchantRulesModal } from './MerchantRulesModal';
+import { BudgetSettingsModal } from './BudgetSettingsModal';
 
 type Category = {
   id: string;
@@ -47,6 +48,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [showMerchantRules, setShowMerchantRules] = useState(false);
+  const [showBudgetSettings, setShowBudgetSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -415,7 +417,13 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
           <h1 className="text-3xl font-bold text-white mb-2">LifeDashHub</h1>
           <p className="text-white/60">Your complete financial overview</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowBudgetSettings(true)}
+            className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 text-violet-300 font-medium transition-all"
+          >
+            ⚙️ Period
+          </button>
           <button
             onClick={() => setShowBudgetPlanner(!showBudgetPlanner)}
             className="px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-medium transition-all"
@@ -468,6 +476,13 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
           onClose={() => setShowMerchantRules(false)}
         />
       )}
+
+      {/* Budget Settings Modal */}
+      <BudgetSettingsModal
+        isOpen={showBudgetSettings}
+        onClose={() => setShowBudgetSettings(false)}
+        onSave={() => loadData()}
+      />
 
       {/* Budget Planner */}
       {showBudgetPlanner && (
