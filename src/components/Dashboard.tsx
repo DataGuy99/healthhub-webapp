@@ -10,7 +10,7 @@ import { CovenantTemplate } from './CovenantTemplate';
 import { ChronicleTemplate } from './ChronicleTemplate';
 import { TreasuryTemplate } from './TreasuryTemplate';
 import { AnimatedTitle } from './AnimatedTitle';
-import { InstallButton } from './InstallButton';
+import { CryptoMetalsTracker } from './CryptoMetalsTracker';
 import { clearAuth } from '../lib/auth';
 
 type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
@@ -419,14 +419,14 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Investment category with sub-tabs
     if (activeTab === 'investment') {
+      if (investmentSubTab === 'crypto-metals') {
+        return <CryptoMetalsTracker />;
+      }
+      // Portfolio and Performance placeholders for now
       return (
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
-          <h2 className="text-2xl font-bold text-white">📈 {investmentSubTab === 'portfolio' ? 'Investment Portfolio' : investmentSubTab === 'crypto-metals' ? 'Crypto & Precious Metals' : 'Performance Analysis'}</h2>
-          <p className="text-white/60 mt-2">
-            {investmentSubTab === 'crypto-metals'
-              ? 'Track your cryptocurrency and precious metals holdings with live price data.'
-              : 'Feature coming soon...'}
-          </p>
+          <h2 className="text-2xl font-bold text-white">📈 {investmentSubTab === 'portfolio' ? 'Investment Portfolio' : 'Performance Analysis'}</h2>
+          <p className="text-white/60 mt-2">Feature coming soon...</p>
         </div>
       );
     }
@@ -476,15 +476,12 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           <div onClick={() => setActiveTab('overview')} className="cursor-pointer">
             <AnimatedTitle text="LifeDashHub" />
           </div>
-          <div className="flex items-center gap-2">
-            <InstallButton />
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 transition-all text-sm"
-            >
-              Logout
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 transition-all text-sm"
+          >
+            Logout
+          </button>
         </div>
 
         {/* Tabs - Main or Sub-tabs based on active category */}
