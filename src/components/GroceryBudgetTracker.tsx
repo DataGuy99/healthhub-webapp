@@ -429,6 +429,72 @@ export function GroceryBudgetTracker() {
         </div>
       </div>
 
+      {/* Protein Tracking Cards (only show if protein goal > 0) */}
+      {dailyGoal > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-5">
+            <div className="text-white/70 text-sm mb-1">Protein Goal</div>
+            <div className="text-white text-2xl font-bold">{periodProteinGoal.toFixed(0)}g</div>
+            <div className="text-white/60 text-xs mt-1">{dailyGoal}g/day × {daysInPeriod} days</div>
+          </div>
+          <div className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 backdrop-blur-xl rounded-2xl border border-orange-500/30 p-5">
+            <div className="text-white/70 text-sm mb-1">Protein Secured</div>
+            <div className="text-white text-2xl font-bold">{proteinSecured.toFixed(0)}g</div>
+            <div className="text-white/60 text-xs mt-1">{daysCovered.toFixed(1)} days covered</div>
+          </div>
+          <div className={`bg-gradient-to-r ${proteinGap === 0 ? 'from-green-500/20 to-emerald-500/20 border-green-500/30' : 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30'} backdrop-blur-xl rounded-2xl border p-5`}>
+            <div className="text-white/70 text-sm mb-1">Protein Gap</div>
+            <div className={`text-2xl font-bold ${proteinGap === 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+              {proteinGap.toFixed(0)}g
+            </div>
+            <div className="text-white/60 text-xs mt-1">{daysRemaining.toFixed(1)} days remaining</div>
+          </div>
+          <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-5">
+            <div className="text-white/70 text-sm mb-1">Protein Spending</div>
+            <div className="text-white text-2xl font-bold">${proteinSpent.toFixed(2)}</div>
+            <div className="text-white/60 text-xs mt-1">{proteinPurchases.length} protein purchases</div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Protein Suggestions (only show if gap exists and suggestions available) */}
+      {dailyGoal > 0 && proteinGap > 0 && affordableSuggestions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 backdrop-blur-xl rounded-2xl border border-indigo-500/30 p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">💡 Smart Protein Suggestions</h3>
+            <div className="text-sm text-white/60">Based on remaining budget: ${budgetAfterProtein.toFixed(2)}</div>
+          </div>
+          <div className="space-y-3">
+            {affordableSuggestions.map((suggestion, idx) => (
+              <div key={idx} className="bg-white/10 rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="font-bold text-white">{suggestion.food_name}</div>
+                    <div className="text-sm text-white/60 mt-1">
+                      {suggestion.items_needed} × {suggestion.serving_size}{suggestion.serving_unit}
+                      ({suggestion.protein_grams}g protein each) = {suggestion.total_protein.toFixed(0)}g total
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-green-400">${suggestion.total_cost.toFixed(2)}</div>
+                    <div className="text-xs text-white/60">${suggestion.cost_per_gram.toFixed(2)}/g</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <p className="text-blue-300 text-sm">
+              💡 <strong>Tip:</strong> These suggestions will close your {proteinGap.toFixed(0)}g protein gap within your remaining budget.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Progress Bar */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-5">
         <div className="flex items-center justify-between mb-2">
@@ -505,6 +571,58 @@ export function GroceryBudgetTracker() {
               />
             </div>
           </div>
+
+          {/* Protein Source Toggle (only show if protein goal > 0) */}
+          {dailyGoal > 0 && (
+            <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  id="is-protein-source"
+                  checked={formIsProteinSource}
+                  onChange={(e) => setFormIsProteinSource(e.target.checked)}
+                  className="w-5 h-5 rounded border-2 border-purple-500/50 bg-white/10 checked:bg-purple-500 focus:ring-2 focus:ring-purple-500/50 cursor-pointer"
+                />
+                <label htmlFor="is-protein-source" className="text-white font-medium cursor-pointer">
+                  🥩 This is a protein source purchase
+                </label>
+              </div>
+
+              {formIsProteinSource && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3"
+                >
+                  <div>
+                    <label className="block text-sm text-white/70 mb-2">Total Protein (grams)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={formProteinGrams}
+                      onChange={(e) => setFormProteinGrams(e.target.value)}
+                      placeholder="e.g., 450"
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <p className="text-xs text-white/50 mt-1">Total grams of protein in this purchase</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/70 mb-2">Days Covered</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={formDaysCovered}
+                      onChange={(e) => setFormDaysCovered(e.target.value)}
+                      placeholder="e.g., 3"
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    />
+                    <p className="text-xs text-white/50 mt-1">How many days this protein will last</p>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={addPurchase}
             className="mt-4 px-6 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all"
@@ -545,6 +663,16 @@ export function GroceryBudgetTracker() {
                   </div>
                   <div className="ml-11">
                     <div className="text-2xl font-bold text-green-400">${purchase.amount.toFixed(2)}</div>
+                    {purchase.is_protein_source && (
+                      <div className="mt-2 flex items-center gap-2 text-sm">
+                        <span className="px-2 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300">
+                          🥩 {purchase.protein_grams}g protein
+                        </span>
+                        <span className="text-white/60">
+                          {purchase.days_covered} days covered
+                        </span>
+                      </div>
+                    )}
                     {purchase.notes && (
                       <div className="mt-2 text-sm text-white/70 bg-black/20 rounded-lg p-3">
                         {purchase.notes}

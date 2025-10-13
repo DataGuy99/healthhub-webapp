@@ -5,6 +5,7 @@ import { DailySupplementLogger } from './DailySupplementLogger';
 import { SupplementsView } from './SupplementsView';
 import { SectionsView } from './SectionsView';
 import { CostCalculator } from './CostCalculator';
+import { SupplementImportExport } from './SupplementImportExport';
 import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
 import { ChronicleTemplate } from './ChronicleTemplate';
@@ -317,15 +318,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         return <CostCalculator />;
       }
       if (supplementsSubTab === 'export') {
-        return (
-          <ChronicleTemplate
-            category="supplements-export"
-            categoryName="Import / Export"
-            icon="📤"
-            color="from-purple-500/20 to-pink-500/20 border-purple-500/30"
-            onBack={() => setActiveTab('overview')}
-          />
-        );
+        return <SupplementImportExport />;
       }
     }
 

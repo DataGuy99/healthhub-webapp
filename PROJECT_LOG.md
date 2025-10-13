@@ -743,7 +743,229 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - CSV import system (in progress)
   - User settings database sync
 
-**Current Version**: v2.1.1 (2025-10-13)
+**Current Version**: v2.1.2 (2025-10-13)
+
+---
+
+## v2.1.2 (2025-10-13) - Data Loss Prevention & Protein Goal Tracking
+
+### Critical Data Loss Incident & Recovery
+
+**Issue**: User discovered ALL supplement data was deleted during previous updates.
+
+**Root Cause Analysis**:
+1. CONSOLIDATED_DATABASE_SCHEMA.sql contains `DROP TABLE IF EXISTS supplements CASCADE`
+2. Running this migration deleted all user data
+3. Supplement CSV import/export UI was replaced with ChronicleTemplate during redesign
+4. User lost 30 supplements from their daily regimen
+
+**Recovery Actions**:
+1. User provided backup CSV: `supplement_schedule.csv` (30 supplements)
+2. Created new SupplementImportExport component with full CSV import/export
+3. Replaced ChronicleTemplate with proper import/export UI in Dashboard
+4. Restored supplement data from CSV backup
+
+---
+
+### Safe Database Migration Practices
+
+**CRITICAL RULE**: **NEVER use `DROP TABLE` statements in production migrations**
+
+**Safe Migration Pattern** (ADD COLUMNS ONLY):
+```sql
+-- ✅ SAFE: Add columns with ALTER TABLE
+ALTER TABLE grocery_purchases
+ADD COLUMN IF NOT EXISTS protein_grams DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS days_covered DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS is_protein_source BOOLEAN DEFAULT false;
+
+COMMENT ON COLUMN grocery_purchases.protein_grams IS 'Total protein grams in this purchase';
+```
+
+**Unsafe Migration Pattern** (NEVER DO THIS):
+```sql
+-- ❌ DANGEROUS: Deletes ALL user data
+DROP TABLE IF EXISTS supplements CASCADE;
+
+CREATE TABLE supplements (
+  -- ... columns
+);
+```
+
+**Migration Checklist**:
+- ✅ Use `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for new fields
+- ✅ Use `CREATE TABLE IF NOT EXISTS` for new tables
+- ✅ Test migrations on empty database first
+- ✅ Always have data backups before running migrations
+- ❌ NEVER use DROP TABLE in production
+- ❌ NEVER use DROP COLUMN without data migration plan
+- ❌ NEVER assume data can be recreated
+
+**CONSOLIDATED_DATABASE_SCHEMA.sql Purpose**:
+- For COMPLETE database rebuilds ONLY
+- NOT for production updates
+- Use when setting up new dev environments
+- Use when user explicitly wants full reset
+
+**Safe Update Strategy**:
+1. Add new columns/tables with migrations
+2. Preserve existing data
+3. Export data before major changes
+4. Use versioned migration files
+5. Document breaking changes
+
+---
+
+### New Features Added
+
+#### 1. SUPPLEMENT IMPORT/EXPORT COMPONENT
+**File**: `src/components/SupplementImportExport.tsx` (362 lines)
+**Status**: FULLY FUNCTIONAL
+
+**Features**:
+- Export all supplements to CSV with proper escaping
+- Import supplements from CSV with quoted value parsing
+- Support for JSON fields (ingredients, active_days)
+- Import status tracking ("Importing... X done, Y skipped")
+- Warning that import adds (doesn't replace data)
+- CSV format guide with required/optional columns
+
+**CSV Format Supported**:
+```csv
+Name,Dose,Dose Unit,Section,Ingredients (JSON),Notes,Form,Frequency Pattern,Active Days (JSON),Cost,Quantity,Frequency (days)
+Methylene Blue,1,mL,Early Morning,,Mitochondrial ETC boost,,everyday,[0,1,2,3,4,5,6],,,
+```
+
+**Import Logic** (`src/components/SupplementImportExport.tsx:115-238`):
+- Parses quoted CSV values correctly
+- Handles commas/newlines in quoted strings
+- Parses JSON fields (ingredients, active_days)
+- Validates required fields (name)
+- Tracks import progress in real-time
+- Skips rows with errors, continues import
+
+**Export Logic** (`src/components/SupplementImportExport.tsx:30-113`):
+- Escapes special characters in CSV
+- Wraps fields with commas/quotes/newlines
+- Exports JSON fields as stringified JSON
+- Generates timestamped filename
+- Downloads automatically via Blob API
+
+**Location**: `Supplements → Export` tab
+
+---
+
+#### 2. PROTEIN GOAL TRACKING (GROCERY BUDGET)
+**File**: `src/components/GroceryBudgetTracker.tsx` (updated to 692 lines)
+**Status**: FULLY FUNCTIONAL
+
+**New Database Columns**:
+```sql
+-- Added to grocery_budgets table
+ALTER TABLE grocery_budgets
+ADD COLUMN IF NOT EXISTS daily_protein_goal DECIMAL(10,2) DEFAULT 0.00;
+
+-- Added to grocery_purchases table
+ALTER TABLE grocery_purchases
+ADD COLUMN IF NOT EXISTS protein_grams DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS days_covered DECIMAL(10,2),
+ADD COLUMN IF NOT EXISTS is_protein_source BOOLEAN DEFAULT false;
+```
+
+**Migration File**: `supabase/migrations/20251013000001_add_protein_goal_tracking.sql`
+
+**Features Added**:
+1. **Protein Tracking Cards** (4 cards):
+   - Protein Goal (daily × days in period)
+   - Protein Secured (total grams purchased)
+   - Protein Gap (goal - secured)
+   - Protein Spending ($ spent on protein sources)
+
+2. **Smart Protein Suggestions**:
+   - Queries `protein_calculations` table for cost-per-gram data
+   - Filters to items within remaining budget
+   - Calculates how many items needed to close protein gap
+   - Shows top 5 most affordable options
+   - Displays total cost and protein per suggestion
+
+3. **Protein Source Purchase Form**:
+   - Checkbox: "🥩 This is a protein source purchase"
+   - Fields appear when checked:
+     - Total Protein (grams)
+     - Days Covered (how many days this protein will last)
+   - Validates protein fields when marked as protein source
+
+4. **Purchase List Indicators**:
+   - Shows protein badge on protein source purchases
+   - Displays grams and days covered
+   - Visual distinction with purple highlighting
+
+**Protein Gap Calculation** (`src/components/GroceryBudgetTracker.tsx:274-287`):
+```typescript
+const dailyGoal = budget?.daily_protein_goal || 0;
+const daysInPeriod = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24));
+const periodProteinGoal = dailyGoal * daysInPeriod;
+
+const proteinPurchases = purchases.filter(p => p.is_protein_source);
+const proteinSecured = proteinPurchases.reduce((sum, p) => sum + (p.protein_grams || 0), 0);
+const proteinGap = Math.max(0, periodProteinGoal - proteinSecured);
+
+const daysCovered = dailyGoal > 0 ? proteinSecured / dailyGoal : 0;
+const daysRemaining = Math.max(0, daysInPeriod - daysCovered);
+```
+
+**Smart Suggestions Algorithm** (`src/components/GroceryBudgetTracker.tsx:290-300`):
+```typescript
+const affordableSuggestions = proteinCalculations
+  .filter(calc => calc.price <= budgetAfterProtein) // Can afford whole item
+  .map(calc => ({
+    ...calc,
+    items_needed: Math.ceil(proteinGap / calc.protein_grams),
+    total_cost: Math.ceil(proteinGap / calc.protein_grams) * calc.price,
+    total_protein: Math.ceil(proteinGap / calc.protein_grams) * calc.protein_grams,
+  }))
+  .filter(s => s.total_cost <= budgetAfterProtein) // Total cost within budget
+  .sort((a, b) => a.total_cost - b.total_cost) // Cheapest first
+  .slice(0, 5);
+```
+
+**Use Cases**:
+- Track protein purchases (chicken, eggs, protein powder)
+- Monitor if protein goal is being met
+- Get budget-friendly suggestions to close protein gap
+- Calculate how long protein will last (days covered)
+
+---
+
+### UI/UX Improvements
+
+#### Dashboard Tab Hiding Behavior
+**Status**: Already working correctly (verified)
+
+**Behavior**:
+- **On Overview**: Shows all 8 main category tabs
+- **In Category**: Hides main tabs, shows "← Home" button + sub-tabs
+
+**Implementation**: `src/components/Dashboard.tsx:269-313`
+
+#### Cards vs Tabs Navigation
+**Difference Identified and Documented**:
+
+**Cards (in FinanceView.tsx)**:
+- Local navigation within FinanceView component
+- Sets `selectedCategory` state locally
+- Shows template views within same component
+- Uses `onBack={() => setSelectedCategory(null)}` to return
+- Remains on "overview" tab in Dashboard
+
+**Tabs (in Dashboard.tsx)**:
+- Global navigation across entire app
+- Calls `onCategorySelect(category)` which changes Dashboard state
+- Navigates to completely different tab
+- Hides main category tabs and shows sub-tabs
+- Full category immersion
+
+**Design Rationale**: Cards provide quick access without losing place, tabs provide deep dives
 
 ---
 
