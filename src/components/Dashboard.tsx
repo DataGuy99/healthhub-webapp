@@ -11,20 +11,21 @@ import { ChronicleTemplate } from './ChronicleTemplate';
 import { TreasuryTemplate } from './TreasuryTemplate';
 import { AnimatedTitle } from './AnimatedTitle';
 import { CryptoMetalsTracker } from './CryptoMetalsTracker';
-import { BillsDueDateTracker } from './BillsDueDateTracker';
-import { RecurringItemTracker } from './RecurringItemTracker';
 import { SpendingTracker } from './SpendingTracker';
+import { BillsCalendar } from './BillsCalendar';
+import { ProteinCalculator } from './ProteinCalculator';
+import { GroceryBudgetTracker } from './GroceryBudgetTracker';
+import { AutoMPGTracker } from './AutoMPGTracker';
+import { MiscShopTracker } from './MiscShopTracker';
 import { clearAuth } from '../lib/auth';
 
-type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
+type CategoryTab = 'overview' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
-type GrocerySubTab = 'items' | 'costs' | 'common';
-type AutoSubTab = 'maintenance' | 'gas' | 'costs';
-type RentSubTab = 'payments' | 'lease' | 'history';
-type BillsSubTab = 'due-dates' | 'tracker' | 'providers';
+type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
+type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs';
+type BillsSubTab = 'calendar' | 'tracker' | 'providers';
 type InvestmentSubTab = 'portfolio' | 'crypto-metals' | 'performance';
-type MiscShopSubTab = 'purchases' | 'wishlist' | 'returns';
-type MiscHealthSubTab = 'appointments' | 'records' | 'insurance';
+type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
 type HomeGardenSubTab = 'projects' | 'maintenance' | 'purchases';
 
 interface DashboardProps {
@@ -34,26 +35,22 @@ interface DashboardProps {
 
 const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: string }> = {
   'overview': { name: 'LifeDashHub', icon: '💰', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
-  'supplements': { name: 'Supplements', icon: '💊', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
   'grocery': { name: 'Grocery', icon: '🛒', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
-  'rent': { name: 'Rent', icon: '🏠', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30' },
-  'bills': { name: 'Bills & Utilities', icon: '💡', color: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30' },
+  'supplements': { name: 'Supplements', icon: '💊', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
   'auto': { name: 'Auto', icon: '🚗', color: 'from-red-500/20 to-rose-500/20 border-red-500/30' },
-  'investment': { name: 'Investment', icon: '📈', color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/30' },
   'misc-shop': { name: 'Misc Shopping', icon: '🛍️', color: 'from-pink-500/20 to-fuchsia-500/20 border-pink-500/30' },
-  'misc-health': { name: 'Misc Health', icon: '🏥', color: 'from-teal-500/20 to-cyan-500/20 border-teal-500/30' },
+  'bills': { name: 'Bills & Payments', icon: '💳', color: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30' },
+  'investment': { name: 'Investment', icon: '📈', color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/30' },
   'home-garden': { name: 'Home & Garden', icon: '🌱', color: 'from-lime-500/20 to-green-500/20 border-lime-500/30' },
 };
 
 export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const [supplementsSubTab, setSupplementsSubTab] = useState<SupplementsSubTab>('daily');
   const [grocerySubTab, setGrocerySubTab] = useState<GrocerySubTab>('items');
-  const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('maintenance');
-  const [rentSubTab, setRentSubTab] = useState<RentSubTab>('payments');
-  const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('due-dates');
+  const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('mpg-tracker');
+  const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('calendar');
   const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>('portfolio');
-  const [miscShopSubTab, setMiscShopSubTab] = useState<MiscShopSubTab>('purchases');
-  const [miscHealthSubTab, setMiscHealthSubTab] = useState<MiscHealthSubTab>('appointments');
+  const [miscShopSubTab, setMiscShopSubTab] = useState<MiscShopSubTab>('budget');
   const [homeGardenSubTab, setHomeGardenSubTab] = useState<HomeGardenSubTab>('projects');
 
   const handleLogout = async () => {
@@ -107,6 +104,8 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     if (activeTab === 'grocery') {
       const tabs: { id: GrocerySubTab; label: string; icon: string }[] = [
         { id: 'items', label: 'Items', icon: '🛒' },
+        { id: 'protein', label: 'Protein Calculator', icon: '🥩' },
+        { id: 'budget', label: 'Budget Tracker', icon: '💵' },
         { id: 'costs', label: 'Costs', icon: '💰' },
         { id: 'common', label: 'Common Purchases', icon: '⭐' },
       ];
@@ -145,6 +144,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     if (activeTab === 'auto') {
       const tabs: { id: AutoSubTab; label: string; icon: string }[] = [
+        { id: 'mpg-tracker', label: 'MPG Tracker', icon: '📊' },
         { id: 'maintenance', label: 'Maintenance', icon: '🔧' },
         { id: 'gas', label: 'Gas Prices', icon: '⛽' },
         { id: 'costs', label: 'Costs', icon: '💰' },
@@ -232,23 +232,10 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       );
     };
 
-    if (activeTab === 'rent') {
-      return renderGenericSubTabs(
-        [
-          { id: 'payments', label: 'Payments', icon: '💵' },
-          { id: 'lease', label: 'Lease Info', icon: '📄' },
-          { id: 'history', label: 'History', icon: '📊' },
-        ],
-        rentSubTab,
-        setRentSubTab,
-        'blue'
-      );
-    }
-
     if (activeTab === 'bills') {
       return renderGenericSubTabs(
         [
-          { id: 'due-dates', label: 'Due Dates', icon: '📅' },
+          { id: 'calendar', label: 'Calendar', icon: '📅' },
           { id: 'tracker', label: 'Payment Tracker', icon: '✅' },
           { id: 'providers', label: 'Providers', icon: '🏢' },
         ],
@@ -274,6 +261,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     if (activeTab === 'misc-shop') {
       return renderGenericSubTabs(
         [
+          { id: 'budget', label: 'Budget Tracker', icon: '💵' },
           { id: 'purchases', label: 'Purchases', icon: '🛍️' },
           { id: 'wishlist', label: 'Wish List', icon: '⭐' },
           { id: 'returns', label: 'Returns', icon: '↩️' },
@@ -281,19 +269,6 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         miscShopSubTab,
         setMiscShopSubTab,
         'pink'
-      );
-    }
-
-    if (activeTab === 'misc-health') {
-      return renderGenericSubTabs(
-        [
-          { id: 'appointments', label: 'Appointments', icon: '📆' },
-          { id: 'records', label: 'Records', icon: '📋' },
-          { id: 'insurance', label: 'Insurance', icon: '🏥' },
-        ],
-        miscHealthSubTab,
-        setMiscHealthSubTab,
-        'teal'
       );
     }
 
@@ -368,6 +343,12 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           />
         );
       }
+      if (grocerySubTab === 'protein') {
+        return <ProteinCalculator />;
+      }
+      if (grocerySubTab === 'budget') {
+        return <GroceryBudgetTracker />;
+      }
       if (grocerySubTab === 'common') {
         return (
           <CategoryHub
@@ -394,6 +375,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Auto category with sub-tabs
     if (activeTab === 'auto') {
+      if (autoSubTab === 'mpg-tracker') {
+        return <AutoMPGTracker />;
+      }
       if (autoSubTab === 'maintenance') {
         return (
           <CategoryHub
@@ -429,48 +413,10 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       }
     }
 
-    // Rent category with sub-tabs
-    if (activeTab === 'rent') {
-      const config = CATEGORY_CONFIG[activeTab];
-      if (rentSubTab === 'payments') {
-        return (
-          <CovenantTemplate
-            category={activeTab}
-            categoryName={config.name}
-            icon={config.icon}
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      // Lease info using CategoryHub (store lease terms as items)
-      if (rentSubTab === 'lease') {
-        return (
-          <CategoryHub
-            category="rent-lease"
-            categoryName="Lease Information"
-            icon="📋"
-            color="from-blue-500/20 to-cyan-500/20 border-blue-500/30"
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      // Payment history using ChronicleTemplate
-      return (
-        <ChronicleTemplate
-          category="rent-history"
-          categoryName="Payment History"
-          icon="📜"
-          color="from-blue-500/20 to-cyan-500/20 border-blue-500/30"
-          onBack={() => setActiveTab('overview')}
-        />
-      );
-    }
-
     // Bills category with sub-tabs
     if (activeTab === 'bills') {
-      if (billsSubTab === 'due-dates') {
-        return <BillsDueDateTracker />;
+      if (billsSubTab === 'calendar') {
+        return <BillsCalendar />;
       }
       // Payment tracker using ChronicleTemplate
       if (billsSubTab === 'tracker') {
@@ -528,6 +474,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     // Misc Shop category with sub-tabs
     if (activeTab === 'misc-shop') {
       const config = CATEGORY_CONFIG[activeTab];
+      if (miscShopSubTab === 'budget') {
+        return <MiscShopTracker />;
+      }
       if (miscShopSubTab === 'purchases') {
         return (
           <ChronicleTemplate
@@ -557,43 +506,6 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           category="misc-shop-returns"
           categoryName="Returns & Exchanges"
           icon="🔄"
-          color={config.color}
-          onBack={() => setActiveTab('overview')}
-        />
-      );
-    }
-
-    // Misc Health category with sub-tabs
-    if (activeTab === 'misc-health') {
-      const config = CATEGORY_CONFIG[activeTab];
-      if (miscHealthSubTab === 'appointments') {
-        return (
-          <CategoryHub
-            category="misc-health-appointments"
-            categoryName="Appointments"
-            icon="📆"
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      if (miscHealthSubTab === 'records') {
-        return (
-          <ChronicleTemplate
-            category="misc-health-records"
-            categoryName="Medical Records"
-            icon="📋"
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      // Insurance using CategoryHub
-      return (
-        <CategoryHub
-          category="misc-health-insurance"
-          categoryName="Insurance Info"
-          icon="🛡️"
           color={config.color}
           onBack={() => setActiveTab('overview')}
         />

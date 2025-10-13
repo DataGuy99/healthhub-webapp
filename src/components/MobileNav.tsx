@@ -1,4 +1,4 @@
-type CategoryTab = 'overview' | 'supplements' | 'grocery' | 'rent' | 'bills' | 'auto' | 'investment' | 'misc-shop' | 'misc-health' | 'home-garden';
+type CategoryTab = 'overview' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
 
 interface MobileNavProps {
   activeTab: CategoryTab;
@@ -7,9 +7,13 @@ interface MobileNavProps {
 
 const NAV_ITEMS: Array<{ id: CategoryTab; label: string; icon: string }> = [
   { id: 'overview', label: 'Overview', icon: '💰' },
-  { id: 'supplements', label: 'Supps', icon: '💊' },
   { id: 'grocery', label: 'Grocery', icon: '🛒' },
+  { id: 'supplements', label: 'Supps', icon: '💊' },
   { id: 'auto', label: 'Auto', icon: '🚗' },
+  { id: 'misc-shop', label: 'Shop', icon: '🛍️' },
+  { id: 'bills', label: 'Bills', icon: '💳' },
+  { id: 'investment', label: 'Invest', icon: '📈' },
+  { id: 'home-garden', label: 'Home', icon: '🌱' },
 ];
 
 export function MobileNav({ activeTab, onTabChange }: MobileNavProps) {
