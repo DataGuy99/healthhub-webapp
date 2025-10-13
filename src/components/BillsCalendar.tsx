@@ -44,11 +44,12 @@ export function BillsCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [showAddBill, setShowAddBill] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Form state
   const [formName, setFormName] = useState('');
   const [formAmount, setFormAmount] = useState('');
-  const [formFrequency, setFormFrequency] = useState<'weekly' | 'monthly'>('monthly');
+  const [formFrequency, setFormFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('monthly');
   const [formDayOfWeek, setFormDayOfWeek] = useState(5); // Friday
   const [formDayOfMonth, setFormDayOfMonth] = useState(1);
   const [formSkipFirstWeek, setFormSkipFirstWeek] = useState(false);
@@ -94,6 +95,19 @@ export function BillsCalendar() {
     }
   };
 
+  const handleDateClick = (day: CalendarDay) => {
+    // Only open form if clicking on calendar cell, not on bill chips
+    setSelectedDate(day.date);
+    setShowAddBill(true);
+
+    // Pre-populate form based on clicked date
+    if (formFrequency === 'weekly' || formFrequency === 'biweekly') {
+      setFormDayOfWeek(day.date.getDay());
+    } else if (formFrequency === 'monthly') {
+      setFormDayOfMonth(day.date.getDate());
+    }
+  };
+
   const addRecurringBill = async () => {
     try {
       const user = await getCurrentUser();
@@ -111,7 +125,7 @@ export function BillsCalendar() {
           name: formName.trim(),
           amount: parseFloat(formAmount),
           frequency: formFrequency,
-          day_of_week: formFrequency === 'weekly' ? formDayOfWeek : null,
+          day_of_week: (formFrequency === 'weekly' || formFrequency === 'biweekly') ? formDayOfWeek : null,
           day_of_month: formFrequency === 'monthly' ? formDayOfMonth : null,
           skip_first_week: formSkipFirstWeek,
           is_active: true,
@@ -130,6 +144,7 @@ export function BillsCalendar() {
       setFormSkipFirstWeek(false);
       setFormIcon('💵');
       setShowAddBill(false);
+      setSelectedDate(null);
       loadData();
     } catch (error) {
       console.error('Error adding bill:', error);
@@ -248,6 +263,22 @@ export function BillsCalendar() {
       return true;
     }
 
+    if (bill.frequency === 'biweekly') {
+      if (date.getDay() !== bill.day_of_week) return false;
+
+      // For biweekly, only show on 1st and 3rd weeks OR 2nd and 4th weeks
+      const dateNum = date.getDate();
+      const weekOfMonth = Math.ceil(dateNum / 7);
+
+      // Check skip_first_week for rent pattern (skip 1st week, show 2-3-4)
+      if (bill.skip_first_week) {
+        return weekOfMonth >= 2;
+      }
+
+      // Default biweekly: alternate weeks (1st and 3rd week)
+      return weekOfMonth === 1 || weekOfMonth === 3;
+    }
+
     if (bill.frequency === 'monthly') {
       return date.getDate() === bill.day_of_month;
     }
@@ -337,7 +368,14 @@ export function BillsCalendar() {
           animate={{ opacity: 1, height: 'auto' }}
           className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">Add Recurring Bill</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Add Recurring Bill</h3>
+            {selectedDate && (
+              <div className="text-sm text-yellow-300">
+                Starting: {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white/70 mb-2">Bill Name</label>
@@ -364,14 +402,15 @@ export function BillsCalendar() {
               <label className="block text-sm text-white/70 mb-2">Frequency</label>
               <select
                 value={formFrequency}
-                onChange={(e) => setFormFrequency(e.target.value as 'weekly' | 'monthly')}
+                onChange={(e) => setFormFrequency(e.target.value as 'weekly' | 'biweekly' | 'monthly')}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
               >
                 <option value="weekly" className="bg-slate-800">Weekly</option>
+                <option value="biweekly" className="bg-slate-800">Biweekly (every 2 weeks)</option>
                 <option value="monthly" className="bg-slate-800">Monthly</option>
               </select>
             </div>
-            {formFrequency === 'weekly' ? (
+            {(formFrequency === 'weekly' || formFrequency === 'biweekly') ? (
               <div>
                 <label className="block text-sm text-white/70 mb-2">Day of Week</label>
                 <select
@@ -401,7 +440,7 @@ export function BillsCalendar() {
                 />
               </div>
             )}
-            {formFrequency === 'weekly' && (
+            {(formFrequency === 'weekly' || formFrequency === 'biweekly') && (
               <div className="md:col-span-2 flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -411,7 +450,9 @@ export function BillsCalendar() {
                   className="w-5 h-5 rounded bg-white/10 border-white/20 text-yellow-500 focus:ring-2 focus:ring-yellow-500/50"
                 />
                 <label htmlFor="skipFirstWeek" className="text-white/80">
-                  Skip first week of month (for Rent)
+                  {formFrequency === 'biweekly'
+                    ? 'Skip first week (show 2nd, 3rd, 4th weeks)'
+                    : 'Skip first week of month (for Rent)'}
                 </label>
               </div>
             )}
@@ -474,7 +515,8 @@ export function BillsCalendar() {
             return (
               <div
                 key={index}
-                className={`min-h-[100px] p-2 rounded-lg border transition-all ${
+                onClick={() => handleDateClick(day)}
+                className={`min-h-[100px] p-2 rounded-lg border transition-all cursor-pointer hover:ring-2 hover:ring-yellow-500/30 ${
                   !day.isCurrentMonth
                     ? 'bg-white/5 border-white/5 opacity-40'
                     : isToday
@@ -494,7 +536,10 @@ export function BillsCalendar() {
                     {day.bills.map((item, i) => (
                       <button
                         key={i}
-                        onClick={() => togglePayment(day, item.bill)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePayment(day, item.bill);
+                        }}
                         className={`w-full text-left px-2 py-1 rounded text-xs transition-all ${
                           item.payment?.paid
                             ? 'bg-green-500/30 border border-green-500/50 text-green-200 line-through'
@@ -535,7 +580,7 @@ export function BillsCalendar() {
                     <div className="font-semibold text-white">{bill.name}</div>
                     <div className="text-sm text-white/60">
                       ${bill.amount.toFixed(2)} • {bill.frequency}
-                      {bill.frequency === 'weekly' && ` on ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][bill.day_of_week!]}`}
+                      {(bill.frequency === 'weekly' || bill.frequency === 'biweekly') && ` on ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][bill.day_of_week!]}`}
                       {bill.frequency === 'monthly' && ` on day ${bill.day_of_month}`}
                       {bill.skip_first_week && ' (skip 1st week)'}
                     </div>

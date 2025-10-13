@@ -743,7 +743,626 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - CSV import system (in progress)
   - User settings database sync
 
-**Current Version**: v2.0.0
+**Current Version**: v2.1.1 (2025-10-13)
+
+---
+
+## v2.1.1 (2025-10-13) - Interactive Bills Calendar & Biweekly Patterns
+
+### New Features
+
+#### 1. INTERACTIVE DATE CLICKING (BillsCalendar)
+**File**: `src/components/BillsCalendar.tsx` (updated to 595 lines)
+
+**Features Added**:
+- Click any date on calendar to add new recurring bill
+- Form auto-populates with clicked date context (day of week/month)
+- Hover effect on calendar cells (yellow ring)
+- "Starting: [date]" indicator when form opened from date click
+- Prevented event bubbling (bill chips still toggle paid/unpaid independently)
+
+**How It Works** (`src/components/BillsCalendar.tsx:98-109`):
+```typescript
+const handleDateClick = (day: CalendarDay) => {
+  setSelectedDate(day.date);
+  setShowAddBill(true);
+
+  // Auto-populate form based on frequency type
+  if (formFrequency === 'weekly' || formFrequency === 'biweekly') {
+    setFormDayOfWeek(day.date.getDay());
+  } else if (formFrequency === 'monthly') {
+    setFormDayOfMonth(day.date.getDate());
+  }
+};
+```
+
+**User Experience**:
+1. Click Friday 13th on calendar
+2. Form opens with "Starting: Oct 13, 2025"
+3. If frequency = weekly: day selector pre-set to Friday (5)
+4. If frequency = monthly: day selector pre-set to 13
+5. Enter bill details and save
+
+---
+
+#### 2. BIWEEKLY BILL RECURRENCE PATTERN
+**File**: `src/components/BillsCalendar.tsx:266-280`
+
+**New Frequency Option**: "Biweekly (every 2 weeks)"
+
+**Features**:
+- Added to frequency dropdown (weekly, biweekly, monthly)
+- Works with day-of-week selection (like weekly)
+- Compatible with "Skip first week" checkbox
+- **Default Pattern**: Shows on 1st and 3rd weeks of month
+- **With Skip First Week**: Shows on 2nd, 3rd, 4th weeks (for rent use case)
+
+**Biweekly Logic** (`src/components/BillsCalendar.tsx:266-280`):
+```typescript
+if (bill.frequency === 'biweekly') {
+  if (date.getDay() !== bill.day_of_week) return false;
+
+  const dateNum = date.getDate();
+  const weekOfMonth = Math.ceil(dateNum / 7);
+
+  // If skip_first_week: show weeks 2-3-4
+  if (bill.skip_first_week) {
+    return weekOfMonth >= 2;
+  }
+
+  // Default: show weeks 1 and 3
+  return weekOfMonth === 1 || weekOfMonth === 3;
+}
+```
+
+**Use Cases**:
+- Paychecks (every other Friday, weeks 1 & 3)
+- Rent (every other Friday, skip first week → 2nd, 3rd, 4th Fridays)
+- Utility bills on biweekly schedule
+
+**Note**: This implements month-based biweekly (alternating weeks within month), not continuous biweekly across months. This matches user's requirement for "2nd and 3rd weeks only" patterns.
+
+---
+
+#### 3. IMPROVED BILL FORM UI
+**Changes**:
+- Date context display when opened from calendar click
+- Updated skip_first_week label for biweekly: "Skip first week (show 2nd, 3rd, 4th weeks)"
+- Checkbox now applies to both weekly and biweekly frequencies
+- Better visual feedback with cursor-pointer on calendar cells
+
+---
+
+### CodeRabbit Review Conducted
+
+**Command**: `/root/.local/bin/coderabbit review --plain`
+**Findings**: 10 issues (mostly archived migrations, biweekly logic discussion)
+
+**Issues Addressed**:
+- ✅ Biweekly pattern: Kept month-based logic (matches user requirements)
+- ⏳ Plaid token encryption: Noted for future (app-layer encryption when implementing)
+- ⏭️ Archived migration triggers/policies: Skipped (not active, superseded by consolidated schema)
+- ⏭️ CONSOLIDATED_DATABASE_SCHEMA.sql "not idempotent" warning: Intentional for rebuild use case
+
+**Issues Deferred**:
+- Plaid access token encryption (will handle during Plaid integration)
+- Archived migration improvements (not actively used)
+- True biweekly across months (current logic meets requirements)
+
+---
+
+### Bug Fixes
+
+1. **Event Propagation Issue**:
+   - Problem: Clicking bill chip would also trigger date form
+   - Fix: Added `e.stopPropagation()` to bill chip onClick handlers
+   - Location: `src/components/BillsCalendar.tsx:532-535`
+
+2. **Form State Persistence**:
+   - Reset `selectedDate` to null after form submission
+   - Prevents old date from showing on next form open
+
+---
+
+## v2.1.0 (2025-10-13) - Budget Period Standardization & Advanced Trackers
+
+### Critical Session Recovery
+**Issue**: Previous session (Windows forced update) did NOT update PROJECT_LOG.md, violating Rule #29
+**Impact**: Lost documentation of all work between v2.0.0 and v2.1.0
+**Fix**: Complete audit conducted 2025-10-13, all features now documented below
+
+---
+
+### Major System Changes
+
+#### 1. BUDGET PERIOD STANDARDIZATION (Critical Infrastructure)
+**Problem**: Each budget tracker implemented its own period logic inconsistently
+**Solution**: Created centralized `useBudgetPeriod` hook
+
+**File**: `src/hooks/useBudgetPeriod.ts` (196 lines)
+
+**How It Works**:
+- Single source of truth for budget period dates
+- Queries `budget_settings` table (previously missing, causing errors)
+- Calculates period dates dynamically based on user settings
+- All budget trackers now use this hook for consistency
+
+**Hook API**:
+```typescript
+const {
+  settings,              // BudgetSettings from database
+  currentPeriod,         // { startDate, endDate, periodType }
+  loading,               // Initial load state
+  refreshPeriod,         // Force reload from DB
+  formatPeriodDisplay,   // Returns "Jan 15 - Jan 21"
+  getDaysRemaining,      // Days until period ends
+  isDateInCurrentPeriod, // Check if date falls in period
+} = useBudgetPeriod();
+```
+
+**Period Types Supported**:
+- **Weekly**: Starts on specified day of week (e.g., Monday)
+- **Biweekly**: Every 2 weeks starting on specified day
+- **Monthly**: Starts on specified day of month (1-31)
+- **Custom**: User-defined start date + length in days
+
+**Period Calculation Logic** (`src/hooks/useBudgetPeriod.ts:63-158`):
+- Weekly: Find most recent occurrence of start day
+- Biweekly: Same as weekly but alternates based on weeks since epoch
+- Monthly: Current month if past start day, else previous month
+- Custom: Calculate which period number we're in based on elapsed days
+
+**Components Using This Hook**:
+- `GroceryBudgetTracker`
+- `MiscShopTracker`
+- All future budget/spending trackers must use this
+
+---
+
+#### 2. BUDGET SETTINGS MODAL
+**File**: `src/components/BudgetSettingsModal.tsx` (291 lines)
+**Purpose**: UI for setting global budget period preferences
+
+**Features**:
+- Period type selector (weekly, biweekly, monthly, custom)
+- Week start day picker (for weekly/biweekly)
+- Month start day input (for monthly, 1-31)
+- Custom period configurator (start date + length in days)
+- Live preview of next reset date
+- Saves to `budget_settings` table with UNIQUE(user_id)
+
+**Database Schema**:
+```sql
+CREATE TABLE budget_settings (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE,
+  period_type TEXT CHECK (IN 'weekly', 'biweekly', 'monthly', 'custom'),
+  period_start_day INTEGER CHECK (0-31),
+  period_start_date DATE,
+  period_length_days INTEGER,
+  created_at, updated_at TIMESTAMPTZ
+);
+```
+
+---
+
+### Complete Module Documentation
+
+#### 3. GROCERY BUDGET TRACKER
+**File**: `src/components/GroceryBudgetTracker.tsx` (467 lines)
+**Status**: FULLY FUNCTIONAL
+
+**Features**:
+- Period-based budgeting using `useBudgetPeriod` hook
+- Period navigation (previous/next with offset tracking)
+- Budget settings (configurable amount, default $90)
+- Purchase logging (store, amount, date, notes)
+- Real-time analytics:
+  - Period Budget (total allocated)
+  - Spent This Period (running total)
+  - Remaining/Over Budget (calculated)
+  - Budget usage % with color-coded progress bar (green ≤80%, yellow ≤100%, red >100%)
+
+**Database Schema**:
+```sql
+CREATE TABLE grocery_budgets (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE,  -- Single row per user
+  weekly_budget DECIMAL(10,2) DEFAULT 90.00,
+  created_at, updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE grocery_purchases (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  store TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  date DATE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ
+);
+```
+
+**Location**: `Grocery → Budget Tracker` sub-tab
+
+---
+
+#### 4. MISC SHOP TRACKER (WITH ROLLOVER SAVINGS)
+**File**: `src/components/MiscShopTracker.tsx` (704 lines)
+**Status**: FULLY FUNCTIONAL
+**Unique Feature**: Rollover savings system
+
+**Features**:
+- Period-based budgeting using `useBudgetPeriod` hook
+- Period navigation (forward/backward through periods)
+- **Rollover Savings System** (UNIQUE):
+  - Unused budget rolls over to savings account
+  - Savings persist across periods
+  - Can use savings for "big purchases"
+  - Tracks savings separately from regular budget
+- Purchase tracking with "big purchase" flag
+- Real-time stats: Budget, Spent, Remaining, Rollover Savings, Total Available
+- Budget progress bar (color-coded)
+
+**Database Schema**:
+```sql
+CREATE TABLE misc_shop_budgets (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE,
+  monthly_budget DECIMAL(10,2) DEFAULT 30.00,
+  rollover_savings DECIMAL(10,2) DEFAULT 0.00,  -- UNIQUE FEATURE
+  created_at, updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE misc_shop_purchases (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  item_name TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  date DATE NOT NULL,
+  is_big_purchase BOOLEAN DEFAULT false,  -- Uses savings
+  notes TEXT,
+  created_at TIMESTAMPTZ
+);
+```
+
+**Rollover Workflow**:
+1. End of period: If budget remaining > 0, click "Roll Over to Savings"
+2. Savings accumulate in `rollover_savings` column
+3. For big purchases: Check "Big Purchase" box when adding
+4. Use savings: Click "Use Savings" button, enter amount to deduct
+
+**Location**: `Misc Shopping → Budget Tracker` sub-tab
+
+---
+
+#### 5. AUTO MPG TRACKER
+**File**: `src/components/AutoMPGTracker.tsx` (635 lines)
+**Status**: FULLY FUNCTIONAL
+
+**Features**:
+- **Gas Fillup Logging**: Date, mileage, gallons, cost, notes
+- **Automatic MPG Calculation**: From previous fillup (miles driven / gallons)
+- **Price Per Gallon**: Auto-calculated (cost / gallons)
+- **Maintenance Scheduling System**:
+  - Define service items (oil change, tire rotation, etc.)
+  - Set interval in miles (e.g., 5000)
+  - Track last done mileage
+  - Automatic due date calculation
+  - Status indicators: OK / DUE SOON / OVERDUE
+  - One-click "Mark as Done" (uses current mileage)
+- **Summary Stats**: Current Mileage, Avg MPG, Avg Gas Price, Total Spent
+
+**Database Schema**:
+```sql
+CREATE TABLE gas_fillups (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  date DATE NOT NULL,
+  mileage INTEGER NOT NULL,
+  gallons DECIMAL(10,2) NOT NULL,
+  cost DECIMAL(10,2) NOT NULL,
+  price_per_gallon DECIMAL(10,3),  -- Auto-calculated
+  mpg DECIMAL(10,2),                -- Auto-calculated from previous
+  notes TEXT,
+  created_at TIMESTAMPTZ
+);
+
+CREATE TABLE maintenance_items (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  service_name TEXT NOT NULL,
+  interval_miles INTEGER NOT NULL,
+  last_done_mileage INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  icon TEXT DEFAULT '🔧',
+  created_at TIMESTAMPTZ
+);
+```
+
+**Maintenance Status Logic**:
+```typescript
+next_due = last_done + interval
+miles_until_due = next_due - current
+
+if (miles_until_due < 0)         → OVERDUE (red)
+else if (miles_until_due <= 500) → DUE SOON (yellow)
+else                              → OK (green)
+```
+
+**Location**: `Auto → MPG Tracker` sub-tab
+
+---
+
+#### 6. PROTEIN CALCULATOR
+**File**: `src/components/ProteinCalculator.tsx` (473 lines)
+**Status**: FULLY FUNCTIONAL
+**Purpose**: Calculate cost-per-gram of protein from food sources
+
+**Features**:
+- Quick calculator: food name, serving size+unit, protein grams, price
+- Automatic cost calculation: `cost_per_gram = price / protein_grams`
+- **Target System**:
+  - Set target cost per gram (e.g., $0.050/g)
+  - Set tolerance percentage (e.g., 15%)
+  - Visual status indicators based on target
+- Calculation history (last 20 saved)
+- **Status Classification**:
+  - **Excellent** (green): ≤ target cost
+  - **Acceptable** (yellow): > target but within tolerance
+  - **Expensive** (red): > target + tolerance
+- Units supported: oz, lb, g, kg
+
+**Database Schema**:
+```sql
+CREATE TABLE protein_calculations (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  food_name TEXT NOT NULL,
+  serving_size DECIMAL(10,2),
+  serving_unit TEXT,
+  protein_grams DECIMAL(10,2),
+  price DECIMAL(10,2),
+  cost_per_gram DECIMAL(10,6),  -- price/protein_grams
+  date DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ
+);
+
+CREATE TABLE protein_targets (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE,
+  target_cost_per_gram DECIMAL(10,6),
+  tolerance_percentage DECIMAL(5,2),
+  created_at, updated_at TIMESTAMPTZ
+);
+```
+
+**Location**: `Grocery → Protein Calculator` sub-tab
+
+---
+
+#### 7. CRYPTO & METALS TRACKER
+**File**: `src/components/CryptoMetalsTracker.tsx` (408 lines)
+**Status**: FULLY FUNCTIONAL WITH LIVE PRICE FEEDS
+
+**Features**:
+- **Live Price Feeds**:
+  - Crypto from CoinGecko API (free tier)
+  - Metals from metals.live API
+  - Auto-refresh every 60 seconds
+  - Fallback mock data if APIs fail
+- Portfolio tracking: amount held, optional purchase price
+- Gain/loss calculation if purchase price provided
+- 24-hour price changes (color-coded)
+- Total portfolio value (sum of all holdings at current prices)
+
+**Supported Assets**:
+- **Crypto** (10): BTC, ETH, SOL, ADA, DOT, MATIC, LINK, AVAX, UNI, ATOM
+- **Metals** (4): XAU (Gold), XAG (Silver), XPT (Platinum), XPD (Palladium)
+
+**Database Schema**:
+```sql
+CREATE TABLE investment_holdings (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  type TEXT CHECK (IN 'crypto', 'metal'),
+  symbol TEXT NOT NULL,
+  name TEXT NOT NULL,
+  amount DECIMAL(20,8) NOT NULL,     -- High precision for crypto
+  purchase_price DECIMAL(10,2),      -- Optional, for gain calc
+  notes TEXT,
+  created_at TIMESTAMPTZ
+);
+```
+
+**Location**: `Investment → Crypto & Metals` sub-tab
+
+---
+
+#### 8. BILLS CALENDAR
+**File**: `src/components/BillsCalendar.tsx` (557 lines)
+**Status**: FULLY FUNCTIONAL
+
+**Features**:
+- Full month calendar view (6 weeks, 42 days)
+- **Recurring Bill Management**:
+  - Weekly bills with day-of-week
+  - Monthly bills with day-of-month (1-31)
+  - "Skip first week" option (for rent on 2nd+ Friday)
+  - Icon and color customization
+- **Payment Tracking**: Click bill on calendar to mark paid/unpaid
+- **Summary Stats**:
+  - This Week's Load (Friday-Thursday)
+  - Month Remaining (unpaid bills)
+  - This Month Total (all bills)
+- Month navigation (previous/next)
+- **Visual Indicators**:
+  - Today: blue ring
+  - Days with bills: red background
+  - All bills paid: green background
+  - Individual bills: green (paid) or white (unpaid)
+
+**Database Schema**:
+```sql
+CREATE TABLE recurring_bills (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  frequency TEXT CHECK (IN 'weekly', 'biweekly', 'monthly', 'custom'),
+  day_of_week INTEGER CHECK (0-6),
+  day_of_month INTEGER CHECK (1-31),
+  skip_first_week BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  color TEXT,
+  icon TEXT DEFAULT '💵',
+  created_at, updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE bill_payments (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  recurring_bill_id UUID NOT NULL,
+  date DATE NOT NULL,
+  amount DECIMAL(10,2),
+  paid BOOLEAN DEFAULT false,
+  paid_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at, updated_at TIMESTAMPTZ,
+  UNIQUE(recurring_bill_id, date)
+);
+```
+
+**Location**: `Bills → Calendar` sub-tab
+
+---
+
+### Dashboard Navigation Structure
+
+**Dashboard Component**: `src/components/Dashboard.tsx` (652 lines)
+
+**8 Main Categories**:
+1. **LifeDashHub** (Overview) - Finance summary
+2. **Grocery** - 5 sub-tabs
+3. **Supplements** - 5 sub-tabs
+4. **Auto** - 4 sub-tabs
+5. **Misc Shopping** - 4 sub-tabs
+6. **Bills & Payments** - 3 sub-tabs
+7. **Investment** - 3 sub-tabs
+8. **Home & Garden** - 3 sub-tabs
+
+**Complete Sub-Tab Structure**:
+
+**Supplements** (5 sub-tabs):
+- 📝 Daily Logger
+- 📚 Library (CRUD)
+- 📂 Sections
+- 💰 Costs
+- 📤 Export
+
+**Grocery** (5 sub-tabs):
+- 🛒 Items (CategoryHub)
+- 🥩 Protein Calculator
+- 💵 Budget Tracker
+- 💰 Costs (SpendingTracker)
+- ⭐ Common Purchases
+
+**Auto** (4 sub-tabs):
+- 📊 MPG Tracker
+- 🔧 Maintenance (CategoryHub)
+- ⛽ Gas Prices (ChronicleTemplate)
+- 💰 Costs (SpendingTracker)
+
+**Bills** (3 sub-tabs):
+- 📅 Calendar
+- ✅ Payment Tracker (ChronicleTemplate)
+- 🏢 Providers (CategoryHub)
+
+**Investment** (3 sub-tabs):
+- 💼 Portfolio (CategoryHub)
+- 🪙 Crypto & Metals
+- 📈 Performance (TreasuryTemplate)
+
+**Misc Shopping** (4 sub-tabs):
+- 💵 Budget Tracker
+- 🛍️ Purchases (ChronicleTemplate)
+- ⭐ Wish List (CategoryHub)
+- ↩️ Returns (ChronicleTemplate)
+
+**Home & Garden** (3 sub-tabs):
+- 🔨 Projects (ChronicleTemplate)
+- 🔧 Maintenance (CategoryHub)
+- 🛒 Purchases (ChronicleTemplate)
+
+**Navigation Behavior**:
+- On Overview: Show all 8 main category tabs
+- In Category: Show "← Home" button + sub-tabs for that category
+
+---
+
+### Database Schema Changes (v2.1.0)
+
+#### New Tables Added:
+1. `budget_settings` - Global period configuration (UNIQUE per user)
+2. `recurring_bills` - Bill definitions
+3. `bill_payments` - Payment tracking
+4. `investment_holdings` - Crypto/metals portfolio
+
+#### Tables Previously Undocumented:
+1. `grocery_budgets` - Single row per user, weekly_budget
+2. `grocery_purchases` - Purchase log
+3. `protein_calculations` - Protein cost analysis
+4. `protein_targets` - Single row per user, target settings
+5. `misc_shop_budgets` - Single row, monthly_budget + rollover_savings
+6. `misc_shop_purchases` - Purchase log with is_big_purchase flag
+7. `gas_fillups` - Auto fillup log with MPG
+8. `maintenance_items` - Auto maintenance schedule
+
+**Total Tables**: 25 (consolidated from 16 migration files)
+
+**Consolidated Schema File**: `sql-migrations/CONSOLIDATED_DATABASE_SCHEMA.sql` (1,176 lines)
+- Created 2025-10-13
+- Drops all tables first (idempotent - safe to run multiple times)
+- Contains all 25 tables with RLS policies, indexes, triggers
+
+---
+
+### Code Statistics (v2.1.0)
+
+**Component Lines**: 11,254 lines total across 28 component files
+
+**Largest Components**:
+- Dashboard.tsx: 652 lines
+- MiscShopTracker.tsx: 704 lines
+- AutoMPGTracker.tsx: 635 lines
+- BillsCalendar.tsx: 557 lines
+- ProteinCalculator.tsx: 473 lines
+- GroceryBudgetTracker.tsx: 467 lines
+- CryptoMetalsTracker.tsx: 408 lines
+
+**Hooks**: useBudgetPeriod.ts: 196 lines
+
+**Project Size**: 168M (119 files excluding node_modules/.git)
+
+---
+
+### Critical Fixes Applied (2025-10-13)
+
+1. **Fixed `budget_settings` Missing Table**:
+   - Error: "relation 'budget_settings' does not exist"
+   - Cause: Migration not applied to Supabase
+   - Fix: Created consolidated schema, user applied successfully
+
+2. **Fixed Schema Column Mismatches**:
+   - `gas_fillups`: Was using `odometer`/`total_cost`, fixed to `mileage`/`cost`
+   - `grocery_budgets`: Was multi-row, fixed to single-row with `weekly_budget`
+   - `misc_shop_budgets`: Fixed to single-row with `monthly_budget` + `rollover_savings`
+   - `maintenance_items`: Fixed to `service_name`, `interval_miles`, `last_done_mileage`
+
+3. **Made Schema Idempotent**:
+   - Added DROP TABLE IF EXISTS CASCADE for all 25 tables
+   - Safe to run multiple times without policy conflicts
 
 ---
 
