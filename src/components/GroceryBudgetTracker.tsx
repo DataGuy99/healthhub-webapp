@@ -11,6 +11,9 @@ interface GroceryPurchase {
   amount: number;
   date: string;
   notes?: string;
+  protein_grams?: number;
+  days_covered?: number;
+  is_protein_source?: boolean;
   created_at?: string;
 }
 
@@ -18,8 +21,19 @@ interface GroceryBudget {
   id?: string;
   user_id?: string;
   weekly_budget: number;
+  daily_protein_goal?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+interface ProteinCalculation {
+  id?: string;
+  food_name: string;
+  serving_size: number;
+  serving_unit: string;
+  protein_grams: number;
+  price: number;
+  cost_per_gram: number;
 }
 
 export function GroceryBudgetTracker() {
@@ -28,6 +42,8 @@ export function GroceryBudgetTracker() {
   const [budget, setBudget] = useState<GroceryBudget | null>(null);
   const [loading, setLoading] = useState(true);
   const [periodOffset, setPeriodOffset] = useState(0); // 0 = current, -1 = previous, +1 = next
+  const [proteinCalculations, setProteinCalculations] = useState<ProteinCalculation[]>([]);
+  const [showProteinSuggestions, setShowProteinSuggestions] = useState(false);
 
   // Form state
   const [showAddPurchase, setShowAddPurchase] = useState(false);
@@ -36,9 +52,13 @@ export function GroceryBudgetTracker() {
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formNotes, setFormNotes] = useState('');
+  const [formIsProteinSource, setFormIsProteinSource] = useState(false);
+  const [formProteinGrams, setFormProteinGrams] = useState('');
+  const [formDaysCovered, setFormDaysCovered] = useState('');
 
   // Budget settings
   const [budgetAmount, setBudgetAmount] = useState('90');
+  const [dailyProteinGoal, setDailyProteinGoal] = useState('150');
 
   useEffect(() => {
     if (currentPeriod && !periodLoading) {
@@ -65,7 +85,19 @@ export function GroceryBudgetTracker() {
 
       if (budgetData) {
         setBudgetAmount(budgetData.weekly_budget.toString());
+        setDailyProteinGoal((budgetData.daily_protein_goal || 150).toString());
       }
+
+      // Load protein calculations from protein calculator
+      const { data: proteinData, error: proteinError } = await supabase
+        .from('protein_calculations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('cost_per_gram', { ascending: true })
+        .limit(20);
+
+      if (proteinError) throw proteinError;
+      setProteinCalculations(proteinData || []);
 
       // Calculate viewing period based on offset
       const viewPeriod = calculateViewPeriod();
@@ -111,8 +143,15 @@ export function GroceryBudgetTracker() {
       if (!user) return;
 
       const amount = parseFloat(budgetAmount);
+      const proteinGoal = parseFloat(dailyProteinGoal);
+
       if (isNaN(amount) || amount <= 0) {
         alert('Please enter a valid budget amount');
+        return;
+      }
+
+      if (isNaN(proteinGoal) || proteinGoal < 0) {
+        alert('Please enter a valid protein goal (0 or higher)');
         return;
       }
 
@@ -122,6 +161,7 @@ export function GroceryBudgetTracker() {
           .from('grocery_budgets')
           .update({
             weekly_budget: amount,
+            daily_protein_goal: proteinGoal,
             updated_at: new Date().toISOString(),
           })
           .eq('id', budget.id);
@@ -134,6 +174,7 @@ export function GroceryBudgetTracker() {
           .insert({
             user_id: user.id,
             weekly_budget: amount,
+            daily_protein_goal: proteinGoal,
             created_at: new Date().toISOString(),
           });
 
@@ -158,6 +199,18 @@ export function GroceryBudgetTracker() {
         return;
       }
 
+      // Validate protein fields if marked as protein source
+      if (formIsProteinSource) {
+        if (!formProteinGrams || parseFloat(formProteinGrams) <= 0) {
+          alert('Please enter protein grams for protein sources');
+          return;
+        }
+        if (!formDaysCovered || parseFloat(formDaysCovered) <= 0) {
+          alert('Please enter how many days this protein covers');
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('grocery_purchases')
         .insert({
@@ -166,6 +219,9 @@ export function GroceryBudgetTracker() {
           amount: parseFloat(formAmount),
           date: formDate,
           notes: formNotes.trim() || null,
+          is_protein_source: formIsProteinSource,
+          protein_grams: formIsProteinSource ? parseFloat(formProteinGrams) : null,
+          days_covered: formIsProteinSource ? parseFloat(formDaysCovered) : null,
           created_at: new Date().toISOString(),
         });
 
@@ -176,6 +232,9 @@ export function GroceryBudgetTracker() {
       setFormAmount('');
       setFormDate(new Date().toISOString().split('T')[0]);
       setFormNotes('');
+      setFormIsProteinSource(false);
+      setFormProteinGrams('');
+      setFormDaysCovered('');
       setShowAddPurchase(false);
       loadData();
     } catch (error) {
@@ -210,6 +269,35 @@ export function GroceryBudgetTracker() {
   const periodBudget = budget?.weekly_budget || 90;
   const remaining = periodBudget - periodTotal;
   const percentUsed = periodBudget > 0 ? (periodTotal / periodBudget) * 100 : 0;
+
+  // Calculate protein tracking
+  const dailyGoal = budget?.daily_protein_goal || 0;
+  const daysInPeriod = currentPeriod ? Math.ceil((currentPeriod.endDate.getTime() - currentPeriod.startDate.getTime()) / (1000 * 60 * 60 * 24)) : 7;
+  const periodProteinGoal = dailyGoal * daysInPeriod;
+
+  // Calculate protein secured and spent on protein
+  const proteinPurchases = purchases.filter(p => p.is_protein_source);
+  const proteinSpent = proteinPurchases.reduce((sum, p) => sum + p.amount, 0);
+  const proteinSecured = proteinPurchases.reduce((sum, p) => sum + (p.protein_grams || 0), 0);
+  const proteinGap = Math.max(0, periodProteinGoal - proteinSecured);
+  const budgetAfterProtein = remaining; // Remaining budget after all spending
+
+  // Calculate protein coverage
+  const daysCovered = dailyGoal > 0 ? proteinSecured / dailyGoal : 0;
+  const daysRemaining = Math.max(0, daysInPeriod - daysCovered);
+
+  // Smart suggestions: find protein sources that fit remaining budget
+  const affordableSuggestions = proteinCalculations
+    .filter(calc => calc.price <= budgetAfterProtein) // Can afford whole item
+    .map(calc => ({
+      ...calc,
+      items_needed: Math.ceil(proteinGap / calc.protein_grams), // Round up to whole items
+      total_cost: Math.ceil(proteinGap / calc.protein_grams) * calc.price,
+      total_protein: Math.ceil(proteinGap / calc.protein_grams) * calc.protein_grams,
+    }))
+    .filter(s => s.total_cost <= budgetAfterProtein) // Total cost within budget
+    .sort((a, b) => a.total_cost - b.total_cost) // Cheapest first
+    .slice(0, 5); // Top 5 suggestions
 
   const viewPeriod = calculateViewPeriod();
 
@@ -260,20 +348,34 @@ export function GroceryBudgetTracker() {
           animate={{ opacity: 1, height: 'auto' }}
           className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">Budget Settings</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Budget & Protein Settings</h3>
           <p className="text-sm text-white/60 mb-4">
             Budget period is controlled globally from Overview → Budget Period Settings
           </p>
-          <div>
-            <label className="block text-sm text-white/70 mb-2">Budget Amount ($)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={budgetAmount}
-              onChange={(e) => setBudgetAmount(e.target.value)}
-              placeholder="90.00"
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Budget Amount ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                placeholder="90.00"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Daily Protein Goal (g)</label>
+              <input
+                type="number"
+                step="1"
+                value={dailyProteinGoal}
+                onChange={(e) => setDailyProteinGoal(e.target.value)}
+                placeholder="150"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+              <p className="text-xs text-white/50 mt-1">Set to 0 to disable protein tracking</p>
+            </div>
           </div>
           <button
             onClick={saveBudgetSettings}
