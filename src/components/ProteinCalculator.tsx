@@ -10,6 +10,7 @@ interface ProteinCalculation {
   serving_size: number;
   serving_unit: string;
   protein_grams: number;
+  num_servings: number;
   price: number;
   cost_per_gram: number;
   date: string;
@@ -35,6 +36,7 @@ export function ProteinCalculator() {
   const [servingSize, setServingSize] = useState('');
   const [servingUnit, setServingUnit] = useState('oz');
   const [proteinGrams, setProteinGrams] = useState('');
+  const [numServings, setNumServings] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -90,21 +92,24 @@ export function ProteinCalculator() {
       const user = await getCurrentUser();
       if (!user) return;
 
-      if (!foodName.trim() || !servingSize || !proteinGrams || !price) {
+      if (!foodName.trim() || !servingSize || !proteinGrams || !numServings || !price) {
         alert('Please fill in all required fields');
         return;
       }
 
       const serving = parseFloat(servingSize);
       const protein = parseFloat(proteinGrams);
+      const servings = parseFloat(numServings);
       const cost = parseFloat(price);
 
-      if (serving <= 0 || protein <= 0 || cost <= 0) {
+      if (serving <= 0 || protein <= 0 || servings <= 0 || cost <= 0) {
         alert('Values must be greater than 0');
         return;
       }
 
-      const costPerGram = cost / protein;
+      // Calculate total protein: protein per serving × number of servings
+      const totalProtein = protein * servings;
+      const costPerGram = cost / totalProtein;
 
       const { error } = await supabase
         .from('protein_calculations')
@@ -114,6 +119,7 @@ export function ProteinCalculator() {
           serving_size: serving,
           serving_unit: servingUnit,
           protein_grams: protein,
+          num_servings: servings,
           price: cost,
           cost_per_gram: costPerGram,
           date: new Date().toISOString().split('T')[0],
@@ -127,6 +133,7 @@ export function ProteinCalculator() {
       setFoodName('');
       setServingSize('');
       setProteinGrams('');
+      setNumServings('');
       setPrice('');
       setNotes('');
       loadData();
@@ -329,8 +336,8 @@ export function ProteinCalculator() {
       {/* Quick Calculator */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
         <h3 className="text-xl font-bold text-white mb-4">Quick Calculator</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
             <label className="block text-sm text-white/70 mb-2">Food Name</label>
             <input
               type="text"
@@ -348,7 +355,7 @@ export function ProteinCalculator() {
                 step="0.01"
                 value={servingSize}
                 onChange={(e) => setServingSize(e.target.value)}
-                placeholder="Amount"
+                placeholder="10"
                 className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500/50"
               />
               <select
@@ -364,26 +371,40 @@ export function ProteinCalculator() {
             </div>
           </div>
           <div>
-            <label className="block text-sm text-white/70 mb-2">Protein (grams)</label>
+            <label className="block text-sm text-white/70 mb-2">Protein per Serving (g)</label>
             <input
               type="number"
               step="0.1"
               value={proteinGrams}
               onChange={(e) => setProteinGrams(e.target.value)}
-              placeholder="e.g., 25"
+              placeholder="25"
               className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500/50"
             />
+            <p className="text-xs text-white/50 mt-1">Per serving</p>
           </div>
           <div>
-            <label className="block text-sm text-white/70 mb-2">Price ($)</label>
+            <label className="block text-sm text-white/70 mb-2">Number of Servings</label>
+            <input
+              type="number"
+              step="0.1"
+              value={numServings}
+              onChange={(e) => setNumServings(e.target.value)}
+              placeholder="4"
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+            />
+            <p className="text-xs text-white/50 mt-1">In package</p>
+          </div>
+          <div>
+            <label className="block text-sm text-white/70 mb-2">Total Price ($)</label>
             <input
               type="number"
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              placeholder="e.g., 3.50"
+              placeholder="12.99"
               className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500/50"
             />
+            <p className="text-xs text-white/50 mt-1">For whole package</p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm text-white/70 mb-2">Notes (optional)</label>
@@ -430,7 +451,10 @@ export function ProteinCalculator() {
                       <div>
                         <div className="font-bold text-white text-lg">{calc.food_name}</div>
                         <div className="text-sm text-white/60">
-                          {calc.serving_size} {calc.serving_unit} • {calc.protein_grams}g protein • ${calc.price.toFixed(2)}
+                          {calc.serving_size}{calc.serving_unit} serving × {calc.num_servings} servings • {calc.protein_grams}g protein per serving • ${calc.price.toFixed(2)} total
+                        </div>
+                        <div className="text-xs text-white/50">
+                          Total protein: {(calc.protein_grams * calc.num_servings).toFixed(1)}g
                         </div>
                       </div>
                     </div>
