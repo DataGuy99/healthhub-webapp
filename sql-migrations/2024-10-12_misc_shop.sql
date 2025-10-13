@@ -1,5 +1,6 @@
 -- Table: misc_shop_budgets
 -- Description: Store user's misc shop budget and rollover savings
+-- Note: Period settings are now managed globally in budget_settings table
 
 CREATE TABLE IF NOT EXISTS misc_shop_budgets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,7 +21,6 @@ CREATE TABLE IF NOT EXISTS misc_shop_purchases (
   item_name TEXT NOT NULL,
   amount DECIMAL(10, 2) NOT NULL,
   date DATE NOT NULL,
-  month TEXT NOT NULL, -- YYYY-MM format for grouping
   is_big_purchase BOOLEAN DEFAULT false,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS misc_shop_purchases (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_misc_shop_budgets_user_id ON misc_shop_budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_misc_shop_purchases_user_id ON misc_shop_purchases(user_id);
-CREATE INDEX IF NOT EXISTS idx_misc_shop_purchases_month ON misc_shop_purchases(month);
 CREATE INDEX IF NOT EXISTS idx_misc_shop_purchases_date ON misc_shop_purchases(date);
 
 -- Row Level Security
