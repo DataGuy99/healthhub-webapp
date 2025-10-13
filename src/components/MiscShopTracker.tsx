@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { useBudgetPeriod } from '../hooks/useBudgetPeriod';
 
 interface MiscShopBudget {
   id: string;
@@ -17,16 +18,17 @@ interface MiscShopPurchase {
   item_name: string;
   amount: number;
   date: string;
-  month: string; // YYYY-MM format
   is_big_purchase: boolean;
   notes: string | null;
   created_at: string;
 }
 
 export const MiscShopTracker: React.FC = () => {
+  const { currentPeriod, formatPeriodDisplay, loading: periodLoading } = useBudgetPeriod();
   const [budget, setBudget] = useState<MiscShopBudget | null>(null);
   const [purchases, setPurchases] = useState<MiscShopPurchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodOffset, setPeriodOffset] = useState(0); // 0 = current, -1 = previous, +1 = next
 
   // Budget settings
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -40,14 +42,27 @@ export const MiscShopTracker: React.FC = () => {
   const [newIsBigPurchase, setNewIsBigPurchase] = useState(false);
   const [newNotes, setNewNotes] = useState('');
 
-  // Month navigation
-  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().substring(0, 7));
-
   useEffect(() => {
-    loadData();
-  }, [currentMonth]);
+    if (currentPeriod && !periodLoading) {
+      loadData();
+    }
+  }, [currentPeriod, periodOffset, periodLoading]);
+
+  const calculateViewPeriod = () => {
+    if (!currentPeriod) return { startDate: new Date(), endDate: new Date() };
+
+    const periodLengthMs = currentPeriod.endDate.getTime() - currentPeriod.startDate.getTime();
+    const offsetMs = periodOffset * periodLengthMs;
+
+    return {
+      startDate: new Date(currentPeriod.startDate.getTime() + offsetMs),
+      endDate: new Date(currentPeriod.endDate.getTime() + offsetMs),
+    };
+  };
 
   const loadData = async () => {
+    if (!currentPeriod) return;
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -97,12 +112,20 @@ export const MiscShopTracker: React.FC = () => {
         normalizedBudget ? normalizedBudget.monthly_budget.toFixed(2) : '30.00'
       );
 
-      // Load purchases for current month
+      // Calculate viewing period based on offset
+      const viewPeriod = calculateViewPeriod();
+      const periodStart = viewPeriod.startDate.toISOString().split('T')[0];
+      const periodEnd = new Date(viewPeriod.endDate);
+      periodEnd.setDate(periodEnd.getDate() - 1); // End date is exclusive
+      const periodEndStr = periodEnd.toISOString().split('T')[0];
+
+      // Load purchases for viewing period
       const { data: purchasesData, error: purchasesError } = await supabase
         .from('misc_shop_purchases')
         .select('*')
         .eq('user_id', user.id)
-        .eq('month', currentMonth)
+        .gte('date', periodStart)
+        .lte('date', periodEndStr)
         .order('date', { ascending: false });
 
       if (purchasesError) {
@@ -159,8 +182,6 @@ export const MiscShopTracker: React.FC = () => {
       if (!user) return;
 
       const amount = parseFloat(newAmount);
-      const purchaseDate = new Date(newDate);
-      const month = purchaseDate.toISOString().substring(0, 7);
 
       const { error } = await supabase
         .from('misc_shop_purchases')
@@ -169,7 +190,6 @@ export const MiscShopTracker: React.FC = () => {
           item_name: newItemName.trim(),
           amount: amount,
           date: newDate,
-          month: month,
           is_big_purchase: newIsBigPurchase,
           notes: newNotes.trim() || null
         });
@@ -219,18 +239,18 @@ export const MiscShopTracker: React.FC = () => {
   const rolloverToSavings = async () => {
     if (!budget) return;
 
-    const monthSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
-    const monthRemaining = budget.monthly_budget - monthSpent;
+    const periodSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
+    const periodRemaining = budget.monthly_budget - periodSpent;
 
-    if (monthRemaining <= 0) {
-      alert('No remaining budget to roll over this month');
+    if (periodRemaining <= 0) {
+      alert('No remaining budget to roll over this period');
       return;
     }
 
-    if (!confirm(`Roll over $${monthRemaining.toFixed(2)} to savings?`)) return;
+    if (!confirm(`Roll over $${periodRemaining.toFixed(2)} to savings?`)) return;
 
     try {
-      const newRollover = budget.rollover_savings + monthRemaining;
+      const newRollover = budget.rollover_savings + periodRemaining;
 
       const { error } = await supabase
         .from('misc_shop_budgets')
@@ -245,7 +265,7 @@ export const MiscShopTracker: React.FC = () => {
         alert('Failed to roll over savings');
       } else {
         await loadData();
-        alert(`Successfully rolled over $${monthRemaining.toFixed(2)} to savings!`);
+        alert(`Successfully rolled over $${periodRemaining.toFixed(2)} to savings!`);
       }
     } catch (error) {
       console.error('Error rolling over savings:', error);
@@ -292,20 +312,15 @@ export const MiscShopTracker: React.FC = () => {
     }
   };
 
-  const changeMonth = (direction: 'prev' | 'next') => {
-    const [year, month] = currentMonth.split('-').map(Number);
-    const date = new Date(year, month - 1);
-
-    if (direction === 'prev') {
-      date.setMonth(date.getMonth() - 1);
-    } else {
-      date.setMonth(date.getMonth() + 1);
-    }
-
-    setCurrentMonth(date.toISOString().substring(0, 7));
+  const navigatePeriod = (direction: 'prev' | 'next') => {
+    setPeriodOffset(periodOffset + (direction === 'next' ? 1 : -1));
   };
 
-  if (loading) {
+  const isCurrentPeriod = () => {
+    return periodOffset === 0;
+  };
+
+  if (loading || periodLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -321,20 +336,16 @@ export const MiscShopTracker: React.FC = () => {
     );
   }
 
-  // Calculate month stats
-  const monthSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
-  const monthRemaining = budget.monthly_budget - monthSpent;
-  const totalAvailable = monthRemaining + budget.rollover_savings;
+  // Calculate period stats
+  const periodSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
+  const periodRemaining = budget.monthly_budget - periodSpent;
+  const totalAvailable = periodRemaining + budget.rollover_savings;
   const percentUsed =
     budget.monthly_budget > 0
-      ? (monthSpent / budget.monthly_budget) * 100
+      ? (periodSpent / budget.monthly_budget) * 100
       : 0;
 
-  const formatMonth = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-  };
+  const viewPeriod = calculateViewPeriod();
 
   return (
     <div className="space-y-6">
@@ -363,7 +374,7 @@ export const MiscShopTracker: React.FC = () => {
             className="space-y-4"
           >
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Monthly Budget</label>
+              <label className="block text-sm text-gray-400 mb-2">Period Budget</label>
               <div className="flex items-center gap-2">
                 <span className="text-white text-xl">$</span>
                 <input
@@ -398,8 +409,9 @@ export const MiscShopTracker: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-gray-400">Monthly Budget</div>
+              <div className="text-sm text-gray-400">Period Budget</div>
               <div className="text-3xl font-bold text-white">${budget.monthly_budget.toFixed(2)}</div>
+              <div className="text-xs text-gray-500 mt-1">Budget period controlled from Overview</div>
             </div>
 
             <div>
@@ -410,10 +422,10 @@ export const MiscShopTracker: React.FC = () => {
         )}
       </motion.div>
 
-      {/* Month Navigation */}
+      {/* Period Navigation */}
       <div className="flex items-center justify-between bg-gray-800/50 rounded-lg p-4">
         <button
-          onClick={() => changeMonth('prev')}
+          onClick={() => navigatePeriod('prev')}
           className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
         >
           <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -421,10 +433,17 @@ export const MiscShopTracker: React.FC = () => {
           </svg>
         </button>
 
-        <h3 className="text-xl font-semibold text-white">{formatMonth(currentMonth)}</h3>
+        <div className="text-center">
+          <h3 className="text-xl font-semibold text-white">
+            {viewPeriod.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(viewPeriod.endDate.getTime() - 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </h3>
+          {isCurrentPeriod() && (
+            <div className="text-green-400 text-sm">Current Period</div>
+          )}
+        </div>
 
         <button
-          onClick={() => changeMonth('next')}
+          onClick={() => navigatePeriod('next')}
           className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
         >
           <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -433,25 +452,25 @@ export const MiscShopTracker: React.FC = () => {
         </button>
       </div>
 
-      {/* Month Stats */}
+      {/* Period Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-3 gap-4"
       >
         <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-1">Spent This Month</div>
-          <div className="text-2xl font-bold text-white">${monthSpent.toFixed(2)}</div>
+          <div className="text-sm text-gray-400 mb-1">Spent This Period</div>
+          <div className="text-2xl font-bold text-white">${periodSpent.toFixed(2)}</div>
           <div className="text-xs text-gray-500 mt-1">{percentUsed.toFixed(0)}% of budget</div>
         </div>
 
         <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-1">Month Remaining</div>
-          <div className={`text-2xl font-bold ${monthRemaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            ${monthRemaining.toFixed(2)}
+          <div className="text-sm text-gray-400 mb-1">Period Remaining</div>
+          <div className={`text-2xl font-bold ${periodRemaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            ${periodRemaining.toFixed(2)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {monthRemaining >= 0 ? 'Under budget' : 'Over budget'}
+            {periodRemaining >= 0 ? 'Under budget' : 'Over budget'}
           </div>
         </div>
 
@@ -486,7 +505,7 @@ export const MiscShopTracker: React.FC = () => {
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={rolloverToSavings}
-          disabled={monthRemaining <= 0}
+          disabled={periodRemaining <= 0}
           className="px-4 py-3 bg-green-500/20 hover:bg-green-500/30 disabled:bg-gray-700 disabled:text-gray-500 text-green-300 rounded-lg transition-colors"
         >
           💰 Roll Over to Savings
@@ -620,7 +639,7 @@ export const MiscShopTracker: React.FC = () => {
               exit={{ opacity: 0 }}
               className="text-center py-12 text-gray-400"
             >
-              No purchases this month
+              No purchases this period
             </motion.div>
           ) : (
             purchases.map((purchase) => (

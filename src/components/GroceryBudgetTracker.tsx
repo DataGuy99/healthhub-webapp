@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
+import { useBudgetPeriod } from '../hooks/useBudgetPeriod';
 
 interface GroceryPurchase {
   id?: string;
@@ -9,7 +10,6 @@ interface GroceryPurchase {
   store: string;
   amount: number;
   date: string;
-  week_start: string; // Start of the week this purchase belongs to
   notes?: string;
   created_at?: string;
 }
@@ -18,16 +18,16 @@ interface GroceryBudget {
   id?: string;
   user_id?: string;
   weekly_budget: number;
-  week_start_day: number; // 0=Sunday, 1=Monday, etc.
   created_at?: string;
   updated_at?: string;
 }
 
 export function GroceryBudgetTracker() {
+  const { currentPeriod, formatPeriodDisplay, loading: periodLoading } = useBudgetPeriod();
   const [purchases, setPurchases] = useState<GroceryPurchase[]>([]);
   const [budget, setBudget] = useState<GroceryBudget | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(new Date());
+  const [periodOffset, setPeriodOffset] = useState(0); // 0 = current, -1 = previous, +1 = next
 
   // Form state
   const [showAddPurchase, setShowAddPurchase] = useState(false);
@@ -39,29 +39,16 @@ export function GroceryBudgetTracker() {
 
   // Budget settings
   const [budgetAmount, setBudgetAmount] = useState('90');
-  const [weekStartDay, setWeekStartDay] = useState(1); // Monday
 
   useEffect(() => {
-    loadData();
-  }, [currentWeekStart]);
-
-  useEffect(() => {
-    // Calculate week start based on today and budget settings
-    const today = new Date();
-    const weekStart = getWeekStart(today, budget?.week_start_day || 1);
-    setCurrentWeekStart(weekStart);
-  }, [budget]);
-
-  const getWeekStart = (date: Date, startDay: number): Date => {
-    const result = new Date(date);
-    const day = result.getDay();
-    const diff = (day < startDay ? day + 7 : day) - startDay;
-    result.setDate(result.getDate() - diff);
-    result.setHours(0, 0, 0, 0);
-    return result;
-  };
+    if (currentPeriod && !periodLoading) {
+      loadData();
+    }
+  }, [currentPeriod, periodOffset, periodLoading]);
 
   const loadData = async () => {
+    if (!currentPeriod) return;
+
     try {
       const user = await getCurrentUser();
       if (!user) return;
@@ -78,21 +65,22 @@ export function GroceryBudgetTracker() {
 
       if (budgetData) {
         setBudgetAmount(budgetData.weekly_budget.toString());
-        setWeekStartDay(budgetData.week_start_day);
       }
 
-      // Load purchases for current week
-      const weekStart = currentWeekStart.toISOString().split('T')[0];
-      const weekEnd = new Date(currentWeekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      const weekEndStr = weekEnd.toISOString().split('T')[0];
+      // Calculate viewing period based on offset
+      const viewPeriod = calculateViewPeriod();
+      const periodStart = viewPeriod.startDate.toISOString().split('T')[0];
+      const periodEnd = new Date(viewPeriod.endDate);
+      periodEnd.setDate(periodEnd.getDate() - 1); // End date is exclusive, so subtract 1 day
+      const periodEndStr = periodEnd.toISOString().split('T')[0];
 
+      // Load purchases for viewing period
       const { data: purchasesData, error: purchasesError } = await supabase
         .from('grocery_purchases')
         .select('*')
         .eq('user_id', user.id)
-        .gte('date', weekStart)
-        .lte('date', weekEndStr)
+        .gte('date', periodStart)
+        .lte('date', periodEndStr)
         .order('date', { ascending: false });
 
       if (purchasesError) throw purchasesError;
@@ -103,6 +91,18 @@ export function GroceryBudgetTracker() {
       console.error('Error loading data:', error);
       setLoading(false);
     }
+  };
+
+  const calculateViewPeriod = () => {
+    if (!currentPeriod) return { startDate: new Date(), endDate: new Date() };
+
+    const periodLengthMs = currentPeriod.endDate.getTime() - currentPeriod.startDate.getTime();
+    const offsetMs = periodOffset * periodLengthMs;
+
+    return {
+      startDate: new Date(currentPeriod.startDate.getTime() + offsetMs),
+      endDate: new Date(currentPeriod.endDate.getTime() + offsetMs),
+    };
   };
 
   const saveBudgetSettings = async () => {
@@ -122,7 +122,6 @@ export function GroceryBudgetTracker() {
           .from('grocery_budgets')
           .update({
             weekly_budget: amount,
-            week_start_day: weekStartDay,
             updated_at: new Date().toISOString(),
           })
           .eq('id', budget.id);
@@ -135,7 +134,6 @@ export function GroceryBudgetTracker() {
           .insert({
             user_id: user.id,
             weekly_budget: amount,
-            week_start_day: weekStartDay,
             created_at: new Date().toISOString(),
           });
 
@@ -160,9 +158,6 @@ export function GroceryBudgetTracker() {
         return;
       }
 
-      const purchaseDate = new Date(formDate);
-      const weekStart = getWeekStart(purchaseDate, budget?.week_start_day || 1);
-
       const { error } = await supabase
         .from('grocery_purchases')
         .insert({
@@ -170,7 +165,6 @@ export function GroceryBudgetTracker() {
           store: formStore.trim(),
           amount: parseFloat(formAmount),
           date: formDate,
-          week_start: weekStart.toISOString().split('T')[0],
           notes: formNotes.trim() || null,
           created_at: new Date().toISOString(),
         });
@@ -207,28 +201,23 @@ export function GroceryBudgetTracker() {
     }
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const newWeekStart = new Date(currentWeekStart);
-    newWeekStart.setDate(newWeekStart.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentWeekStart(newWeekStart);
+  const navigatePeriod = (direction: 'prev' | 'next') => {
+    setPeriodOffset(periodOffset + (direction === 'next' ? 1 : -1));
   };
 
   // Calculate totals
-  const weekTotal = purchases.reduce((sum, p) => sum + p.amount, 0);
-  const weeklyBudget = budget?.weekly_budget || 90;
-  const remaining = weeklyBudget - weekTotal;
-  const percentUsed = (weekTotal / weeklyBudget) * 100;
+  const periodTotal = purchases.reduce((sum, p) => sum + p.amount, 0);
+  const periodBudget = budget?.weekly_budget || 90;
+  const remaining = periodBudget - periodTotal;
+  const percentUsed = periodBudget > 0 ? (periodTotal / periodBudget) * 100 : 0;
 
-  const weekEndDate = new Date(currentWeekStart);
-  weekEndDate.setDate(weekEndDate.getDate() + 6);
+  const viewPeriod = calculateViewPeriod();
 
-  const isCurrentWeek = () => {
-    const today = new Date();
-    const todayWeekStart = getWeekStart(today, budget?.week_start_day || 1);
-    return currentWeekStart.toISOString().split('T')[0] === todayWeekStart.toISOString().split('T')[0];
+  const isCurrentPeriod = () => {
+    return periodOffset === 0;
   };
 
-  if (loading) {
+  if (loading || periodLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-white/70">Loading budget...</div>
@@ -246,7 +235,7 @@ export function GroceryBudgetTracker() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-white">🛒 Grocery Budget</h2>
-          <p className="text-white/60 text-sm">Track your weekly grocery spending</p>
+          <p className="text-white/60 text-sm">Track your grocery spending per budget period</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -272,34 +261,19 @@ export function GroceryBudgetTracker() {
           className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
         >
           <h3 className="text-lg font-semibold text-white mb-4">Budget Settings</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-white/70 mb-2">Weekly Budget ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={budgetAmount}
-                onChange={(e) => setBudgetAmount(e.target.value)}
-                placeholder="90.00"
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-white/70 mb-2">Week Starts On</label>
-              <select
-                value={weekStartDay}
-                onChange={(e) => setWeekStartDay(parseInt(e.target.value))}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-              >
-                <option value="0" className="bg-slate-800">Sunday</option>
-                <option value="1" className="bg-slate-800">Monday</option>
-                <option value="2" className="bg-slate-800">Tuesday</option>
-                <option value="3" className="bg-slate-800">Wednesday</option>
-                <option value="4" className="bg-slate-800">Thursday</option>
-                <option value="5" className="bg-slate-800">Friday</option>
-                <option value="6" className="bg-slate-800">Saturday</option>
-              </select>
-            </div>
+          <p className="text-sm text-white/60 mb-4">
+            Budget period is controlled globally from Overview → Budget Period Settings
+          </p>
+          <div>
+            <label className="block text-sm text-white/70 mb-2">Budget Amount ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              placeholder="90.00"
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
           </div>
           <button
             onClick={saveBudgetSettings}
@@ -310,39 +284,39 @@ export function GroceryBudgetTracker() {
         </motion.div>
       )}
 
-      {/* Week Navigation */}
+      {/* Period Navigation */}
       <div className="flex items-center justify-between bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4">
         <button
-          onClick={() => navigateWeek('prev')}
+          onClick={() => navigatePeriod('prev')}
           className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all"
         >
-          ← Previous Week
+          ← Previous Period
         </button>
         <div className="text-center">
           <div className="text-white font-bold text-lg">
-            {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {viewPeriod.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(viewPeriod.endDate.getTime() - 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
-          {isCurrentWeek() && (
-            <div className="text-green-400 text-sm">Current Week</div>
+          {isCurrentPeriod() && (
+            <div className="text-green-400 text-sm">Current Period</div>
           )}
         </div>
         <button
-          onClick={() => navigateWeek('next')}
+          onClick={() => navigatePeriod('next')}
           className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all"
         >
-          Next Week →
+          Next Period →
         </button>
       </div>
 
       {/* Budget Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-xl rounded-2xl border border-blue-500/30 p-5">
-          <div className="text-white/70 text-sm mb-1">Weekly Budget</div>
-          <div className="text-white text-3xl font-bold">${weeklyBudget.toFixed(2)}</div>
+          <div className="text-white/70 text-sm mb-1">Period Budget</div>
+          <div className="text-white text-3xl font-bold">${periodBudget.toFixed(2)}</div>
         </div>
         <div className={`bg-gradient-to-r ${remaining >= 0 ? 'from-green-500/20 to-emerald-500/20 border-green-500/30' : 'from-red-500/20 to-rose-500/20 border-red-500/30'} backdrop-blur-xl rounded-2xl border p-5`}>
-          <div className="text-white/70 text-sm mb-1">Spent This Week</div>
-          <div className="text-white text-3xl font-bold">${weekTotal.toFixed(2)}</div>
+          <div className="text-white/70 text-sm mb-1">Spent This Period</div>
+          <div className="text-white text-3xl font-bold">${periodTotal.toFixed(2)}</div>
           <div className="text-white/60 text-xs mt-1">{percentUsed.toFixed(1)}% of budget</div>
         </div>
         <div className={`bg-gradient-to-r ${remaining >= 0 ? 'from-green-500/20 to-emerald-500/20 border-green-500/30' : 'from-red-500/20 to-rose-500/20 border-red-500/30'} backdrop-blur-xl rounded-2xl border p-5`}>
@@ -440,10 +414,10 @@ export function GroceryBudgetTracker() {
 
       {/* Purchases List */}
       <div className="space-y-3">
-        <h3 className="text-xl font-bold text-white">This Week's Purchases</h3>
+        <h3 className="text-xl font-bold text-white">This Period's Purchases</h3>
         {purchases.length === 0 ? (
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-12 text-center">
-            <div className="text-white/40 text-lg mb-2">No purchases this week</div>
+            <div className="text-white/40 text-lg mb-2">No purchases this period</div>
             <div className="text-white/60 text-sm">Click "Add Purchase" to log your grocery spending</div>
           </div>
         ) : (
