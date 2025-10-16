@@ -1,0 +1,58 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'HealthBridgeAndroid/**'
+      - '.github/workflows/android-build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'HealthBridgeAndroid/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x HealthBridgeAndroid/gradlew
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Build Debug APK
+      working-directory: ./HealthBridgeAndroid
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: healthbridge-debug-apk
+        path: HealthBridgeAndroid/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+
+    - name: Build Release APK (unsigned)
+      working-directory: ./HealthBridgeAndroid
+      run: ./gradlew assembleRelease --stacktrace
+      continue-on-error: true
+
+    - name: Upload Release APK (if built)
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: healthbridge-release-apk-unsigned
+        path: HealthBridgeAndroid/app/build/outputs/apk/release/app-release-unsigned.apk
+        retention-days: 30
