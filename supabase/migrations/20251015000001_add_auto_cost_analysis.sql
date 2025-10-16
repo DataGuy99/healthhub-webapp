@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS auto_cost_analysis (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
     -- Constraints
-    CONSTRAINT positive_miles CHECK (total_miles_driven >= 0),
+    CONSTRAINT non_negative_miles CHECK (total_miles_driven >= 0),
     CONSTRAINT non_negative_maintenance CHECK (total_maintenance_cost >= 0),
     CONSTRAINT non_negative_fuel CHECK (total_fuel_cost >= 0),
     CONSTRAINT valid_mpg CHECK (average_mpg > 0),

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase, type AutoCostAnalysis } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 interface GasFillup {
@@ -42,7 +42,10 @@ export function AutoCostAnalysis() {
   const loadData = async () => {
     try {
       const user = await getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       // Load all gas fillups
       const { data: fillupsData, error: fillupsError } = await supabase
@@ -71,7 +74,7 @@ export function AutoCostAnalysis() {
 
       setLoading(false);
     } catch (error) {
-      console.error('Error loading auto cost data:', error);
+      console.error('Error loading auto cost data');
       setLoading(false);
     }
   };
