@@ -56,13 +56,7 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- Background Sync Worker -->
-        <service
-            android:name="androidx.work.impl.background.systemjob.SystemJobService"
-            android:directBootAware="false"
-            android:enabled="@bool/enable_system_job_service"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <!-- Background Sync Worker - WorkManager handles this automatically -->
 
     </application>
 
