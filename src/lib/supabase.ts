@@ -265,3 +265,62 @@ export interface AutoCostAnalysis {
   created_at?: string;
   updated_at?: string;
 }
+
+// ============================================================================
+// Health Data Tracking Types
+// ============================================================================
+
+export type HealthMetricType =
+  | 'heart_rate'
+  | 'blood_oxygen'
+  | 'respiratory_rate'
+  | 'body_temperature'
+  | 'steps'
+  | 'distance'
+  | 'calories'
+  | 'exercise'
+  | 'sleep_stage'
+  | 'nutrition'
+  | 'hydration'
+  | 'stress_level';
+
+export interface HealthDataPoint {
+  id?: string;
+  user_id?: string;
+  timestamp: string; // ISO 8601 timestamp
+  type: HealthMetricType;
+  value: number;
+  accuracy?: number; // 0-100
+  source: string; // 'smartwatch', 'phone', 'manual'
+  context?: {
+    activity?: string;
+    location?: string;
+    supplement_logs?: string[]; // Array of supplement IDs
+    sleep_stage?: string;
+    stress_level?: string;
+  };
+  metadata?: {
+    device_id?: string;
+    battery_level?: number;
+    sensor_confidence?: number;
+    environmental?: {
+      temperature?: number;
+      humidity?: number;
+    };
+  };
+  created_at?: string;
+}
+
+export interface HealthSyncStatus {
+  id?: string;
+  user_id?: string;
+  last_sync_timestamp?: string;
+  data_points_count: number;
+  sync_errors?: Array<{
+    timestamp: string;
+    error_message: string;
+    error_code?: string;
+  }>;
+  created_at?: string;
+  updated_at?: string;
+}
