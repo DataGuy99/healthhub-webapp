@@ -1,0 +1,283 @@
+# Claude CLI: Life Optimization Engine - Phase 0 Cleanup & Foundation  
+## 🧹 PHASE 0: COMPREHENSIVE CODEBASE AUDIT & CLEANUP  
+**CRITICAL**: Before building new features, we must surgically clean the existing codebase. Your current codebase has significant technical debt that will sabotage new development.
+
+## 🔍 EXECUTION STRATEGY
+
+### **Step 1: Repository Analysis & Documentation**
+First, create a complete inventory of what exists vs what works:
+
+```bash
+# Run this exact sequence:
+find . -name "*.tsx" -o -name ".ts" | wc -l
+find . -name "*.md" | grep -E "(README|PROJECT|TODO)" | cat
+grep -r "TODO\|FIXME\|HACK" src/ | head -20
+grep -r "console.log\|console.error" src/ | wc -l
+ls -la src/components/ | wc -l
+```
+
+### **Step 2: Component Functionality Audit**
+
+**Dashboard.tsx Analysis:**
+- **ISSUE**: References 8 non-existent components (SpendingTracker, etc.)
+- **ACTION**: Remove all references to missing components
+- **VALIDATION**: App should compile without errors after cleanup
+
+**FinanceView.tsx Analysis:**
+- **ISSUE**: Plaid integration exists in UI only - no actual API calls
+- **ACTION**: Strip down to working CSV import only, remove bank connection UI
+- **VALIDATION**: CSV import should remain functional
+
+**Component Reference Audit:**
+Systematically check each component file:
+- Does the file exist in src/components/?
+- Does it export a valid React component?
+- Does it have working data connections?
+- Are all its imports resolvable?
+
+### **Step 3: Database Schema Consistency Check**
+
+**Critical Finding**: Your migrations create tables that don't match component expectations.
+
+**Required Actions:**
+1. List all migration files and their creation order
+2. Document which tables each component expects
+3. Identify schema mismatches
+4. Create consolidation plan
+
+**Specific Issues Found:**
+- `grocery_budgets` table vs `category_budgets` usage
+- Column name inconsistencies across migrations
+- Missing indexes that components assume exist
+
+### **Step 4: Dependency & Import Cleanup**
+
+**Import Resolution Audit:**
+```bash
+# Check for broken imports:
+grep -r "from.*components" src/ | grep -v "from './components" | head -20
+grep -r "supabase" src/ | grep -v "from '../lib/supabase'" | head -20
+```
+
+**Dependency Audit:**
+- Remove unused npm packages
+- Update outdated dependencies that cause warnings
+- Ensure all peer dependencies are satisfied
+
+### **Step 5: Functionality vs Interface Separation**
+
+**Working Features (Keep):**
+- Supplement daily logging system
+- CSV import/export functionality
+- Basic finance template system (CategoryHub, CovenantTemplate, etc.)
+- User authentication flow
+- Database connection layer
+
+**Broken Features (Remove/Fix):**
+- Plaid bank integration (frontend only)
+- Offline data layer (not implemented)
+- Spending tracker (component doesn't exist)
+- Crypto/metals tracker (mock data only)
+- Merchant rules system (UI only)
+
+**Interface Bloat (Remove):**
+- Dashboard cards that lead nowhere
+- Sub-tabs for non-existent components
+- Placeholder buttons that do nothing
+- Decorative elements without function
+
+## 🎯 SPECIFIC CLEANUP TASKS
+
+### **Task 1: Dashboard Component Purge**
+
+**Files to Modify:** `src/components/Dashboard.tsx`
+
+**Remove These Entire Sections:**
+- All references to `SpendingTracker` component (lines ~340-360, ~440-460)
+- All "costs" sub-tab references that don't exist
+- All placeholder components in renderContent() function
+
+**Keep These Sections:**
+- Supplement system (daily, library, sections, costs, export)
+- Working finance templates (items, protein, budget)
+- Working auto features (mpg-tracker, maintenance)
+
+**Validation:** After cleanup, Dashboard should only reference components that actually exist and work.
+
+### **Task 2: FinanceView Reality Check**
+
+**Files to Modify:** `src/components/FinanceView.tsx`
+
+**Remove These Features:**
+- Plaid "Connect Bank" button and related UI
+- Bank accounts display section
+- Any reference to live transaction sync
+- Merchant rules modal (until implemented)
+
+**Keep These Features:**
+- CSV import system (fully working)
+- Budget planner (functional)
+- Category spending cards (working)
+- Manual budget input
+
+**Validation:** FinanceView should compile and CSV import should still work.
+
+### **Task 3: Database Schema Harmonization**
+
+**Create This File:** `supabase/migrations/CLEANUP_consolidate_schema.sql`
+
+**Actions Required:**
+1. Document current schema state
+2. Identify which tables are actually used
+3. Create migration to fix naming inconsistencies
+4. Add missing indexes that components expect
+
+**Specific Fixes Needed:**
+- Standardize on `category_budgets` vs `grocery_budgets`
+- Ensure all `.single()` queries have proper unique constraints
+- Add composite indexes for common query patterns
+
+### **Task 4: Component Existence Verification**
+
+**Create This Script:** `scripts/verify_components.sh`
+
+**Logic Flow:**
+1. Parse all import statements in src/
+2. Check if imported files exist
+3. Verify imported components are properly exported
+4. Identify circular dependencies
+5. Generate report of broken references
+
+**Expected Output:**
+- List of missing component files
+- List of broken import statements
+- List of unused components (candidates for removal)
+
+### **Task 5: Legacy Code Removal**
+
+**Identify and Remove:**
+- Console.log statements used for debugging
+- Commented-out code blocks
+- Unused utility functions
+- Duplicate helper functions
+- Placeholder data generators
+
+**Keep:**
+- Error handling console.error statements
+- Legitimate debugging logs with context
+- Production-ready logging with levels
+
+## 🔧 CLEANUP EXECUTION ORDER
+
+### **Phase 0.1: Safety First**
+1. Create complete backup of current state
+2. Document current working features
+3. Identify critical functionality that must be preserved
+4. Set up testing environment to validate changes
+
+### **Phase 0.2: Interface Cleanup**
+1. Remove all broken component references from Dashboard
+2. Strip FinanceView to working core functionality
+3. Clean up import statements across all files
+4. Remove unused utility functions
+
+### **Phase 0.3: Database Consolidation**
+1. Audit current database schema
+2. Create harmonization migration
+3. Test all database operations still work
+4. Validate component-database compatibility
+
+### **Phase 0.4: Validation & Testing**
+1. Ensure app compiles without errors
+2. Verify all working features still function
+3. Test user authentication flow
+4. Validate supplement tracking system
+5. Confirm CSV import still works
+
+## ✅ CLEANUP VALIDATION CHECKLIST
+
+**Before proceeding to Phase 1, verify:**
+- [ ] App compiles without TypeScript errors
+- [ ] All existing working features still function
+- [ ] No references to non-existent components
+- [ ] Database operations work correctly
+- [ ] User can still log supplements successfully
+- [ ] CSV import/export functionality preserved
+- [ ] Authentication system intact
+- [ ] No console errors in browser
+- [ ] Clean, readable code structure
+- [ ] PROJECT_LOG.md updated with cleanup details
+
+## 🚨 ANTI-STRAYING MEASURES
+
+**Checkpoint Alpha:** Before writing any new code, ensure cleanup is complete
+**Checkpoint Bravo:** Validate that removed code doesn't break existing functionality  
+**Checkpoint Charlie:** Get user confirmation that cleanup meets expectations
+**Checkpoint Delta:** Only proceed to health data integration after solid foundation
+
+**Failure Prevention:**
+- If cleanup breaks existing functionality, STOP and fix before continuing
+- If unsure about removing something, ask user first
+- Document every change made during cleanup
+- Keep detailed notes of what was removed and why
+
+## 📋 SUCCESS CRITERIA
+
+**Technical Success:**
+- Zero TypeScript compilation errors
+- Zero runtime console errors
+- All working features preserved
+- Clean, maintainable code structure
+
+**Functional Success:**
+- Supplement logging works exactly as before
+- CSV import/export functions correctly
+- User authentication flows properly
+- Database operations execute successfully
+
+**Foundation Success:**
+- Solid base for health data integration
+- Clear separation between working and broken features
+- Documented understanding of current capabilities
+- Clean slate for new development
+
+## 🚗 AUTOMOTIVE ENHANCEMENT
+
+**New Requirement**: Track cost-per-mile driven aggregating maintenance costs, MPG, and gas prices.
+
+**Implementation Strategy:**
+Add to the AutoMPGTracker component:
+
+**Data Points to Collect:**
+- Annual maintenance costs (total for year)
+- Average MPG over time period
+- Average gas price during period
+- Total miles driven in period
+
+**Calculation Logic:**
+```
+Cost per mile = (Total maintenance cost + Total gas cost) / Total miles driven
+Where: Total gas cost = Miles driven / Average MPG * Average gas price
+```
+
+**Database Addition:**
+Add to `gas_fillups` table or create new `auto_cost_analysis` table with fields for:
+- period_start_date
+- period_end_date  
+- total_maintenance_cost
+- average_mpg
+- average_gas_price
+- total_miles_driven
+- cost_per_mile
+
+**User Interface Addition:**
+Add to Auto section sub-tabs:
+- "Cost Analysis" showing the calculated cost-per-mile
+- Visual breakdown of cost components (maintenance vs fuel)
+- Historical trend of cost-per-mile over time
+- Comparison against vehicle age/mileage benchmarks
+
+**Validation Requirement:**
+User must be able to see clear cost-per-mile calculation that updates as they add new gas fill-ups and maintenance records.
+
+This cleanup phase is critical - rushing through it will doom the entire project. Taketime to understand what exists before building what comes next.
