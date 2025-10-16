@@ -123,7 +123,7 @@ class HealthConnectService(private val context: Context) {
                     source = record.metadata.dataOrigin.packageName,
                     context = null,
                     metadata = HealthMetadata(
-                        deviceId = record.metadata.device?.identifier,
+                        deviceId = record.metadata.device?.model,
                         batteryLevel = null,
                         sensorConfidence = null,
                         environmental = null
@@ -143,7 +143,7 @@ class HealthConnectService(private val context: Context) {
                 source = record.metadata.dataOrigin.packageName,
                 context = null,
                 metadata = HealthMetadata(
-                    deviceId = record.metadata.device?.identifier,
+                    deviceId = record.metadata.device?.model,
                     batteryLevel = null,
                     sensorConfidence = null,
                     environmental = null
