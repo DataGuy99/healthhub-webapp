@@ -76,7 +76,8 @@ export function ProteinCalculator() {
       setTarget(targetData);
 
       if (targetData) {
-        setTargetCost(targetData.target_cost_per_gram.toString());
+        // Convert from dollars to cents for display
+        setTargetCost((targetData.target_cost_per_gram * 100).toFixed(1));
         setTolerancePercent(targetData.tolerance_percentage.toString());
       }
 
@@ -153,20 +154,23 @@ export function ProteinCalculator() {
         return;
       }
 
-      const cost = parseFloat(targetCost);
+      const costInCents = parseFloat(targetCost);
       const tolerance = parseFloat(tolerancePercent);
 
-      if (cost <= 0 || tolerance < 0) {
+      if (costInCents <= 0 || tolerance < 0) {
         alert('Invalid values');
         return;
       }
+
+      // Convert cents to dollars for storage
+      const costInDollars = costInCents / 100;
 
       if (target) {
         // Update existing
         const { error } = await supabase
           .from('protein_targets')
           .update({
-            target_cost_per_gram: cost,
+            target_cost_per_gram: costInDollars,
             tolerance_percentage: tolerance,
           })
           .eq('id', target.id);
@@ -178,7 +182,7 @@ export function ProteinCalculator() {
           .from('protein_targets')
           .insert({
             user_id: user.id,
-            target_cost_per_gram: cost,
+            target_cost_per_gram: costInDollars,
             tolerance_percentage: tolerance,
             created_at: new Date().toISOString(),
           });
@@ -282,7 +286,7 @@ export function ProteinCalculator() {
           <div className="text-white/70 text-sm mb-2">Your Target</div>
           <div className="flex items-baseline gap-4">
             <div>
-              <span className="text-white text-3xl font-bold">${target.target_cost_per_gram.toFixed(3)}</span>
+              <span className="text-white text-3xl font-bold">{(target.target_cost_per_gram * 100).toFixed(1)}¢</span>
               <span className="text-white/60 text-lg ml-2">per gram</span>
             </div>
             <div className="text-white/60">
@@ -302,13 +306,13 @@ export function ProteinCalculator() {
           <h3 className="text-lg font-semibold text-white mb-4">Set Your Protein Cost Target</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-white/70 mb-2">Target Cost per Gram ($)</label>
+              <label className="block text-sm text-white/70 mb-2">Target Cost per Gram (¢)</label>
               <input
                 type="number"
-                step="0.001"
+                step="0.1"
                 value={targetCost}
                 onChange={(e) => setTargetCost(e.target.value)}
-                placeholder="e.g., 0.050"
+                placeholder="e.g., 5.5"
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-green-500/50"
               />
             </div>
