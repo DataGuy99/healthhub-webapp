@@ -17,13 +17,14 @@ import { BillsCalendar } from './BillsCalendar';
 import { ProteinCalculator } from './ProteinCalculator';
 import { GroceryBudgetTracker } from './GroceryBudgetTracker';
 import { AutoMPGTracker } from './AutoMPGTracker';
+import { AutoCostAnalysis } from './AutoCostAnalysis';
 import { MiscShopTracker } from './MiscShopTracker';
 import { clearAuth } from '../lib/auth';
 
 type CategoryTab = 'overview' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
-type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs';
+type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
 type BillsSubTab = 'calendar' | 'tracker' | 'providers';
 type InvestmentSubTab = 'portfolio' | 'crypto-metals' | 'performance';
 type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
@@ -148,6 +149,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         { id: 'mpg-tracker', label: 'MPG Tracker', icon: '📊' },
         { id: 'maintenance', label: 'Maintenance', icon: '🔧' },
         { id: 'gas', label: 'Gas Prices', icon: '⛽' },
+        { id: 'cost-analysis', label: 'Cost Analysis', icon: '💵' },
         { id: 'costs', label: 'Costs', icon: '💰' },
       ];
 
@@ -392,6 +394,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
             onBack={() => setActiveTab('overview')}
           />
         );
+      }
+      if (autoSubTab === 'cost-analysis') {
+        return <AutoCostAnalysis />;
       }
       if (autoSubTab === 'costs') {
         return (

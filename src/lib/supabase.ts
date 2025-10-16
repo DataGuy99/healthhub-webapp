@@ -245,3 +245,23 @@ export interface SubTabConfig {
   icon: string; // Emoji icon
   template: CategoryTemplate; // Template type for this sub-tab
 }
+
+// ============================================================================
+// Automotive Cost Analysis Types
+// ============================================================================
+
+export interface AutoCostAnalysis {
+  id?: string;
+  user_id?: string;
+  analysis_period_start: string; // DATE format 'YYYY-MM-DD'
+  analysis_period_end: string; // DATE format 'YYYY-MM-DD'
+  total_miles_driven: number;
+  total_maintenance_cost: number;
+  total_fuel_cost: number;
+  average_mpg: number;
+  average_gas_price: number;
+  cost_per_mile?: number; // Generated column, read-only
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
