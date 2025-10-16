@@ -8,9 +8,9 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -38,16 +38,18 @@ class MainActivity : AppCompatActivity() {
         private val dateFormatter = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
     }
 
+    // Health Connect permission launcher using official contract
     private val requestPermissions = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
+        PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        val requiredPermissions = healthConnectService.getRequiredPermissions()
+        if (granted.containsAll(requiredPermissions)) {
             statusText.text = "Permissions granted - ready to sync"
             syncButton.isEnabled = true
+            Toast.makeText(this, "Health Connect permissions granted", Toast.LENGTH_SHORT).show()
         } else {
             statusText.text = "Permissions required to sync health data"
-            Toast.makeText(this, "Please grant all permissions", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please grant all Health Connect permissions", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -107,11 +109,15 @@ class MainActivity : AppCompatActivity() {
             if (!healthConnectService.isHealthConnectAvailable()) {
                 statusText.text = "HealthConnect not available"
                 syncButton.isEnabled = false
+                Toast.makeText(this@MainActivity,
+                    "Please install Health Connect from Play Store",
+                    Toast.LENGTH_LONG).show()
                 return@launch
             }
 
             val permissions = healthConnectService.getRequiredPermissions()
-            requestPermissions.launch(permissions.toTypedArray())
+            // Launch Health Connect's official permission request UI
+            requestPermissions.launch(permissions)
         }
     }
 
