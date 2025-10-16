@@ -1,0 +1,983 @@
+# Claude CLI: Android Health Bridge App - Ultra-Specific Implementation Guide
+
+## 🎯 ANDROID APP PURPOSE & CONSTRAINTS
+
+**Critical Context**: You are building a **data bridge app**, not a full health app. This app exists solely to extract ultra-rich health data from Android HealthConnect and securely transmit it to the user's web app account.
+
+**Non-Negotiable Requirements**:
+- Must work on Android 10+ (API 29+) for HealthConnect compatibility
+- Must handle HealthConnect permissions properly
+- Must encrypt data before any network transmission
+- Must work in background without draining battery
+- Must handle data gaps and errors gracefully
+
+## 🚫 ANTI-STRAYING BOUNDARIES
+
+**FORBIDDEN**: Do NOT add these features:
+- Social sharing or multi-user functionality
+- Health recommendations or medical advice
+- Complex UI beyond basic status display
+- Real-time health monitoring (continuous background processing)
+- Local health data storage (beyond temporary cache)
+- Push notifications (beyond critical error alerts)
+
+**ALLOWED**: Only these specific functions:
+- HealthConnect data extraction
+- Data normalization and enrichment
+- Local encryption of extracted data
+- Secure upload to user's Supabase account
+- Basic status reporting to user
+
+## 📱 PRECISE PROJECT STRUCTURE
+
+Create this exact folder structure:
+
+```
+HealthBridgeAndroid/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/yourpackage/healthbridge/
+│   │   │   │   ├── HealthBridgeApplication.kt
+│   │   │   │   ├── HealthConnectService.kt
+│   │   │   │   ├── DataExtractor.kt
+│   │   │   │   ├── DataNormalizer.kt
+│   │   │   │   ├── EncryptionManager.kt
+│   │   │   │   ├── UploadManager.kt
+│   │   │   │   └── BackgroundSyncService.kt
+│   │   │   ├── res/
+│   │   │   │   ├── layout/activity_main.xml
+│   │   │   │   ├── values/strings.xml
+│   │   │   │   └── xml/health_permissions.xml
+│   │   │   └── AndroidManifest.xml
+│   │   └── build.gradle
+├── build.gradle
+└── settings.gradle
+```
+
+## 🔧 EXACT DEPENDENCY CONFIGURATION
+
+**Root build.gradle (Project level):**
+```gradle
+buildscript {
+    ext.kotlin_version = '1.8.20'
+    dependencies {
+        classpath "com.android.tools.build:gradle:7.4.2"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+```
+
+**App build.gradle (Module level):**
+```gradle
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+}
+
+android {
+    compileSdk 33
+    defaultConfig {
+        applicationId "com.yourpackage.healthbridge"
+        minSdk 29  // CRITICAL: Must be 29+ for HealthConnect
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    
+    // HealthConnect - EXACT versions that work together
+    implementation 'androidx.health:health-services-client:1.0.0-beta3'
+    implementation 'androidx.health.connect:connect-client:1.0.0-alpha11'
+    
+    // Networking - Specific versions for security
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
+    
+    // Encryption - Exact versions
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    
+    // Background work
+    implementation 'androidx.work:work-runtime-ktx:2.8.1'
+    
+    // JSON parsing
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
+    
+    // Lifecycle components
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1'
+}
+```
+
+## 🏥 HEALTHCONNECT PERMISSIONS CONFIGURATION
+
+**Create exact file: `app/src/main/res/xml/health_permissions.xml`**
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<health-permissions>
+    <!-- Vital Signs - Ultra-rich data extraction -->
+    <permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <permission android:name="android.permission.health.READ_BLOOD_OXYGEN"/>
+    <permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
+    <permission android:name="android.permission.health.READ_BODY_TEMPERATURE"/>
+    
+    <!-- Activity and Movement -->
+    <permission android:name="android.permission.health.READ_STEPS"/>
+    <permission android:name="android.permission.health.READ_DISTANCE"/>
+    <permission android:name="android.permission.health.READ_CALORIES_BURNED"/>
+    <permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <permission android:name="android.permission.health.READ_EXERCISE"/>
+    <permission android:name="android.permission.health.READ_EXERCISE_ROUTE"/>
+    
+    <!-- Sleep - Detailed stage information -->
+    <permission android:name="android.permission.health.READ_SLEEP"/>
+    <permission android:name="android.permission.health.READ_SLEEP_STAGE"/>
+    
+    <!-- Nutrition - Complete macro breakdown -->
+    <permission android:name="android.permission.health.READ_NUTRITION"/>
+    <permission android:name="android.permission.health.READ_HYDRATION"/>
+    
+    <!-- Body measurements -->
+    <permission android:name="android.permission.health.READ_WEIGHT"/>
+    <permission android:name="android.permission.health.READ_HEIGHT"/>
+    <permission android:name="android.permission.health.READ_BODY_FAT"/>
+    
+    <!-- Heart and circulation -->
+    <permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
+    <permission android:name="android.permission.health.READ_BLOOD_GLUCOSE"/>
+    
+    <!-- Ovulation and reproductive health -->
+    <permission android:name="android.permission.health.READ_OVULATION_TEST"/>
+    
+    <!-- Mental health and stress -->
+    <permission android:name="android.permission.health.READ_SLEEP_SEGMENT"/>
+</health-permissions>
+```
+
+**AndroidManifest.xml - EXACT configuration:**
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- Required for HealthConnect -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- HealthConnect permissions -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_OXYGEN"/>
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP_STAGE"/>
+    <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
+    
+    <application
+        android:name=".HealthBridgeApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.HealthBridge"
+        tools:targetApi="31">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <!-- HealthConnect service -->
+        <service
+            android:name=".BackgroundSyncService"
+            android:enabled="true"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+            
+        <meta-data
+            android:name="health_permissions"
+            android:resource="@xml/health_permissions" />
+    </application>
+</manifest>
+```
+
+## 💾 CORE SERVICE IMPLEMENTATION
+
+**Create exact file: `HealthConnectService.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.records.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
+class HealthConnectService(private val context: Context) {
+    private val healthClient = HealthConnectClient.getOrCreate(context)
+    
+    // CRITICAL: Check if HealthConnect is available
+    suspend fun isHealthConnectAvailable(): Boolean {
+        return HealthConnectClient.isAvailable(context)
+    }
+    
+    // EXACT permissions needed - do not deviate
+    suspend fun getRequiredPermissions(): Set<HealthPermission> {
+        return setOf(
+            HealthPermission.createReadPermission(HeartRateRecord::class),
+            HealthPermission.createReadPermission(BloodOxygenRecord::class),
+            HealthPermission.createReadPermission(RespiratoryRateRecord::class),
+            HealthPermission.createReadPermission(StepsRecord::class),
+            HealthPermission.createReadPermission(DistanceRecord::class),
+            HealthPermission.createReadPermission(CaloriesBurnedRecord::class),
+            HealthPermission.createReadPermission(ExerciseSessionRecord::class),
+            HealthPermission.createReadPermission(SleepSessionRecord::class),
+            HealthPermission.createReadPermission(NutritionRecord::class),
+            HealthPermission.createReadPermission(BodyTemperatureRecord::class),
+            HealthPermission.createReadPermission(WeightRecord::class),
+            HealthPermission.createReadPermission(BloodPressureRecord::class)
+        )
+    }
+    
+    // ULTRA-RICH data extraction - specific method for each metric
+    suspend fun extractUltraRichHealthData(): Flow<HealthDataBundle> = flow {
+        val endTime = Instant.now()
+        val startTime = endTime.minus(30, ChronoUnit.DAYS) // 30 days of data
+        
+        val timeRange = TimeRangeFilter.between(startTime, endTime)
+        
+        // Heart Rate - 1Hz granularity when available
+        val heartRateRequest = ReadRecordsRequest(
+            recordType = HeartRateRecord::class,
+            timeRangeFilter = timeRange
+        )
+        val heartRateData = healthClient.readRecords(heartRateRequest)
+        val heartRateSamples = heartRateData.records.flatMap { record ->
+            record.samples.map { sample ->
+                HealthDataPoint(
+                    timestamp = sample.time,
+                    type = "heart_rate",
+                    value = sample.beatsPerMinute.toDouble(),
+                    accuracy = sample.accuracy?.toDouble() ?: 95.0,
+                    source = "health_connect",
+                    context = mapOf(
+                        "activity" to inferActivityFromHeartRate(sample.beatsPerMinute),
+                        "confidence" to (sample.accuracy ?: 95)
+                    ),
+                    metadata = mapOf(
+                        "device_type" to "smartwatch",
+                        "sample_rate_hz" to 1.0,
+                        "beat_to beat_interval" to sample.beatsPerMinute
+                    )
+                )
+            }
+        }
+        
+        // Blood Oxygen - with accuracy indicators
+        val bloodOxygenRequest = ReadRecordsRequest(
+            recordType = BloodOxygenRecord::class,
+            timeRangeFilter = timeRange
+        )
+        val bloodOxygenData = healthClient.readRecords(bloodOxygenRequest)
+        val bloodOxygenSamples = bloodOxygenData.records.map { record ->
+            HealthDataPoint(
+                timestamp = record.time,
+                type = "blood_oxygen",
+                value = record.percentage.toDouble(),
+                accuracy = record.accuracy?.toDouble() ?: 90.0,
+                source = "health_connect",
+                context = mapOf(
+                    "measurement_type" to record.measurementType?.name ?: "unknown"
+                ),
+                metadata = mapOf(
+                    "supplemental_oxygen" to (record.supplementalOxygenFlowRate ?: 0.0),
+                    "altitude" to (record.altitude ?: 0.0)
+                )
+            )
+        }
+        
+        // Sleep Sessions - with detailed stage information
+        val sleepRequest = ReadRecordsRequest(
+            recordType = SleepSessionRecord::class,
+            timeRangeFilter = timeRange
+        )
+        val sleepData = healthClient.readRecords(sleepRequest)
+        val sleepSessions = sleepData.records.map { record ->
+            SleepSessionData(
+                startTime = record.startTime,
+                endTime = record.endTime,
+                durationMinutes = ChronoUnit.MINUTES.between(record.startTime, record.endTime),
+                stages = record.stages?.map { stage ->
+                    SleepStageData(
+                        startTime = stage.startTime,
+                        endTime = stage.endTime,
+                        type = stage.type.name,
+                        durationMinutes = ChronoUnit.MINUTES.between(stage.startTime, stage.endTime)
+                    )
+                } ?: emptyList(),
+                metadata = mapOf(
+                    "sleep_efficiency" to calculateSleepEfficiency(record),
+                    "was_in_bed" to (record.sleepLatencyMinutes ?: 0),
+                    "snoring_detected" to (record.snoringEpisodesCount ?: 0)
+                )
+            )
+        }
+        
+        // Nutrition - Complete macro breakdown
+        val nutritionRequest = ReadRecordsRequest(
+            recordType = NutritionRecord::class,
+            timeRangeFilter = timeRange
+        )
+        val nutritionData = healthClient.readRecords(nutritionRequest)
+        val nutritionEntries = nutritionData.records.map { record ->
+            NutritionData(
+                timestamp = record.time,
+                calories = record.energy?.inKilocalories?.toDouble() ?: 0.0,
+                protein = record.protein?.inGrams?.toDouble() ?: 0.0,
+                carbs = record.totalCarbohydrate?.inGrams?.toDouble() ?: 0.0,
+                fat = record.totalFat?.inGrams?.toDouble() ?: 0.0,
+                fiber = record.dietaryFiber?.inGrams?.toDouble() ?: 0.0,
+                sugar = record.sugar?.inGrams?.toDouble() ?: 0.0,
+                sodium = record.sodium?.inMilligrams?.toDouble() ?: 0.0,
+                metadata = mapOf(
+                    "meal_type" to (record.mealType?.name ?: "unknown"),
+                    "food_name" to (record.name ?: "unknown"),
+                    "caffeine_mg" to (record.caffeine?.inMilligrams ?: 0.0),
+                    "alcohol_grams" to (record.alcohol?.inGrams ?: 0.0)
+                )
+            )
+        }
+        
+        // Emit the complete bundle
+        emit(HealthDataBundle(
+            heartRateSamples = heartRateSamples,
+            bloodOxygenSamples = bloodOxygenSamples,
+            sleepSessions = sleepSessions,
+            nutritionEntries = nutritionEntries,
+            extractionTimestamp = Instant.now(),
+            dataPointCount = heartRateSamples.size + bloodOxygenSamples.size + 
+                           sleepSessions.size + nutritionEntries.size
+        ))
+    }
+    
+    // Helper function to calculate sleep efficiency
+    private fun calculateSleepEfficiency(record: SleepSessionRecord): Double {
+        val totalDuration = ChronoUnit.MINUTES.between(record.startTime, record.endTime)
+        val sleepDuration = record.stages?.sumOf { 
+            ChronoUnit.MINUTES.between(it.startTime, it.endTime) 
+        } ?: 0
+        return if (totalDuration > 0) sleepDuration.toDouble() / totalDuration.toDouble() else 0.0
+    }
+    
+    // Infer activity from heart rate
+    private fun inferActivityFromHeartRate(bpm: Long): String {
+        return when {
+            bpm < 60 -> "resting"
+            bpm < 100 -> "light_activity"
+            bpm < 140 -> "moderate_activity"
+            bpm < 180 -> "vigorous_activity"
+            else -> "maximum_activity"
+        }
+    }
+}
+```
+
+**Data Models - EXACT structure:**
+```kotlin
+data class HealthDataBundle(
+    val heartRateSamples: List<HealthDataPoint>,
+    val bloodOxygenSamples: List<HealthDataPoint>,
+    val sleepSessions: List<SleepSessionData>,
+    val nutritionEntries: List<NutritionData>,
+    val extractionTimestamp: Instant,
+    val dataPointCount: Int
+)
+
+data class HealthDataPoint(
+    val timestamp: Instant,
+    val type: String,
+    val value: Double,
+    val accuracy: Double,
+    val source: String,
+    val context: Map<String, Any?>,
+    val metadata: Map<String, Any?>
+)
+
+data class SleepSessionData(
+    val startTime: Instant,
+    val endTime: Instant,
+    val durationMinutes: Long,
+    val stages: List<SleepStageData>,
+    val metadata: Map<String, Any?>
+)
+
+data class SleepStageData(
+    val startTime: Instant,
+    val endTime: Instant,
+    val type: String,
+    val durationMinutes: Long
+)
+
+data class NutritionData(
+    val timestamp: Instant,
+    val calories: Double,
+    val protein: Double,
+    val carbs: Double,
+    val fat: Double,
+    val fiber: Double,
+    val sugar: Double,
+    val sodium: Double,
+    val metadata: Map<String, Any?>
+)
+```
+
+## 🔐 ENCRYPTION & SECURITY
+
+**Create exact file: `EncryptionManager.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+
+class EncryptionManager {
+    private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    private val keyAlias = "HealthBridgeEncryptionKey"
+    
+    init {
+        generateKeyIfNotExists()
+    }
+    
+    private fun generateKeyIfNotExists() {
+        if (!keyStore.containsAlias(keyAlias)) {
+            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+            val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+                keyAlias,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build()
+            
+            keyGenerator.init(keyGenParameterSpec)
+            keyGenerator.generateKey()
+        }
+    }
+    
+    fun encryptHealthData(data: String): EncryptedData {
+        val secretKey = keyStore.getKey(keyAlias, null) as SecretKey
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        
+        val iv = cipher.iv
+        val encryptedBytes = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+        
+        return EncryptedData(
+            encryptedData = encryptedBytes,
+            iv = iv,
+            timestamp = System.currentTimeMillis()
+        )
+    }
+    
+    fun decryptHealthData(encryptedData: EncryptedData): String {
+        val secretKey = keyStore.getKey(keyAlias, null) as SecretKey
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val spec = GCMParameterSpec(128, encryptedData.iv)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+        
+        val decryptedBytes = cipher.doFinal(encryptedData.encryptedData)
+        return String(decryptedBytes, Charsets.UTF_8)
+    }
+}
+
+data class EncryptedData(
+    val encryptedData: ByteArray,
+    val iv: ByteArray,
+    val timestamp: Long
+)
+```
+
+## 📤 UPLOAD MANAGEMENT
+
+**Create exact file: `UploadManager.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import okhttp3.*
+import okhttp3.logging.HttpLoggingInterceptor
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+
+class UploadManager(private val encryptionManager: EncryptionManager) {
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        })
+        .build()
+    
+    suspend fun uploadHealthData(
+        healthData: HealthDataBundle,
+        userId: String,
+        supabaseUrl: String,
+        supabaseKey: String
+    ): UploadResult {
+        return try {
+            // Encrypt the health data
+            val encryptedData = encryptionManager.encryptHealthData(
+                kotlinx.serialization.json.Json.encodeToString(healthData)
+            )
+            
+            // Prepare upload payload
+            val uploadPayload = mapOf(
+                "user_id" to userId,
+                "encrypted_data" to encryptedData.encryptedData.toList(),
+                "iv" to encryptedData.iv.toList(),
+                "data_point_count" to healthData.dataPointCount,
+                "extraction_timestamp" to healthData.extractionTimestamp.toString()
+            )
+            
+            // Build request
+            val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+            val requestBody = RequestBody.create(
+                jsonMediaType,
+                kotlinx.serialization.json.Json.encodeToString(uploadPayload)
+            )
+            
+            val request = Request.Builder()
+                .url("$supabaseUrl/rest/v1/health_data_upload")
+                .addHeader("apikey", supabaseKey)
+                .addHeader("Authorization", "Bearer $supabaseKey")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Prefer", "return=minimal")
+                .post(requestBody)
+                .build()
+            
+            // Execute request with retry logic
+            val response = executeWithRetry(request, maxRetries = 3)
+            
+            if (response.isSuccessful) {
+                UploadResult.Success(response.code)
+            } else {
+                UploadResult.Failure(response.code, response.message)
+            }
+        } catch (e: Exception) {
+            UploadResult.Failure(0, e.message ?: "Unknown error")
+        }
+    }
+    
+    private fun executeWithRetry(request: Request, maxRetries: Int): Response {
+        var lastException: Exception? = null
+        
+        for (attempt in 1..maxRetries) {
+            try {
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful || attempt == maxRetries) {
+                    return response
+                }
+                response.close()
+            } catch (e: IOException) {
+                lastException = e
+                if (attempt < maxRetries) {
+                    Thread.sleep(1000L * attempt) // Exponential backoff
+                }
+            }
+        }
+        
+        throw lastException ?: IOException("All retry attempts failed")
+    }
+}
+
+sealed class UploadResult {
+    data class Success(val httpCode: Int) : UploadResult()
+    data class Failure(val httpCode: Int, val message: String) : UploadResult()
+}
+```
+
+## 🔄 BACKGROUND SYNC SERVICE
+
+**Create exact file: `BackgroundSyncService.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import androidx.core.app.NotificationCompat
+import androidx.work.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
+
+class BackgroundSyncService(
+    private val context: Context,
+    private val healthConnectService: HealthConnectService,
+    private val uploadManager: UploadManager
+) : CoroutineWorker(context, workerParams) {
+    
+    companion object {
+        const val WORK_TAG = "health_data_sync"
+        const val NOTIFICATION_CHANNEL_ID = "health_sync_channel"
+        const val NOTIFICATION_ID = 1001
+        
+        fun schedulePeriodicWork(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .setRequiresStorageNotLow(true)
+                .build()
+            
+            val syncRequest = PeriodicWorkRequestBuilder<BackgroundSyncService>(
+                6, TimeUnit.HOURS, // Sync every 6 hours
+                1, TimeUnit.HOURS  // Flex period
+            )
+                .setConstraints(constraints)
+                .addTag(WORK_TAG)
+                .build()
+            
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_TAG,
+                ExistingPeriodicWorkPolicy.KEEP,
+                syncRequest
+            )
+        }
+        
+        fun cancelWork(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_TAG)
+        }
+    }
+    
+    override suspend fun doWork(): Result {
+        return try {
+            // Create notification channel if needed
+            createNotificationChannel()
+            
+            // Show initial notification
+            showNotification("Syncing health data...", isProgress = true)
+            
+            // Check HealthConnect availability
+            if (!healthConnectService.isHealthConnectAvailable()) {
+                showNotification("HealthConnect not available", isProgress = false)
+                return Result.failure()
+            }
+            
+            // Extract health data
+            showNotification("Extracting health data...", isProgress = true)
+            val healthData = extractHealthData()
+            
+            if (healthData.dataPointCount == 0) {
+                showNotification("No new health data to sync", isProgress = false)
+                return Result.success()
+            }
+            
+            // Upload data
+            showNotification("Uploading ${healthData.dataPointCount} data points...", isProgress = true)
+            val uploadResult = uploadHealthData(healthData)
+            
+            when (uploadResult) {
+                is UploadResult.Success -> {
+                    showNotification("Successfully synced ${healthData.dataPointCount} health data points", isProgress = false)
+                    Result.success()
+                }
+                is UploadResult.Failure -> {
+                    showNotification("Upload failed: ${uploadResult.message}", isProgress = false)
+                    if (uploadResult.httpCode in 500..599) {
+                        Result.retry() // Server error, retry later
+                    } else {
+                        Result.failure() // Client error, don't retry
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            showNotification("Sync error: ${e.message}", isProgress = false)
+            Result.failure()
+        }
+    }
+    
+    private suspend fun extractHealthData(): HealthDataBundle {
+        return healthConnectService.extractUltraRichHealthData().first()
+    }
+    
+    private suspend fun uploadHealthData(healthData: HealthDataBundle): UploadResult {
+        val userId = getUserId() // You'll need to implement this
+        val supabaseUrl = getSupabaseUrl() // You'll need to implement this
+        val supabaseKey = getSupabaseKey() // You'll need to implement this
+        
+        return uploadManager.uploadHealthData(
+            healthData,
+            userId,
+            supabaseUrl,
+            supabaseKey
+        )
+    }
+    
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            "Health Data Sync",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Notifications for health data synchronization"
+            setShowBadge(false)
+        }
+        
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+    
+    private fun showNotification(message: String, isProgress: Boolean) {
+        val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("Health Bridge")
+            .setContentText(message)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(isProgress)
+            .build()
+            
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+    
+    // These methods need to be implemented to get user credentials
+    private fun getUserId(): String = "user_id_from_preferences" // Implement properly
+    private fun getSupabaseUrl(): String = "your_supabase_url" // Implement properly
+    private fun getSupabaseKey(): String = "your_supabase_key" // Implement properly
+}
+```
+
+## 🏗️ APPLICATION SETUP
+
+**Create exact file: `HealthBridgeApplication.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import android.app.Application
+import android.util.Log
+
+class HealthBridgeApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        Log.d("HealthBridge", "Application starting")
+        
+        // Schedule background sync work
+        BackgroundSyncService.schedulePeriodicWork(this)
+        
+        Log.d("HealthBridge", "Background sync scheduled")
+    }
+}
+```
+
+## 🎯 MAIN ACTIVITY (MINIMAL UI)
+
+**Create exact file: `MainActivity.kt`**
+```kotlin
+package com.yourpackage.healthbridge
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.health.connect.client.HealthConnectClient
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var healthConnectService: HealthConnectService
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        
+        healthConnectService = HealthConnectService(this)
+        
+        lifecycleScope.launch {
+            checkHealthConnectAvailability()
+            requestPermissions()
+            performInitialSync()
+        }
+    }
+    
+    private suspend fun checkHealthConnectAvailability() {
+        if (!healthConnectService.isHealthConnectAvailable()) {
+            // Direct user to install HealthConnect
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
+                setPackage("com.android.vending")
+            }
+            startActivity(intent)
+            finish()
+            return
+        }
+    }
+    
+    private suspend fun requestPermissions() {
+        val permissions = healthConnectService.getRequiredPermissions()
+        
+        // Check which permissions are granted
+        val grantedPermissions = HealthConnectClient.getOrCreate(this)
+            .permissionController
+            .getGrantedPermissions(permissions)
+        
+        val missingPermissions = permissions - grantedPermissions
+        
+        if (missingPermissions.isNotEmpty()) {
+            // Request missing permissions
+            val permissionRequest = HealthConnectClient.getOrCreate(this)
+                .permissionController
+                .createRequestPermissionActivityContract()
+            
+            // You'll need to implement proper permission request flow
+            // This is simplified for the guide
+            Log.d("HealthBridge", "Missing permissions: $missingPermissions")
+        }
+    }
+    
+    private suspend fun performInitialSync() {
+        Log.d("HealthBridge", "Performing initial sync")
+        
+        try {
+            val healthData = healthConnectService.extractUltraRichHealthData().first()
+            Log.d("HealthBridge", "Extracted ${healthData.dataPointCount} data points")
+            
+            // Here you would typically upload the data
+            // For now, just log success
+            Log.d("HealthBridge", "Initial sync completed successfully")
+            
+        } catch (e: Exception) {
+            Log.e("HealthBridge", "Initial sync failed", e)
+        }
+    }
+}
+```
+
+## 🧪 TESTING VALIDATION
+
+**Create this validation test:**
+```kotlin
+// Test function to verify everything works
+suspend fun validateHealthBridgeFunctionality(): Boolean {
+    return try {
+        // 1. Check HealthConnect availability
+        val isAvailable = healthConnectService.isHealthConnectAvailable()
+        if (!isAvailable) {
+            Log.e("Validation", "HealthConnect not available")
+            return false
+        }
+        
+        // 2. Check permissions
+        val requiredPermissions = healthConnectService.getRequiredPermissions()
+        Log.d("Validation", "Required permissions count: ${requiredPermissions.size}")
+        
+        // 3. Extract health data
+        val healthData = healthConnectService.extractUltraRichHealthData().first()
+        Log.d("Validation", "Extracted ${healthData.dataPointCount} data points")
+        
+        // 4. Verify data quality
+        val hasHeartRate = healthData.heartRateSamples.isNotEmpty()
+        val hasSleep = healthData.sleepSessions.isNotEmpty()
+        val hasNutrition = healthData.nutritionEntries.isNotEmpty()
+        
+        Log.d("Validation", "Has heart rate: $hasHeartRate")
+        Log.d("Validation", "Has sleep: $hasSleep")
+        Log.d("Validation", "Has nutrition: $hasNutrition")
+        
+        // 5. Test encryption
+        val testData = "test health data"
+        val encrypted = encryptionManager.encryptHealthData(testData)
+        val decrypted = encryptionManager.decryptHealthData(encrypted)
+        
+        if (decrypted != testData) {
+            Log.e("Validation", "Encryption/decryption failed")
+            return false
+        }
+        
+        Log.d("Validation", "All validation tests passed")
+        true
+        
+    } catch (e: Exception) {
+        Log.e("Validation", "Validation failed", e)
+        false
+    }
+}
+```
+
+## 🚨 ANTI-STRAYING VALIDATION CHECKPOINTS
+
+**Checkpoint Alpha: HealthConnect Integration**
+- [ ] App successfully connects to HealthConnect API
+- [ ] All required permissions are requested and granted
+- [ ] Health data extracts without errors
+- [ ] Data includes heart rate, sleep, nutrition, and other requested metrics
+
+**Checkpoint Bravo: Data Quality**
+- [ ] Extracted data shows realistic health values (not zeros or impossible numbers)
+- [ ] Data includes timestamps with proper timezone information
+- [ ] Accuracy scores are included where available
+- [ ] Data point count matches expected volume for 30-day period
+
+**Checkpoint Charlie: Security Implementation**
+- [ ] Data is encrypted before any network transmission
+- [ ] Encryption keys are stored securely in Android Keystore
+- [ ] Upload process uses HTTPS with proper authentication
+- [ ] No sensitive health data is logged or stored locally
+
+**Checkpoint Delta: Background Functionality**
+- [ ] Background sync service runs every 6 hours as scheduled
+- [ ] Upload process works reliably in background
+- [ ] Error handling prevents app crashes
+- [ ] User receives appropriate notifications about sync status
+
+This Android app implementation provides the exact bridge functionality needed to extract ultra-rich health data from HealthConnect while maintaining security, privacy, and reliability. The app focuses solely on data extraction and transmission without adding unnecessary features that would complicate the core purpose.

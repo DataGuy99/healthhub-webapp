@@ -324,3 +324,14 @@ export interface HealthSyncStatus {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface HealthDataUpload {
+  id?: string;
+  user_id?: string;
+  encrypted_data: number[]; // Integer array from Android byte array
+  iv: number[]; // Initialization vector for decryption
+  data_point_count: number;
+  extraction_timestamp: string;
+  processed?: boolean;
+  created_at?: string;
+}
