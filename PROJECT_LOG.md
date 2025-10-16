@@ -743,7 +743,270 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - CSV import system (in progress)
   - User settings database sync
 
-**Current Version**: v2.2.0 (2025-10-15)
+**Current Version**: v2.3.0 (2025-10-16)
+
+---
+
+## v2.3.0 (2025-10-16) - Phase 1: Health Data Bridge & Automotive Cost Tracking
+
+### Phase 1 Complete: Android Health Connect Integration Infrastructure
+
+**Purpose**: Build complete infrastructure for Android HealthConnect integration and automotive cost-per-mile tracking
+
+**Phase 1 Completion**: ✅ All backend infrastructure, database tables, and visualization components complete
+
+#### Part A: Automotive Cost-Per-Mile Tracking (COMPLETE)
+
+**Database Schema**:
+- ✅ `auto_cost_analysis` table with generated `cost_per_mile` column
+  - Safe division handling (NULL for zero miles)
+  - Constraints for data validation (non_negative_miles, valid_mpg, etc.)
+  - RLS policies for user data isolation
+  - Efficient indexes for querying
+  - Update triggers for timestamp management
+
+**Features Added**:
+```sql
+CREATE TABLE auto_cost_analysis (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    analysis_period_start DATE NOT NULL,
+    analysis_period_end DATE NOT NULL,
+    total_miles_driven NUMERIC(10,2) NOT NULL,
+    total_maintenance_cost NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    total_fuel_cost NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    average_mpg NUMERIC(10,2) NOT NULL,
+    average_gas_price NUMERIC(10,3) NOT NULL,
+    cost_per_mile NUMERIC(10,4) GENERATED ALWAYS AS (
+        CASE
+            WHEN total_miles_driven > 0
+            THEN (total_maintenance_cost + total_fuel_cost) / total_miles_driven
+            ELSE NULL
+        END
+    ) STORED,
+    ...
+);
+```
+
+**React Component**: `src/components/AutoCostAnalysis.tsx` (322 lines)
+- Automatic calculation from existing gas_fillups and maintenance_items
+- No manual data entry required
+- Visual cost breakdown (fuel vs maintenance percentages)
+- Detailed metrics dashboard
+- Handles edge cases (< 2 fillups shows "Not Enough Data")
+- Glassmorphism UI with Framer Motion animations
+
+**Integration**: Added as new "Cost Analysis" sub-tab under Auto category in Dashboard
+
+**CodeRabbit Review**: All issues fixed
+- ✅ Removed unused type import
+- ✅ Set loading state before early return
+- ✅ Sanitized error logging (no sensitive details)
+- ✅ Renamed constraint to non_negative_miles for accuracy
+
+**Files Modified**:
+- `supabase/migrations/20251015000001_add_auto_cost_analysis.sql`
+- `src/lib/supabase.ts` (added AutoCostAnalysis interface)
+- `src/components/AutoCostAnalysis.tsx` (new)
+- `src/components/Dashboard.tsx` (added cost-analysis sub-tab)
+
+---
+
+#### Part B: Health Data Tracking Infrastructure (COMPLETE)
+
+**Database Schema**:
+- ✅ `health_data_points` table for ultra-rich health metrics
+  - 11 health metric types (heart_rate, blood_oxygen, respiratory_rate, body_temperature, steps, distance, calories, exercise, sleep_stage, nutrition, hydration, stress_level)
+  - Sub-minute timestamp granularity
+  - JSONB context and metadata for flexible data storage
+  - Accuracy validation (0-100 range)
+  - User data isolation via RLS policies
+  - Efficient composite indexes for queries
+
+- ✅ `health_sync_status` table for Android sync tracking
+  - Last sync timestamp
+  - Data points count
+  - Sync errors (JSONB array)
+
+- ✅ `health_data_upload` table for encrypted Android uploads
+  - Receives AES-256-GCM encrypted byte arrays (as integer arrays)
+  - Includes IV (initialization vector) for client-side decryption
+  - Tracks processed status for upload handling
+  - 7-day retention policy for processed uploads
+
+**Helper Functions**:
+```sql
+-- Get latest health data point for a metric
+get_latest_health_data(user_id, type, hours_back)
+
+-- Get health data within time range
+get_health_data_range(user_id, type, start_time, end_time)
+
+-- Mark upload as processed after decryption
+mark_health_upload_processed(upload_id)
+
+-- Get unprocessed uploads for client-side decryption
+get_unprocessed_health_uploads()
+
+-- Clean up old processed uploads (retention policy)
+cleanup_old_health_uploads()
+```
+
+**TypeScript Types**: `src/lib/supabase.ts`
+```typescript
+export type HealthMetricType =
+  | 'heart_rate' | 'blood_oxygen' | 'respiratory_rate' | 'body_temperature'
+  | 'steps' | 'distance' | 'calories' | 'exercise' | 'sleep_stage'
+  | 'nutrition' | 'hydration' | 'stress_level';
+
+export interface HealthDataPoint {
+  id?: string;
+  user_id?: string;
+  timestamp: string;
+  type: HealthMetricType;
+  value: number;
+  accuracy?: number; // 0-100
+  source: string;
+  context?: {
+    activity?: string;
+    location?: string;
+    supplement_logs?: string[];
+    sleep_stage?: string;
+    stress_level?: string;
+  };
+  metadata?: {
+    device_id?: string;
+    battery_level?: number;
+    sensor_confidence?: number;
+    environmental?: { temperature?: number; humidity?: number; };
+  };
+  created_at?: string;
+}
+
+export interface HealthDataUpload {
+  id?: string;
+  user_id?: string;
+  encrypted_data: number[];
+  iv: number[];
+  data_point_count: number;
+  extraction_timestamp: string;
+  processed?: boolean;
+  created_at?: string;
+}
+```
+
+**React Component**: `src/components/HealthTimeline.tsx` (306 lines)
+- Display health data from health_data_points table
+- Time range selector (24h, 7d, 30d)
+- Metric type filter (all, heart_rate, steps, blood_oxygen, etc.)
+- Timeline view grouped by time periods
+- Metric-specific icons and colors
+- Accuracy indicators for each reading
+- Data summary statistics
+- Empty state for no data
+
+**Files Created/Modified**:
+- `supabase/migrations/20251016000001_add_health_data_tracking.sql`
+- `supabase/migrations/20251016000002_add_health_data_upload.sql`
+- `src/lib/supabase.ts` (added health data interfaces)
+- `src/components/HealthTimeline.tsx` (new)
+
+---
+
+#### Part C: Android HealthBridge App Documentation (COMPLETE)
+
+**Android App Directives** (for future Android development):
+- ✅ `Immediate_Directive_App.txt` (983 lines)
+  - Complete Kotlin implementation guide
+  - Exact project structure and dependencies
+  - HealthConnect permissions configuration
+  - Ultra-rich data extraction service
+  - AES-256-GCM encryption implementation
+  - Upload manager with retry logic
+  - Background sync service (every 6 hours)
+  - Testing validation procedures
+
+- ✅ `Immediate_Directive_App1.txt` (188 lines)
+  - Data flow to Supabase specification
+  - Upload endpoint configuration
+  - Encryption/decryption workflow
+  - User-specific configuration steps
+  - Data destination validation
+
+**Android App Data Flow**:
+```
+Android Phone (HealthConnect)
+  ↓ Extract ultra-rich logs (1Hz granularity)
+  ↓ Add context (activity, confidence scores)
+  ↓ Encrypt locally (AES-256-GCM, Android Keystore)
+  ↓ Upload to Supabase health_data_upload table
+  ↓ Web app downloads encrypted data
+  ↓ Client-side decryption
+  ↓ Insert into health_data_points table
+  ↓ Display in HealthTimeline component
+```
+
+**Android App Features** (documented for implementation):
+- HealthConnect API integration (Android 10+ / API 29+)
+- Permission management for 20+ health metrics
+- Background data sync every 6 hours
+- Battery-optimized extraction
+- Encrypted upload to Supabase
+- Retry logic with exponential backoff
+- Notification system for sync status
+
+---
+
+### Phase 1 Summary Statistics
+
+**Database Changes**:
+- 3 new tables: `auto_cost_analysis`, `health_data_points`, `health_sync_status`, `health_data_upload`
+- 1 new column: `estimated_cost` on `maintenance_items`
+- 1 new column: `cost_per_mile_at_fillup` on `gas_fillups`
+- 6 helper functions for health data operations
+- 8 indexes for efficient querying
+- 4 RLS policies for user data isolation
+
+**React Components**:
+- `AutoCostAnalysis.tsx` (322 lines)
+- `HealthTimeline.tsx` (306 lines)
+- Updated `Dashboard.tsx` with cost-analysis sub-tab
+
+**TypeScript Interfaces**:
+- `AutoCostAnalysis`
+- `HealthMetricType` (union type)
+- `HealthDataPoint`
+- `HealthSyncStatus`
+- `HealthDataUpload`
+
+**Documentation**:
+- Android app implementation guide (983 lines)
+- Data flow specification (188 lines)
+- PROJECT_LOG.md updated with Phase 1 details
+
+**Commits**:
+1. `93ea920` - Add comprehensive automotive cost-per-mile tracking
+2. `9a04bea` - Fix all CodeRabbit review issues
+3. `f6dca79` - Add health data tracking infrastructure
+4. `f6db373` - Add health data upload infrastructure for Android integration
+5. `2c81161` - Add HealthTimeline visualization component
+
+---
+
+### Next Steps (Phase 2+)
+
+**Immediate (User Action Required)**:
+1. Build Android HealthBridge app using documented Kotlin implementation
+2. Integrate HealthTimeline into Dashboard navigation (Health tab)
+3. Test health data sync from Android to web app
+
+**Future Phases** (from Immediate_Directive1.txt):
+- Phase 2: Health-Supplement Correlation Engine
+- Phase 3: AI-Powered Budget Optimization
+- Phase 4: Advanced Analytics & Insights
+- Phase 5: Multi-Platform Sync & Backup
+
+**Phase 1 Status**: ✅ COMPLETE - All infrastructure ready for Android integration
 
 ---
 
