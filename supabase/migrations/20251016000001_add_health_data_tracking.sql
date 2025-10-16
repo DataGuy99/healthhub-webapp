@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_health_data_user_type
 ON health_data_points (user_id, type, timestamp DESC);
 
 CREATE INDEX IF NOT EXISTS idx_health_data_user_date
-ON health_data_points (user_id, (timestamp::date), type);
+ON health_data_points (user_id, DATE(timestamp), type);
 
 -- Partial index for high-accuracy data points
 CREATE INDEX IF NOT EXISTS idx_health_data_high_accuracy
@@ -108,7 +108,7 @@ CREATE OR REPLACE FUNCTION get_latest_health_data(
     p_hours_back INTEGER DEFAULT 24
 )
 RETURNS TABLE (
-    timestamp TIMESTAMPTZ,
+    data_timestamp TIMESTAMPTZ,
     value NUMERIC,
     accuracy INTEGER,
     source TEXT
@@ -137,7 +137,7 @@ CREATE OR REPLACE FUNCTION get_health_data_range(
     p_end_time TIMESTAMPTZ
 )
 RETURNS TABLE (
-    timestamp TIMESTAMPTZ,
+    data_timestamp TIMESTAMPTZ,
     value NUMERIC,
     accuracy INTEGER,
     source TEXT,

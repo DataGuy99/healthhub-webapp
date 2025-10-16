@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">HealthBridge</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="last_sync">Last sync: %1$s</string>
+    <string name="never_synced">Never synced</string>
+    <string name="sync_in_progress">Syncing health data…</string>
+    <string name="sync_success">Successfully synced %1$d data points</string>
+    <string name="sync_error">Sync failed: %1$s</string>
+    <string name="permissions_required">HealthConnect Permissions Required</string>
+    <string name="grant_permissions">Grant Permissions</string>
+    <string name="permissions_explanation">This app needs access to your health data to sync it with your HealthHub web dashboard.</string>
+    <string name="health_connect_unavailable">HealthConnect is not available on this device</string>
+    <string name="data_points_synced">%1$d data points synced</string>
+    <string name="auto_sync_enabled">Auto-sync every 6 hours</string>
+    <string name="manual_sync_only">Manual sync only</string>
+    <string name="enable_auto_sync">Enable Auto-Sync</string>
+    <string name="disable_auto_sync">Disable Auto-Sync</string>
+    <string name="configure_supabase">Configure Supabase Connection</string>
+    <string name="supabase_url">Supabase URL</string>
+    <string name="supabase_key">Supabase Anon Key</string>
+    <string name="user_id">User ID</string>
+    <string name="save_configuration">Save Configuration</string>
+    <string name="configuration_saved">Configuration saved successfully</string>
+    <string name="configuration_error">Please fill in all fields</string>
+</resources>

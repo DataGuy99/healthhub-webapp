@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<health-permissions-config>
+    <!-- Define all required HealthConnect data types -->
+    <health-permission type="HeartRate" />
+    <health-permission type="BloodOxygen" />
+    <health-permission type="RespiratoryRate" />
+    <health-permission type="BodyTemperature" />
+    <health-permission type="Steps" />
+    <health-permission type="Distance" />
+    <health-permission type="TotalCaloriesBurned" />
+    <health-permission type="ActiveCaloriesBurned" />
+    <health-permission type="ExerciseSession" />
+    <health-permission type="SleepSession" />
+    <health-permission type="Nutrition" />
+    <health-permission type="Hydration" />
+</health-permissions-config>
