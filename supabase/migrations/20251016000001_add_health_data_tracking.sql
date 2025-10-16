@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_health_data_user_type
 ON health_data_points (user_id, type, timestamp DESC);
 
 CREATE INDEX IF NOT EXISTS idx_health_data_user_date
-ON health_data_points (user_id, DATE(timestamp), type);
+ON health_data_points (user_id, date_trunc('day', timestamp), type);
 
 -- Partial index for high-accuracy data points
 CREATE INDEX IF NOT EXISTS idx_health_data_high_accuracy
