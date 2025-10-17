@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 
 const FONTS = [
   'font-sans', 'font-serif', 'font-mono',
@@ -17,89 +17,11 @@ interface AnimatedTitleProps {
 }
 
 export function AnimatedTitle({ text }: AnimatedTitleProps) {
-  const [letterFonts, setLetterFonts] = useState<number[]>([]);
-  const [activeLetterIndex, setActiveLetterIndex] = useState(0);
-  const [emoji, setEmoji] = useState('💊');
-  const [isSpinning, setIsSpinning] = useState(false);
-  const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    // Initialize fonts for each letter (all same to start)
-    setLetterFonts(text.split('').map(() => 0));
-
-    let currentLetterIndex = 0;
-    const letterCount = text.length;
-
-    // Slightly slower cycle: 600ms
-    const letterInterval = setInterval(() => {
-      // Move to next letter
-      let nextIndex = (currentLetterIndex + 1) % letterCount;
-
-      // Skip space if present
-      if (text[nextIndex] === ' ') {
-        nextIndex = (nextIndex + 1) % letterCount;
-      }
-      const finalNextIndex = nextIndex;
-
-      // Check if we just completed a full cycle (reached the end)
-      const isLastLetter = finalNextIndex === 0 && currentLetterIndex === letterCount - 1;
-
-      // Move underline to new letter
-      setActiveLetterIndex(finalNextIndex);
-
-      // Change the CURRENT letter's font (the one we're on before moving)
-      // Skip if current character is a space
-      if (text[currentLetterIndex] !== ' ') {
-        setLetterFonts(prev => {
-          const next = [...prev];
-          const currentFont = next[currentLetterIndex];
-          let newFont;
-
-          // Ensure we pick a DIFFERENT font (not the same as current)
-          do {
-            newFont = Math.floor(Math.random() * FONTS.length);
-          } while (newFont === currentFont);
-
-          next[currentLetterIndex] = newFont;
-          return next;
-        });
-      }
-
-      // Update current index for next iteration
-      currentLetterIndex = finalNextIndex;
-
-      // When reaching the last letter and wrapping around, change the emoji
-      if (isLastLetter) {
-        setIsSpinning(true);
-        let spinCount = 0;
-
-        // Clear any existing spin interval
-        if (spinIntervalRef.current) {
-          clearInterval(spinIntervalRef.current);
-        }
-
-        spinIntervalRef.current = setInterval(() => {
-          setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-          spinCount++;
-
-          if (spinCount >= 15) {
-            if (spinIntervalRef.current) {
-              clearInterval(spinIntervalRef.current);
-              spinIntervalRef.current = null;
-            }
-            setIsSpinning(false);
-            setEmoji(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-          }
-        }, 50);
-      }
-    }, 600);
-
-    return () => {
-      clearInterval(letterInterval);
-      if (spinIntervalRef.current) {
-        clearInterval(spinIntervalRef.current);
-      }
-    };
+  // Pick random fonts ONCE on mount - no cycling, no intervals
+  const { letterFonts, emoji } = useMemo(() => {
+    const fonts = text.split('').map(() => Math.floor(Math.random() * FONTS.length));
+    const randomEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    return { letterFonts: fonts, emoji: randomEmoji };
   }, [text]);
 
   return (
@@ -107,48 +29,16 @@ export function AnimatedTitle({ text }: AnimatedTitleProps) {
       {text.split('').map((char, i) => (
         <span key={i}>
           {char === ' ' ? (
-            <span
-              className={`text-3xl sm:text-4xl mx-1 inline-block transition-all duration-300 ${
-                isSpinning ? 'animate-spin-fast' : ''
-              }`}
-            >
+            <span className="text-3xl sm:text-4xl mx-1 inline-block">
               {emoji}
             </span>
           ) : (
-            <span className="inline-block relative">
-              <span
-                className={`transition-all duration-500 ${FONTS[letterFonts[i] || 0]} text-white`}
-                style={{
-                  transform: i === activeLetterIndex ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-                }}
-              >
-                {char}
-              </span>
-              {i === activeLetterIndex && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/80 animate-underline" />
-              )}
+            <span className={`${FONTS[letterFonts[i] || 0]} text-white`}>
+              {char}
             </span>
           )}
         </span>
       ))}
-      <style>{`
-        @keyframes slideDown {
-          0% { transform: translateY(-100%); opacity: 0; }
-          50% { opacity: 1; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-        .animate-spin-fast {
-          animation: slideDown 0.15s ease-out;
-        }
-        @keyframes underline-grow {
-          from { width: 0; }
-          to { width: 100%; }
-        }
-        .animate-underline {
-          animation: underline-grow 0.3s ease-out;
-        }
-      `}</style>
     </h1>
   );
 }

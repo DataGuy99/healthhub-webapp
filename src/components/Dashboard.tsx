@@ -23,11 +23,15 @@ import { HealthTimeline } from './HealthTimeline';
 import { HealthInsights } from './HealthInsights';
 import PurchaseQueue from './PurchaseQueue';
 import ROIAnalyzer from './ROIAnalyzer';
+import CorrelationHeatmap from './CorrelationHeatmap';
+import ROITimeline from './ROITimeline';
+import PurchaseFunnel from './PurchaseFunnel';
+import { OverviewDashboard } from './OverviewDashboard';
 import { clearAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
-type HealthSubTab = 'timeline' | 'insights' | 'correlations' | 'purchase-queue' | 'roi-analysis';
+type HealthSubTab = 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
@@ -42,7 +46,7 @@ interface DashboardProps {
 }
 
 const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: string }> = {
-  'overview': { name: 'LifeDashHub', icon: '💰', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
+  'overview': { name: 'Overview', icon: '🏠', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
   'health': { name: 'Health', icon: '❤️', color: 'from-red-500/20 to-pink-500/20 border-red-500/30' },
   'grocery': { name: 'Grocery', icon: '🛒', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
   'supplements': { name: 'Supplements', icon: '💊', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
@@ -80,11 +84,13 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const renderSubTabs = () => {
     if (activeTab === 'health') {
       const tabs: { id: HealthSubTab; label: string; icon: string }[] = [
-        { id: 'timeline', label: 'Health Timeline', icon: '📊' },
-        { id: 'insights', label: 'AI Insights', icon: '🧠' },
-        { id: 'correlations', label: 'Correlations', icon: '🔬' },
-        { id: 'purchase-queue', label: 'Purchase Queue', icon: '🎯' },
-        { id: 'roi-analysis', label: 'ROI Analysis', icon: '💰' },
+        { id: 'timeline', label: 'Timeline', icon: '📊' },
+        { id: 'insights', label: 'Insights', icon: '🧠' },
+        { id: 'heatmap', label: 'Heatmap', icon: '🔥' },
+        { id: 'roi-timeline', label: 'ROI Timeline', icon: '📈' },
+        { id: 'funnel', label: 'Funnel', icon: '🎯' },
+        { id: 'purchase-queue', label: 'Queue', icon: '📋' },
+        { id: 'roi-analysis', label: 'ROI', icon: '💰' },
       ];
 
       return (
@@ -350,10 +356,10 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   };
 
   const renderContent = () => {
-    // Overview shows LifeDashHub (Finance overview)
+    // Overview shows powerful dashboard with insights
     if (activeTab === 'overview') {
       return (
-        <FinanceView
+        <OverviewDashboard
           onCategorySelect={(category) => {
             // Navigate to specific category when clicking from overview
             setActiveTab(category as CategoryTab);
@@ -370,8 +376,14 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       if (healthSubTab === 'insights') {
         return <HealthInsights />;
       }
-      if (healthSubTab === 'correlations') {
-        return <HealthInsights />;
+      if (healthSubTab === 'heatmap') {
+        return <CorrelationHeatmap correlations={[]} onCellClick={() => {}} />;
+      }
+      if (healthSubTab === 'roi-timeline') {
+        return <ROITimeline data={[]} timeRange="month" />;
+      }
+      if (healthSubTab === 'funnel') {
+        return userId ? <PurchaseFunnel queueItems={[]} onItemClick={() => {}} /> : null;
       }
       if (healthSubTab === 'purchase-queue') {
         return userId ? <PurchaseQueue userId={userId} availableBudget={1000} /> : null;
@@ -637,7 +649,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       <div className="max-w-7xl mx-auto mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div onClick={() => setActiveTab('overview')} className="cursor-pointer">
-            <AnimatedTitle text="LifeDashHub" />
+            <AnimatedTitle text="Overview" />
           </div>
           <button
             onClick={handleLogout}
