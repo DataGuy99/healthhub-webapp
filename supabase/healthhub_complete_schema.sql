@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS public.category_items (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_category_items_user_category ON public.category_items(user_id, category);
-CREATE INDEX idx_category_items_active ON public.category_items(user_id, is_active) WHERE is_active = true;
-CREATE INDEX idx_category_items_supplement ON public.category_items(supplement_id) WHERE supplement_id IS NOT NULL;
-CREATE INDEX idx_category_items_bill ON public.category_items(recurring_bill_id) WHERE recurring_bill_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_category_items_user_category ON public.category_items(user_id, category);
+CREATE INDEX IF NOT EXISTS idx_category_items_active ON public.category_items(user_id, is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_category_items_supplement ON public.category_items(supplement_id) WHERE supplement_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_category_items_bill ON public.category_items(recurring_bill_id) WHERE recurring_bill_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.category_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -115,8 +115,8 @@ CREATE TABLE IF NOT EXISTS public.category_logs (
     is_planned BOOLEAN DEFAULT true
 );
 
-CREATE INDEX idx_category_logs_user_date ON public.category_logs(user_id, date DESC);
-CREATE INDEX idx_category_logs_item_date ON public.category_logs(category_item_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_category_logs_user_date ON public.category_logs(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_category_logs_item_date ON public.category_logs(category_item_id, date DESC);
 
 CREATE TABLE IF NOT EXISTS public.category_budgets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,8 +131,8 @@ CREATE TABLE IF NOT EXISTS public.category_budgets (
     UNIQUE(user_id, category, month_year)
 );
 
-CREATE INDEX idx_category_budgets_user_category ON public.category_budgets(user_id, category);
-CREATE INDEX idx_category_budgets_enabled ON public.category_budgets(user_id, is_enabled) WHERE is_enabled = true;
+CREATE INDEX IF NOT EXISTS idx_category_budgets_user_category ON public.category_budgets(user_id, category);
+CREATE INDEX IF NOT EXISTS idx_category_budgets_enabled ON public.category_budgets(user_id, is_enabled) WHERE is_enabled = true;
 
 -- ================================================================================
 -- SUPPLEMENTS SYSTEM
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS public.supplement_sections (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_supplement_sections_user ON public.supplement_sections(user_id);
+CREATE INDEX IF NOT EXISTS idx_supplement_sections_user ON public.supplement_sections(user_id);
 
 CREATE TABLE IF NOT EXISTS public.supplements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,9 +169,9 @@ CREATE TABLE IF NOT EXISTS public.supplements (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_supplements_user_active ON public.supplements(user_id, is_stack);
-CREATE INDEX idx_supplements_section ON public.supplements(user_id, section);
-CREATE INDEX idx_supplements_stack ON public.supplements(stack_id) WHERE stack_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_supplements_user_active ON public.supplements(user_id, is_stack);
+CREATE INDEX IF NOT EXISTS idx_supplements_section ON public.supplements(user_id, section);
+CREATE INDEX IF NOT EXISTS idx_supplements_stack ON public.supplements(stack_id) WHERE stack_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.supplement_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -183,8 +183,8 @@ CREATE TABLE IF NOT EXISTS public.supplement_logs (
     UNIQUE(user_id, supplement_id, date)
 );
 
-CREATE INDEX idx_supplement_logs_user_date ON public.supplement_logs(user_id, date DESC);
-CREATE INDEX idx_supplement_logs_supplement ON public.supplement_logs(supplement_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_supplement_logs_user_date ON public.supplement_logs(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_supplement_logs_supplement ON public.supplement_logs(supplement_id, date DESC);
 
 -- ================================================================================
 -- FINANCE & BANKING
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS public.bank_accounts (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_bank_accounts_user_active ON public.bank_accounts(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_user_active ON public.bank_accounts(user_id, is_active);
 
 CREATE TABLE IF NOT EXISTS public.plaid_sync_cursors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS public.plaid_sync_cursors (
     last_synced_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_plaid_sync_user ON public.plaid_sync_cursors(user_id);
+CREATE INDEX IF NOT EXISTS idx_plaid_sync_user ON public.plaid_sync_cursors(user_id);
 
 CREATE TABLE IF NOT EXISTS public.budget_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -232,8 +232,8 @@ CREATE TABLE IF NOT EXISTS public.budget_categories (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_budget_categories_user ON public.budget_categories(user_id);
-CREATE INDEX idx_budget_categories_parent ON public.budget_categories(parent_category_id) WHERE parent_category_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_budget_categories_user ON public.budget_categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_budget_categories_parent ON public.budget_categories(parent_category_id) WHERE parent_category_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -254,9 +254,9 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_transactions_user_date ON public.transactions(user_id, date DESC);
-CREATE INDEX idx_transactions_category ON public.transactions(category_id) WHERE category_id IS NOT NULL;
-CREATE INDEX idx_transactions_bank_account ON public.transactions(bank_account_id) WHERE bank_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON public.transactions(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category_id) WHERE category_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_transactions_bank_account ON public.transactions(bank_account_id) WHERE bank_account_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.transaction_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -272,8 +272,8 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_transaction_items_transaction ON public.transaction_items(transaction_id);
-CREATE INDEX idx_transaction_items_user ON public.transaction_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON public.transaction_items(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_user ON public.transaction_items(user_id);
 
 CREATE TABLE IF NOT EXISTS public.transaction_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -285,7 +285,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_rules (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_transaction_rules_user ON public.transaction_rules(user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_rules_user ON public.transaction_rules(user_id);
 
 CREATE TABLE IF NOT EXISTS public.budget_goals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -301,8 +301,8 @@ CREATE TABLE IF NOT EXISTS public.budget_goals (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_budget_goals_user_active ON public.budget_goals(user_id, is_active) WHERE is_active = true;
-CREATE INDEX idx_budget_goals_category ON public.budget_goals(category_id) WHERE category_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_budget_goals_user_active ON public.budget_goals(user_id, is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_budget_goals_category ON public.budget_goals(category_id) WHERE category_id IS NOT NULL;
 
 -- ================================================================================
 -- BILLS & PAYMENTS
@@ -324,7 +324,7 @@ CREATE TABLE IF NOT EXISTS public.recurring_bills (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_recurring_bills_user_active ON public.recurring_bills(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_recurring_bills_user_active ON public.recurring_bills(user_id, is_active);
 
 CREATE TABLE IF NOT EXISTS public.bill_payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -339,9 +339,9 @@ CREATE TABLE IF NOT EXISTS public.bill_payments (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_bill_payments_user_date ON public.bill_payments(user_id, date DESC);
-CREATE INDEX idx_bill_payments_recurring_bill ON public.bill_payments(recurring_bill_id);
-CREATE INDEX idx_bill_payments_unpaid ON public.bill_payments(user_id, date) WHERE paid = false;
+CREATE INDEX IF NOT EXISTS idx_bill_payments_user_date ON public.bill_payments(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_bill_payments_recurring_bill ON public.bill_payments(recurring_bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_payments_unpaid ON public.bill_payments(user_id, date) WHERE paid = false;
 
 -- ================================================================================
 -- GROCERY & PROTEIN TRACKING
@@ -375,7 +375,7 @@ CREATE TABLE IF NOT EXISTS public.grocery_purchases (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_grocery_purchases_user_date ON public.grocery_purchases(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_grocery_purchases_user_date ON public.grocery_purchases(user_id, date DESC);
 
 CREATE TABLE IF NOT EXISTS public.protein_targets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -401,8 +401,8 @@ CREATE TABLE IF NOT EXISTS public.protein_calculations (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_protein_calculations_user_date ON public.protein_calculations(user_id, date DESC);
-CREATE INDEX idx_protein_calculations_cost ON public.protein_calculations(user_id, cost_per_gram);
+CREATE INDEX IF NOT EXISTS idx_protein_calculations_user_date ON public.protein_calculations(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_protein_calculations_cost ON public.protein_calculations(user_id, cost_per_gram);
 
 -- ================================================================================
 -- MISC SHOPPING
@@ -428,7 +428,7 @@ CREATE TABLE IF NOT EXISTS public.misc_shop_purchases (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_misc_shop_purchases_user_date ON public.misc_shop_purchases(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_misc_shop_purchases_user_date ON public.misc_shop_purchases(user_id, date DESC);
 
 -- ================================================================================
 -- AUTOMOTIVE
@@ -448,8 +448,8 @@ CREATE TABLE IF NOT EXISTS public.gas_fillups (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_gas_fillups_user_date ON public.gas_fillups(user_id, date DESC);
-CREATE INDEX idx_gas_fillups_mileage ON public.gas_fillups(user_id, mileage);
+CREATE INDEX IF NOT EXISTS idx_gas_fillups_user_date ON public.gas_fillups(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_gas_fillups_mileage ON public.gas_fillups(user_id, mileage);
 
 CREATE TABLE IF NOT EXISTS public.maintenance_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -463,7 +463,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_items (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_maintenance_items_user_active ON public.maintenance_items(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_maintenance_items_user_active ON public.maintenance_items(user_id, is_active);
 
 CREATE TABLE IF NOT EXISTS public.auto_cost_analysis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -486,7 +486,7 @@ CREATE TABLE IF NOT EXISTS public.auto_cost_analysis (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_auto_cost_user_period ON public.auto_cost_analysis(user_id, analysis_period_end DESC);
+CREATE INDEX IF NOT EXISTS idx_auto_cost_user_period ON public.auto_cost_analysis(user_id, analysis_period_end DESC);
 
 -- ================================================================================
 -- HEALTH DATA TRACKING (Phase 1)
@@ -501,7 +501,7 @@ CREATE TABLE IF NOT EXISTS public.health_exports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_health_exports_user_time ON public.health_exports(user_id, export_time DESC);
+CREATE INDEX IF NOT EXISTS idx_health_exports_user_time ON public.health_exports(user_id, export_time DESC);
 
 CREATE TABLE IF NOT EXISTS public.health_data_points (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -516,8 +516,8 @@ CREATE TABLE IF NOT EXISTS public.health_data_points (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_health_data_user_type_time ON public.health_data_points(user_id, type, timestamp DESC);
-CREATE INDEX idx_health_data_high_accuracy ON public.health_data_points(user_id, accuracy DESC) WHERE accuracy >= 80;
+CREATE INDEX IF NOT EXISTS idx_health_data_user_type_time ON public.health_data_points(user_id, type, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_health_data_high_accuracy ON public.health_data_points(user_id, accuracy DESC) WHERE accuracy >= 80;
 
 CREATE TABLE IF NOT EXISTS public.health_data_upload (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -530,7 +530,7 @@ CREATE TABLE IF NOT EXISTS public.health_data_upload (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_health_upload_user_unprocessed ON public.health_data_upload(user_id, processed) WHERE processed = false;
+CREATE INDEX IF NOT EXISTS idx_health_upload_user_unprocessed ON public.health_data_upload(user_id, processed) WHERE processed = false;
 
 CREATE TABLE IF NOT EXISTS public.health_sync_status (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -565,10 +565,10 @@ CREATE TABLE IF NOT EXISTS public.health_supplement_correlations (
     UNIQUE(user_id, supplement_id, health_metric, time_window_days)
 );
 
-CREATE INDEX idx_correlations_user_supplement ON public.health_supplement_correlations(user_id, supplement_id);
-CREATE INDEX idx_correlations_user_metric ON public.health_supplement_correlations(user_id, health_metric);
-CREATE INDEX idx_correlations_significant ON public.health_supplement_correlations(user_id, p_value, confidence_level DESC) WHERE p_value < 0.05;
-CREATE INDEX idx_correlations_high_confidence ON public.health_supplement_correlations(user_id, confidence_level DESC, updated_at DESC) WHERE confidence_level > 70;
+CREATE INDEX IF NOT EXISTS idx_correlations_user_supplement ON public.health_supplement_correlations(user_id, supplement_id);
+CREATE INDEX IF NOT EXISTS idx_correlations_user_metric ON public.health_supplement_correlations(user_id, health_metric);
+CREATE INDEX IF NOT EXISTS idx_correlations_significant ON public.health_supplement_correlations(user_id, p_value, confidence_level DESC) WHERE p_value < 0.05;
+CREATE INDEX IF NOT EXISTS idx_correlations_high_confidence ON public.health_supplement_correlations(user_id, confidence_level DESC, updated_at DESC) WHERE confidence_level > 70;
 
 CREATE TABLE IF NOT EXISTS public.health_insights (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -582,8 +582,8 @@ CREATE TABLE IF NOT EXISTS public.health_insights (
     dismissed_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_insights_user_type ON public.health_insights(user_id, insight_type);
-CREATE INDEX idx_insights_active_priority ON public.health_insights(user_id, priority DESC, generated_at DESC) WHERE acknowledged_at IS NULL AND dismissed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_insights_user_type ON public.health_insights(user_id, insight_type);
+CREATE INDEX IF NOT EXISTS idx_insights_active_priority ON public.health_insights(user_id, priority DESC, generated_at DESC) WHERE acknowledged_at IS NULL AND dismissed_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS public.supplement_roi_analysis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -601,8 +601,8 @@ CREATE TABLE IF NOT EXISTS public.supplement_roi_analysis (
     UNIQUE(user_id, supplement_id, analysis_period_start, analysis_period_end)
 );
 
-CREATE INDEX idx_roi_user_supplement ON public.supplement_roi_analysis(user_id, supplement_id);
-CREATE INDEX idx_roi_user_score ON public.supplement_roi_analysis(user_id, roi_score DESC);
+CREATE INDEX IF NOT EXISTS idx_roi_user_supplement ON public.supplement_roi_analysis(user_id, supplement_id);
+CREATE INDEX IF NOT EXISTS idx_roi_user_score ON public.supplement_roi_analysis(user_id, roi_score DESC);
 
 CREATE TABLE IF NOT EXISTS public.correlation_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -617,7 +617,7 @@ CREATE TABLE IF NOT EXISTS public.correlation_jobs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_correlation_jobs_user_status ON public.correlation_jobs(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_correlation_jobs_user_status ON public.correlation_jobs(user_id, status, created_at DESC);
 
 -- ================================================================================
 -- FUNCTIONS & TRIGGERS
@@ -775,8 +775,8 @@ CREATE TABLE IF NOT EXISTS public.health_budget_allocations (
     UNIQUE(user_id, category)
 );
 
-CREATE INDEX idx_budget_allocations_user ON public.health_budget_allocations(user_id);
-CREATE INDEX idx_budget_allocations_priority ON public.health_budget_allocations(user_id, health_priority DESC);
+CREATE INDEX IF NOT EXISTS idx_budget_allocations_user ON public.health_budget_allocations(user_id);
+CREATE INDEX IF NOT EXISTS idx_budget_allocations_priority ON public.health_budget_allocations(user_id, health_priority DESC);
 
 -- Smart Purchase Queue
 CREATE TABLE IF NOT EXISTS public.purchase_queue (
@@ -801,10 +801,10 @@ CREATE TABLE IF NOT EXISTS public.purchase_queue (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_queue_user_position ON public.purchase_queue(user_id, queue_position);
-CREATE INDEX idx_queue_user_status ON public.purchase_queue(user_id, status) WHERE status = 'queued';
-CREATE INDEX idx_queue_user_priority ON public.purchase_queue(user_id, priority_score DESC);
-CREATE INDEX idx_queue_optimal_date ON public.purchase_queue(user_id, optimal_purchase_date);
+CREATE INDEX IF NOT EXISTS idx_queue_user_position ON public.purchase_queue(user_id, queue_position);
+CREATE INDEX IF NOT EXISTS idx_queue_user_status ON public.purchase_queue(user_id, status) WHERE status = 'queued';
+CREATE INDEX IF NOT EXISTS idx_queue_user_priority ON public.purchase_queue(user_id, priority_score DESC);
+CREATE INDEX IF NOT EXISTS idx_queue_optimal_date ON public.purchase_queue(user_id, optimal_purchase_date);
 
 -- Purchase Decisions & Outcomes
 CREATE TABLE IF NOT EXISTS public.purchase_decisions (
@@ -828,9 +828,9 @@ CREATE TABLE IF NOT EXISTS public.purchase_decisions (
     alternative_cost NUMERIC
 );
 
-CREATE INDEX idx_decisions_user_date ON public.purchase_decisions(user_id, decision_date DESC);
-CREATE INDEX idx_decisions_category ON public.purchase_decisions(user_id, category);
-CREATE INDEX idx_decisions_outcome ON public.purchase_decisions(user_id, decision) WHERE health_outcome_score IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_decisions_user_date ON public.purchase_decisions(user_id, decision_date DESC);
+CREATE INDEX IF NOT EXISTS idx_decisions_category ON public.purchase_decisions(user_id, category);
+CREATE INDEX IF NOT EXISTS idx_decisions_outcome ON public.purchase_decisions(user_id, decision) WHERE health_outcome_score IS NOT NULL;
 
 -- ================================================================================
 -- PHASE 3 HELPER FUNCTIONS
@@ -1026,9 +1026,10 @@ LEFT JOIN category_logs cl ON cl.category_item_id = ci.id
 WHERE cb.is_enabled = true
 GROUP BY cb.user_id, cb.category, cb.month_year, cb.target_amount, cb.is_enabled;
 
-CREATE INDEX idx_budget_performance_user_month ON category_budget_performance(user_id, month_year);
+CREATE INDEX IF NOT EXISTS idx_budget_performance_user_month ON category_budget_performance(user_id, month_year);
 
 -- Daily health data summary (faster queries)
+-- Note: Stores ALL historical data, filter by date at query time
 CREATE MATERIALIZED VIEW IF NOT EXISTS daily_health_summary AS
 SELECT
     user_id,
@@ -1043,25 +1044,78 @@ SELECT
 FROM health_data_points
 GROUP BY user_id, DATE(timestamp), type;
 
-CREATE INDEX idx_daily_health_user_date ON daily_health_summary(user_id, date DESC, type);
+CREATE INDEX IF NOT EXISTS idx_daily_health_user_date ON daily_health_summary(user_id, date DESC, type);
 
--- Supplement adherence tracking (30-day rolling)
-CREATE MATERIALIZED VIEW IF NOT EXISTS supplement_adherence_30d AS
+-- Query helper: Get recent health data (last 90 days)
+CREATE OR REPLACE FUNCTION get_recent_health_summary(p_user_id UUID, p_days INTEGER DEFAULT 90)
+RETURNS TABLE (
+    date DATE,
+    type TEXT,
+    avg_value NUMERIC,
+    min_value NUMERIC,
+    max_value NUMERIC,
+    stddev_value NUMERIC,
+    sample_count BIGINT,
+    avg_accuracy NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT dhs.date, dhs.type, dhs.avg_value, dhs.min_value, dhs.max_value,
+           dhs.stddev_value, dhs.sample_count, dhs.avg_accuracy
+    FROM daily_health_summary dhs
+    WHERE dhs.user_id = p_user_id
+      AND dhs.date > CURRENT_DATE - p_days
+    ORDER BY dhs.date DESC, dhs.type;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- Supplement adherence tracking
+-- Note: Stores ALL historical data, filter by date at query time
+CREATE MATERIALIZED VIEW IF NOT EXISTS supplement_adherence_summary AS
 SELECT
     sl.user_id,
     sl.supplement_id,
     s.name as supplement_name,
+    DATE_TRUNC('month', sl.date) as month,
     COUNT(*) FILTER (WHERE sl.is_taken = true) as days_taken,
     COUNT(*) as total_days,
     ROUND(COUNT(*) FILTER (WHERE sl.is_taken = true) * 100.0 / NULLIF(COUNT(*), 0), 1) as adherence_rate,
     MAX(sl.date) as last_logged_date
 FROM supplement_logs sl
 JOIN supplements s ON s.id = sl.supplement_id
-GROUP BY sl.user_id, sl.supplement_id, s.name;
+GROUP BY sl.user_id, sl.supplement_id, s.name, DATE_TRUNC('month', sl.date);
 
-CREATE INDEX idx_adherence_user_supplement ON supplement_adherence_30d(user_id, supplement_id);
+CREATE INDEX IF NOT EXISTS idx_adherence_user_supplement ON supplement_adherence_summary(user_id, supplement_id, month DESC);
+
+-- Query helper: Get recent supplement adherence (last 30 days)
+CREATE OR REPLACE FUNCTION get_supplement_adherence_30d(p_user_id UUID)
+RETURNS TABLE (
+    supplement_id UUID,
+    supplement_name TEXT,
+    days_taken BIGINT,
+    total_days BIGINT,
+    adherence_rate NUMERIC,
+    last_logged_date DATE
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        sl.supplement_id,
+        MAX(s.name) as supplement_name,
+        COUNT(*) FILTER (WHERE sl.is_taken = true) as days_taken,
+        COUNT(*) as total_days,
+        ROUND(COUNT(*) FILTER (WHERE sl.is_taken = true) * 100.0 / NULLIF(COUNT(*), 0), 1) as adherence_rate,
+        MAX(sl.date) as last_logged_date
+    FROM supplement_logs sl
+    JOIN supplements s ON s.id = sl.supplement_id
+    WHERE sl.user_id = p_user_id
+      AND sl.date > CURRENT_DATE - 30
+    GROUP BY sl.supplement_id;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Auto cost analysis (auto-calculated from gas fillups)
+-- Note: Pre-aggregated by month for all historical data
 CREATE MATERIALIZED VIEW IF NOT EXISTS auto_cost_summary AS
 SELECT
     user_id,
@@ -1080,7 +1134,30 @@ SELECT
 FROM gas_fillups
 GROUP BY user_id, DATE_TRUNC('month', date);
 
-CREATE INDEX idx_auto_cost_user_month ON auto_cost_summary(user_id, month DESC);
+CREATE INDEX IF NOT EXISTS idx_auto_cost_user_month ON auto_cost_summary(user_id, month DESC);
+
+-- Query helper: Get recent auto costs (last 12 months)
+CREATE OR REPLACE FUNCTION get_auto_costs_12mo(p_user_id UUID)
+RETURNS TABLE (
+    month TIMESTAMPTZ,
+    fillup_count BIGINT,
+    total_gallons NUMERIC,
+    total_fuel_cost NUMERIC,
+    avg_gas_price NUMERIC,
+    avg_mpg NUMERIC,
+    miles_driven NUMERIC,
+    cost_per_mile NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT acs.month, acs.fillup_count, acs.total_gallons, acs.total_fuel_cost,
+           acs.avg_gas_price, acs.avg_mpg, acs.miles_driven, acs.cost_per_mile
+    FROM auto_cost_summary acs
+    WHERE acs.user_id = p_user_id
+      AND acs.month > DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'
+    ORDER BY acs.month DESC;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Supplement ROI summary (combines cost + health benefit)
 CREATE MATERIALIZED VIEW IF NOT EXISTS supplement_roi_summary AS
@@ -1103,7 +1180,7 @@ LEFT JOIN health_supplement_correlations hsc ON hsc.supplement_id = s.id
 WHERE s.cost IS NOT NULL OR s.monthly_cost IS NOT NULL
 GROUP BY s.user_id, s.id, s.name, s.cost, s.monthly_cost;
 
-CREATE INDEX idx_supplement_roi_user_roi ON supplement_roi_summary(user_id, roi_ratio DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_supplement_roi_user_roi ON supplement_roi_summary(user_id, roi_ratio DESC NULLS LAST);
 
 -- ================================================================================
 -- REFRESH FUNCTIONS FOR MATERIALIZED VIEWS
