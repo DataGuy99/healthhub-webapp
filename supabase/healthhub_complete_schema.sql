@@ -93,12 +93,16 @@ CREATE TABLE IF NOT EXISTS public.category_items (
     subcategory TEXT,
     tags TEXT[],
     is_active BOOLEAN DEFAULT true,
+    supplement_id UUID REFERENCES public.supplements(id) ON DELETE SET NULL,
+    recurring_bill_id UUID REFERENCES public.recurring_bills(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_category_items_user_category ON public.category_items(user_id, category);
 CREATE INDEX idx_category_items_active ON public.category_items(user_id, is_active) WHERE is_active = true;
+CREATE INDEX idx_category_items_supplement ON public.category_items(supplement_id) WHERE supplement_id IS NOT NULL;
+CREATE INDEX idx_category_items_bill ON public.category_items(recurring_bill_id) WHERE recurring_bill_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.category_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -362,6 +366,12 @@ CREATE TABLE IF NOT EXISTS public.grocery_purchases (
     protein_grams NUMERIC,
     days_covered NUMERIC,
     is_protein_source BOOLEAN DEFAULT false,
+    cost_per_gram NUMERIC GENERATED ALWAYS AS (
+        CASE
+            WHEN protein_grams > 0 THEN amount / protein_grams
+            ELSE NULL
+        END
+    ) STORED,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -930,3 +940,183 @@ ALTER TABLE public.purchase_decisions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own budget allocations" ON public.health_budget_allocations FOR ALL USING ((select auth.uid()) = user_id);
 CREATE POLICY "Users can manage their own purchase queue" ON public.purchase_queue FOR ALL USING ((select auth.uid()) = user_id);
 CREATE POLICY "Users can manage their own purchase decisions" ON public.purchase_decisions FOR ALL USING ((select auth.uid()) = user_id);
+
+-- ================================================================================
+-- CROSS-POLLINATION: AUTO-INSIGHTS FROM CORRELATIONS
+-- ================================================================================
+
+CREATE OR REPLACE FUNCTION auto_generate_insights_from_correlations()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Auto-create insight for high-confidence correlations
+    IF NEW.confidence_level > 80 AND NEW.p_value < 0.05 THEN
+        INSERT INTO health_insights (
+            user_id,
+            insight_type,
+            insight_data,
+            confidence_score,
+            priority
+        ) VALUES (
+            NEW.user_id,
+            'correlation',
+            jsonb_build_object(
+                'supplement_id', NEW.supplement_id,
+                'health_metric', NEW.health_metric,
+                'correlation', NEW.correlation_coefficient,
+                'improvement_pct', NEW.improvement_percentage,
+                'message', CASE
+                    WHEN NEW.improvement_percentage > 20 THEN 'Strong positive effect detected'
+                    WHEN NEW.improvement_percentage > 10 THEN 'Moderate positive effect detected'
+                    WHEN NEW.improvement_percentage < -10 THEN 'Negative effect detected - consider discontinuing'
+                    ELSE 'Minor effect detected'
+                END
+            ),
+            NEW.confidence_level / 100.0,
+            CASE
+                WHEN ABS(NEW.improvement_percentage) > 20 THEN 10
+                WHEN ABS(NEW.improvement_percentage) > 10 THEN 7
+                ELSE 5
+            END
+        )
+        ON CONFLICT DO NOTHING; -- Prevent duplicates
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_auto_generate_insights
+    AFTER INSERT OR UPDATE ON public.health_supplement_correlations
+    FOR EACH ROW
+    EXECUTE FUNCTION auto_generate_insights_from_correlations();
+
+-- ================================================================================
+-- CROSS-POLLINATION: MATERIALIZED VIEWS FOR PERFORMANCE
+-- ================================================================================
+
+-- Monthly category spending performance (budget vs actual)
+CREATE MATERIALIZED VIEW IF NOT EXISTS category_budget_performance AS
+SELECT
+    cb.user_id,
+    cb.category,
+    cb.month_year,
+    cb.target_amount as budget,
+    COALESCE(SUM(cl.actual_amount), 0) as actual_spent,
+    cb.target_amount - COALESCE(SUM(cl.actual_amount), 0) as remaining,
+    CASE
+        WHEN cb.target_amount > 0 THEN (COALESCE(SUM(cl.actual_amount), 0) / cb.target_amount * 100)
+        ELSE 0
+    END as percent_used,
+    cb.is_enabled
+FROM category_budgets cb
+LEFT JOIN category_items ci ON ci.user_id = cb.user_id AND ci.category = cb.category
+LEFT JOIN category_logs cl ON cl.category_item_id = ci.id
+    AND TO_CHAR(cl.date, 'YYYY-MM') = cb.month_year
+WHERE cb.is_enabled = true
+GROUP BY cb.user_id, cb.category, cb.month_year, cb.target_amount, cb.is_enabled;
+
+CREATE INDEX idx_budget_performance_user_month ON category_budget_performance(user_id, month_year);
+
+-- Daily health data summary (faster queries)
+CREATE MATERIALIZED VIEW IF NOT EXISTS daily_health_summary AS
+SELECT
+    user_id,
+    DATE(timestamp) as date,
+    type,
+    AVG(value) as avg_value,
+    MIN(value) as min_value,
+    MAX(value) as max_value,
+    STDDEV(value) as stddev_value,
+    COUNT(*) as sample_count,
+    AVG(accuracy) as avg_accuracy
+FROM health_data_points
+WHERE timestamp > NOW() - INTERVAL '90 days'
+GROUP BY user_id, DATE(timestamp), type;
+
+CREATE INDEX idx_daily_health_user_date ON daily_health_summary(user_id, date DESC, type);
+
+-- Supplement adherence tracking (30-day rolling)
+CREATE MATERIALIZED VIEW IF NOT EXISTS supplement_adherence_30d AS
+SELECT
+    sl.user_id,
+    sl.supplement_id,
+    s.name as supplement_name,
+    COUNT(*) FILTER (WHERE sl.is_taken = true) as days_taken,
+    COUNT(*) as total_days,
+    ROUND(COUNT(*) FILTER (WHERE sl.is_taken = true) * 100.0 / NULLIF(COUNT(*), 0), 1) as adherence_rate,
+    MAX(sl.date) as last_logged_date
+FROM supplement_logs sl
+JOIN supplements s ON s.id = sl.supplement_id
+WHERE sl.date > NOW() - INTERVAL '30 days'
+GROUP BY sl.user_id, sl.supplement_id, s.name;
+
+CREATE INDEX idx_adherence_user_supplement ON supplement_adherence_30d(user_id, supplement_id);
+
+-- Auto cost analysis (auto-calculated from gas fillups)
+CREATE MATERIALIZED VIEW IF NOT EXISTS auto_cost_summary AS
+SELECT
+    user_id,
+    DATE_TRUNC('month', date) as month,
+    COUNT(*) as fillup_count,
+    SUM(gallons) as total_gallons,
+    SUM(cost) as total_fuel_cost,
+    AVG(price_per_gallon) as avg_gas_price,
+    AVG(mpg) as avg_mpg,
+    MAX(mileage) - MIN(mileage) as miles_driven,
+    CASE
+        WHEN MAX(mileage) - MIN(mileage) > 0
+        THEN SUM(cost) / (MAX(mileage) - MIN(mileage))
+        ELSE NULL
+    END as cost_per_mile
+FROM gas_fillups
+WHERE date > NOW() - INTERVAL '12 months'
+GROUP BY user_id, DATE_TRUNC('month', date);
+
+CREATE INDEX idx_auto_cost_user_month ON auto_cost_summary(user_id, month DESC);
+
+-- Supplement ROI summary (combines cost + health benefit)
+CREATE MATERIALIZED VIEW IF NOT EXISTS supplement_roi_summary AS
+SELECT
+    s.user_id,
+    s.id as supplement_id,
+    s.name as supplement_name,
+    s.cost,
+    s.monthly_cost,
+    COUNT(DISTINCT hsc.health_metric) as metrics_affected,
+    AVG(hsc.improvement_percentage) FILTER (WHERE hsc.p_value < 0.05) as avg_improvement,
+    MAX(hsc.confidence_level) as max_confidence,
+    CASE
+        WHEN s.monthly_cost > 0 AND AVG(hsc.improvement_percentage) FILTER (WHERE hsc.p_value < 0.05) > 0
+        THEN AVG(hsc.improvement_percentage) FILTER (WHERE hsc.p_value < 0.05) / s.monthly_cost
+        ELSE 0
+    END as roi_ratio
+FROM supplements s
+LEFT JOIN health_supplement_correlations hsc ON hsc.supplement_id = s.id
+WHERE s.cost IS NOT NULL OR s.monthly_cost IS NOT NULL
+GROUP BY s.user_id, s.id, s.name, s.cost, s.monthly_cost;
+
+CREATE INDEX idx_supplement_roi_user_roi ON supplement_roi_summary(user_id, roi_ratio DESC NULLS LAST);
+
+-- ================================================================================
+-- REFRESH FUNCTIONS FOR MATERIALIZED VIEWS
+-- ================================================================================
+
+CREATE OR REPLACE FUNCTION refresh_all_materialized_views()
+RETURNS void AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY category_budget_performance;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY daily_health_summary;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY supplement_adherence_30d;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY auto_cost_summary;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY supplement_roi_summary;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to refresh specific user's views (faster)
+CREATE OR REPLACE FUNCTION refresh_user_views(p_user_id UUID)
+RETURNS void AS $$
+BEGIN
+    -- Note: CONCURRENTLY doesn't support WHERE clauses, so full refresh needed
+    -- In production, consider partitioning or incremental updates
+    PERFORM refresh_all_materialized_views();
+END;
+$$ LANGUAGE plpgsql;
