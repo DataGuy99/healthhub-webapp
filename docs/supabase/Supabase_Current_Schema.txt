@@ -1,0 +1,432 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.auto_cost_analysis (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  analysis_period_start date NOT NULL,
+  analysis_period_end date NOT NULL,
+  total_miles_driven numeric NOT NULL CHECK (total_miles_driven >= 0::numeric),
+  total_maintenance_cost numeric NOT NULL DEFAULT 0.00 CHECK (total_maintenance_cost >= 0::numeric),
+  total_fuel_cost numeric NOT NULL DEFAULT 0.00 CHECK (total_fuel_cost >= 0::numeric),
+  average_mpg numeric NOT NULL CHECK (average_mpg > 0::numeric),
+  average_gas_price numeric NOT NULL CHECK (average_gas_price >= 0::numeric),
+  cost_per_mile numeric DEFAULT 
+CASE
+    WHEN (total_miles_driven > (0)::numeric) THEN ((total_maintenance_cost + total_fuel_cost) / total_miles_driven)
+    ELSE NULL::numeric
+END,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT auto_cost_analysis_pkey PRIMARY KEY (id),
+  CONSTRAINT auto_cost_analysis_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.bank_accounts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  plaid_access_token text NOT NULL,
+  plaid_item_id text NOT NULL,
+  institution_name text NOT NULL,
+  institution_id text,
+  account_name text,
+  account_mask text,
+  account_type text,
+  account_subtype text,
+  is_active boolean DEFAULT true,
+  last_synced_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bank_accounts_pkey PRIMARY KEY (id),
+  CONSTRAINT bank_accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.bill_payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  recurring_bill_id uuid NOT NULL,
+  date date NOT NULL,
+  amount numeric NOT NULL,
+  paid boolean DEFAULT false,
+  paid_at timestamp with time zone,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bill_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT bill_payments_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT bill_payments_recurring_bill_id_fkey FOREIGN KEY (recurring_bill_id) REFERENCES public.recurring_bills(id)
+);
+CREATE TABLE public.budget_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  icon text,
+  color text,
+  parent_category_id uuid,
+  is_system boolean DEFAULT false,
+  order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_categories_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_categories_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT budget_categories_parent_category_id_fkey FOREIGN KEY (parent_category_id) REFERENCES public.budget_categories(id)
+);
+CREATE TABLE public.budget_goals (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  category_id uuid,
+  name text NOT NULL,
+  target_amount numeric NOT NULL,
+  period text NOT NULL CHECK (period = ANY (ARRAY['weekly'::text, 'monthly'::text, 'yearly'::text])),
+  start_date date NOT NULL,
+  end_date date,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_goals_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_goals_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT budget_goals_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.budget_categories(id)
+);
+CREATE TABLE public.budget_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  period_type text NOT NULL CHECK (period_type = ANY (ARRAY['weekly'::text, 'biweekly'::text, 'monthly'::text, 'custom'::text])),
+  period_start_day integer CHECK (period_start_day >= 0 AND period_start_day <= 31),
+  period_start_date date,
+  period_length_days integer CHECK (period_length_days > 0),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.category_budgets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  category text NOT NULL,
+  month_year text NOT NULL,
+  target_amount numeric NOT NULL,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT category_budgets_pkey PRIMARY KEY (id),
+  CONSTRAINT category_budgets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.category_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  category text NOT NULL,
+  name text NOT NULL,
+  description text,
+  amount numeric,
+  frequency text,
+  subcategory text,
+  tags ARRAY,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT category_items_pkey PRIMARY KEY (id),
+  CONSTRAINT category_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.category_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  category_item_id uuid NOT NULL,
+  date date NOT NULL,
+  actual_amount numeric,
+  notes text,
+  timestamp timestamp with time zone DEFAULT now(),
+  is_planned boolean DEFAULT true,
+  CONSTRAINT category_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT category_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT category_logs_category_item_id_fkey FOREIGN KEY (category_item_id) REFERENCES public.category_items(id)
+);
+CREATE TABLE public.gas_fillups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  date date NOT NULL,
+  mileage integer NOT NULL,
+  gallons numeric NOT NULL,
+  cost numeric NOT NULL,
+  price_per_gallon numeric NOT NULL,
+  mpg numeric,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  cost_per_mile_at_fillup numeric,
+  CONSTRAINT gas_fillups_pkey PRIMARY KEY (id),
+  CONSTRAINT gas_fillups_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.grocery_budgets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  weekly_budget numeric NOT NULL DEFAULT 90.00,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  daily_protein_goal numeric DEFAULT 0.00,
+  CONSTRAINT grocery_budgets_pkey PRIMARY KEY (id),
+  CONSTRAINT grocery_budgets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.grocery_purchases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  store text NOT NULL,
+  amount numeric NOT NULL,
+  date date NOT NULL,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  protein_grams numeric,
+  days_covered numeric,
+  is_protein_source boolean DEFAULT false,
+  CONSTRAINT grocery_purchases_pkey PRIMARY KEY (id),
+  CONSTRAINT grocery_purchases_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.health_data_points (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  timestamp timestamp with time zone NOT NULL,
+  type text NOT NULL,
+  value numeric NOT NULL CHECK (value >= 0::numeric),
+  accuracy integer CHECK (accuracy >= 0 AND accuracy <= 100),
+  source text NOT NULL,
+  context jsonb DEFAULT '{}'::jsonb,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT health_data_points_pkey PRIMARY KEY (id),
+  CONSTRAINT health_data_points_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.health_data_upload (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  encrypted_data ARRAY NOT NULL,
+  iv ARRAY NOT NULL,
+  data_point_count integer NOT NULL CHECK (data_point_count >= 0),
+  extraction_timestamp timestamp with time zone NOT NULL,
+  processed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT health_data_upload_pkey PRIMARY KEY (id),
+  CONSTRAINT health_data_upload_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.health_exports (
+  id bigint NOT NULL DEFAULT nextval('health_exports_id_seq'::regclass),
+  user_id text NOT NULL,
+  export_time timestamp with time zone NOT NULL,
+  data jsonb NOT NULL,
+  received_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT health_exports_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.health_sync_status (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  last_sync_timestamp timestamp with time zone,
+  data_points_count integer DEFAULT 0 CHECK (data_points_count >= 0),
+  sync_errors jsonb DEFAULT '[]'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT health_sync_status_pkey PRIMARY KEY (id),
+  CONSTRAINT health_sync_status_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.maintenance_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  service_name text NOT NULL,
+  interval_miles integer NOT NULL,
+  last_done_mileage integer NOT NULL,
+  is_active boolean DEFAULT true,
+  icon text DEFAULT '🔧'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  estimated_cost numeric DEFAULT 0.00,
+  CONSTRAINT maintenance_items_pkey PRIMARY KEY (id),
+  CONSTRAINT maintenance_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.misc_shop_budgets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  monthly_budget numeric NOT NULL DEFAULT 30.00,
+  rollover_savings numeric NOT NULL DEFAULT 0.00,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT misc_shop_budgets_pkey PRIMARY KEY (id),
+  CONSTRAINT misc_shop_budgets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.misc_shop_purchases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  item_name text NOT NULL,
+  amount numeric NOT NULL,
+  date date NOT NULL,
+  is_big_purchase boolean DEFAULT false,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT misc_shop_purchases_pkey PRIMARY KEY (id),
+  CONSTRAINT misc_shop_purchases_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.plaid_sync_cursors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  bank_account_id uuid NOT NULL UNIQUE,
+  cursor text NOT NULL,
+  last_synced_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT plaid_sync_cursors_pkey PRIMARY KEY (id),
+  CONSTRAINT plaid_sync_cursors_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT plaid_sync_cursors_bank_account_id_fkey FOREIGN KEY (bank_account_id) REFERENCES public.bank_accounts(id)
+);
+CREATE TABLE public.protein_calculations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  food_name text NOT NULL,
+  serving_size numeric NOT NULL,
+  serving_unit text NOT NULL,
+  protein_grams numeric NOT NULL,
+  price numeric NOT NULL,
+  cost_per_gram numeric NOT NULL,
+  date date NOT NULL,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  num_servings numeric DEFAULT 1.0,
+  CONSTRAINT protein_calculations_pkey PRIMARY KEY (id),
+  CONSTRAINT protein_calculations_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.protein_targets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  target_cost_per_gram numeric NOT NULL,
+  tolerance_percentage numeric NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT protein_targets_pkey PRIMARY KEY (id),
+  CONSTRAINT protein_targets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.recurring_bills (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  amount numeric NOT NULL,
+  frequency text NOT NULL CHECK (frequency = ANY (ARRAY['weekly'::text, 'biweekly'::text, 'monthly'::text, 'custom'::text])),
+  day_of_week integer CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  day_of_month integer CHECK (day_of_month >= 1 AND day_of_month <= 31),
+  skip_first_week boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  color text,
+  icon text DEFAULT '💵'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT recurring_bills_pkey PRIMARY KEY (id),
+  CONSTRAINT recurring_bills_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.supplement_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  supplement_id uuid NOT NULL,
+  date date NOT NULL,
+  is_taken boolean DEFAULT false,
+  timestamp timestamp with time zone DEFAULT now(),
+  CONSTRAINT supplement_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT supplement_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT supplement_logs_supplement_id_fkey FOREIGN KEY (supplement_id) REFERENCES public.supplements(id)
+);
+CREATE TABLE public.supplement_sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT supplement_sections_pkey PRIMARY KEY (id),
+  CONSTRAINT supplement_sections_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.supplements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  dose text,
+  dose_unit text,
+  ingredients jsonb,
+  form text,
+  section text,
+  active_days jsonb,
+  frequency_pattern text DEFAULT 'everyday'::text CHECK (frequency_pattern = ANY (ARRAY['everyday'::text, '5/2'::text, 'workout'::text, 'custom'::text])),
+  is_stack boolean DEFAULT false,
+  stack_id uuid,
+  order integer DEFAULT 0,
+  cost numeric CHECK (cost IS NULL OR cost >= 0::numeric),
+  quantity integer CHECK (quantity IS NULL OR quantity >= 0),
+  frequency integer DEFAULT 1 CHECK (frequency IS NULL OR frequency >= 0),
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT supplements_pkey PRIMARY KEY (id),
+  CONSTRAINT supplements_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT supplements_stack_id_fkey FOREIGN KEY (stack_id) REFERENCES public.supplements(id)
+);
+CREATE TABLE public.transaction_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  pretax_amount numeric NOT NULL,
+  quantity numeric DEFAULT 1,
+  unit_price numeric,
+  category_id uuid,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT transaction_items_pkey PRIMARY KEY (id),
+  CONSTRAINT transaction_items_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id),
+  CONSTRAINT transaction_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT transaction_items_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.budget_categories(id)
+);
+CREATE TABLE public.transaction_rules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  keyword text NOT NULL,
+  category text NOT NULL,
+  template text NOT NULL CHECK (template = ANY (ARRAY['market'::text, 'covenant'::text, 'chronicle'::text, 'treasury'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT transaction_rules_pkey PRIMARY KEY (id),
+  CONSTRAINT transaction_rules_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.transactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  bank_account_id uuid,
+  plaid_transaction_id text,
+  amount numeric NOT NULL,
+  date date NOT NULL,
+  timestamp timestamp with time zone,
+  merchant text,
+  description text,
+  category_id uuid,
+  auto_categorized boolean DEFAULT false,
+  is_recurring boolean DEFAULT false,
+  recurring_series_id uuid,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT transactions_bank_account_id_fkey FOREIGN KEY (bank_account_id) REFERENCES public.bank_accounts(id),
+  CONSTRAINT transactions_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.budget_categories(id)
+);
+CREATE TABLE public.user_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  name text NOT NULL,
+  slug text NOT NULL,
+  icon text NOT NULL DEFAULT '📁'::text,
+  color text NOT NULL,
+  template text NOT NULL CHECK (template = ANY (ARRAY['checklist'::text, 'spending'::text, 'events'::text, 'investments'::text, 'custom'::text])),
+  order integer NOT NULL DEFAULT 0,
+  is_active boolean DEFAULT true,
+  sub_tabs jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_categories_pkey PRIMARY KEY (id),
+  CONSTRAINT user_categories_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  supplement_auto_log_time time without time zone DEFAULT '00:00:00'::time without time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);

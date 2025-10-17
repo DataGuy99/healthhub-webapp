@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FinanceView } from './FinanceView';
 import { DailySupplementLogger } from './DailySupplementLogger';
@@ -19,9 +19,15 @@ import { GroceryBudgetTracker } from './GroceryBudgetTracker';
 import { AutoMPGTracker } from './AutoMPGTracker';
 import { AutoCostAnalysis } from './AutoCostAnalysis';
 import { MiscShopTracker } from './MiscShopTracker';
+import { HealthTimeline } from './HealthTimeline';
+import { HealthInsights } from './HealthInsights';
+import PurchaseQueue from './PurchaseQueue';
+import ROIAnalyzer from './ROIAnalyzer';
 import { clearAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 
-type CategoryTab = 'overview' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
+type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
+type HealthSubTab = 'timeline' | 'insights' | 'correlations' | 'purchase-queue' | 'roi-analysis';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
@@ -37,6 +43,7 @@ interface DashboardProps {
 
 const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: string }> = {
   'overview': { name: 'LifeDashHub', icon: '💰', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
+  'health': { name: 'Health', icon: '❤️', color: 'from-red-500/20 to-pink-500/20 border-red-500/30' },
   'grocery': { name: 'Grocery', icon: '🛒', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
   'supplements': { name: 'Supplements', icon: '💊', color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30' },
   'auto': { name: 'Auto', icon: '🚗', color: 'from-red-500/20 to-rose-500/20 border-red-500/30' },
@@ -47,6 +54,7 @@ const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: 
 };
 
 export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
+  const [healthSubTab, setHealthSubTab] = useState<HealthSubTab>('timeline');
   const [supplementsSubTab, setSupplementsSubTab] = useState<SupplementsSubTab>('daily');
   const [grocerySubTab, setGrocerySubTab] = useState<GrocerySubTab>('items');
   const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('mpg-tracker');
@@ -54,6 +62,14 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>('portfolio');
   const [miscShopSubTab, setMiscShopSubTab] = useState<MiscShopSubTab>('budget');
   const [homeGardenSubTab, setHomeGardenSubTab] = useState<HomeGardenSubTab>('projects');
+  const [userId, setUserId] = useState<string>('');
+
+  // Get user ID from Supabase auth
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, []);
 
   const handleLogout = async () => {
     await clearAuth();
@@ -62,6 +78,47 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
   // Render sub-tabs based on active category
   const renderSubTabs = () => {
+    if (activeTab === 'health') {
+      const tabs: { id: HealthSubTab; label: string; icon: string }[] = [
+        { id: 'timeline', label: 'Health Timeline', icon: '📊' },
+        { id: 'insights', label: 'AI Insights', icon: '🧠' },
+        { id: 'correlations', label: 'Correlations', icon: '🔬' },
+        { id: 'purchase-queue', label: 'Purchase Queue', icon: '🎯' },
+        { id: 'roi-analysis', label: 'ROI Analysis', icon: '💰' },
+      ];
+
+      return (
+        <div className="flex gap-3 min-w-max pb-2">
+          {tabs.map((tab) => {
+            const isActive = healthSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setHealthSubTab(tab.id)}
+                className={`group relative px-5 py-3 rounded-2xl font-semibold transition-all duration-300 whitespace-nowrap overflow-hidden ${
+                  isActive
+                    ? 'bg-gradient-to-r from-red-500/30 to-pink-500/30 backdrop-blur-xl border-2 border-red-400/50 text-white shadow-lg shadow-red-500/20 scale-105'
+                    : 'bg-white/5 backdrop-blur-sm border-2 border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 hover:scale-102'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-pink-600/20 to-rose-600/20 animate-gradient-shift" />
+                )}
+                <span className="relative flex items-center gap-2">
+                  <span className={`text-xl transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                    {tab.icon}
+                  </span>
+                  <span className="text-sm">{tab.label}</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%]"
+                     style={{ transition: 'transform 0.8s ease-in-out' }} />
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (activeTab === 'supplements') {
       const tabs: { id: SupplementsSubTab; label: string; icon: string }[] = [
         { id: 'daily', label: 'Daily Logger', icon: '📝' },
@@ -303,6 +360,25 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           }}
         />
       );
+    }
+
+    // Health category with sub-tabs
+    if (activeTab === 'health') {
+      if (healthSubTab === 'timeline') {
+        return <HealthTimeline />;
+      }
+      if (healthSubTab === 'insights') {
+        return <HealthInsights />;
+      }
+      if (healthSubTab === 'correlations') {
+        return <HealthInsights />;
+      }
+      if (healthSubTab === 'purchase-queue') {
+        return userId ? <PurchaseQueue userId={userId} availableBudget={1000} /> : null;
+      }
+      if (healthSubTab === 'roi-analysis') {
+        return userId ? <ROIAnalyzer userId={userId} /> : null;
+      }
     }
 
     // Supplements category with sub-tabs

@@ -6,7 +6,7 @@ import { MobileNav } from './components/MobileNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
 
-type CategoryTab = 'overview' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
+type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
 
 function App() {
   const [authenticated, setAuthenticated] = useState(false);

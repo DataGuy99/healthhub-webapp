@@ -33,3 +33,12 @@ logs
 
 # Testing
 coverage
+
+# Artifacts
+artifacts/apk/*.apk
+*.apk
+
+# Temporary/Archive files
+supabase/migrations/archive/
+docs/supabase/Supabase_Warnings.txt
+docs/supabase/Supabase_Suggestions.txt
