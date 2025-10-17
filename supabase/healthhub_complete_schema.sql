@@ -508,6 +508,7 @@ CREATE TABLE IF NOT EXISTS public.health_data_points (
 
 CREATE INDEX idx_health_data_user_type_time ON public.health_data_points(user_id, type, timestamp DESC);
 CREATE INDEX idx_health_data_high_accuracy ON public.health_data_points(user_id, accuracy DESC) WHERE accuracy >= 80;
+CREATE INDEX idx_health_data_recent ON public.health_data_points(user_id, timestamp DESC) WHERE timestamp > NOW() - INTERVAL '30 days';
 
 CREATE TABLE IF NOT EXISTS public.health_data_upload (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -558,6 +559,7 @@ CREATE TABLE IF NOT EXISTS public.health_supplement_correlations (
 CREATE INDEX idx_correlations_user_supplement ON public.health_supplement_correlations(user_id, supplement_id);
 CREATE INDEX idx_correlations_user_metric ON public.health_supplement_correlations(user_id, health_metric);
 CREATE INDEX idx_correlations_significant ON public.health_supplement_correlations(user_id, p_value, confidence_level DESC) WHERE p_value < 0.05;
+CREATE INDEX idx_correlations_high_confidence ON public.health_supplement_correlations(user_id, confidence_level DESC, updated_at DESC) WHERE confidence_level > 70;
 
 CREATE TABLE IF NOT EXISTS public.health_insights (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase, BankAccount, Transaction, CategoryBudget, TransactionRule } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
@@ -54,9 +54,9 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const user = await getCurrentUser();
       if (!user) return;
@@ -135,7 +135,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       setError(error instanceof Error ? error.message : 'Failed to load finance data');
       setLoading(false);
     }
-  };
+  }, []);
 
   const saveBudgets = async () => {
     try {

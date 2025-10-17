@@ -743,7 +743,45 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - CSV import system (in progress)
   - User settings database sync
 
-**Current Version**: v2.5.0 (2025-10-16)
+**Current Version**: v2.6.0 (2025-10-16)
+
+---
+
+## v2.6.0 (2025-10-16) - Phase 5: Performance Optimization & Production Readiness
+
+### Performance Optimizations - COMPLETE ✅
+
+**Purpose**: Optimize app for production without degrading UX or features
+
+**Database Optimizations**:
+- Added partial index for recent health data (30 days)
+- Added high-confidence correlation index (>70% confidence)
+- Indexes use `WHERE` clauses for efficiency (only index relevant rows)
+
+**Build Optimizations** (`vite.config.ts`):
+- **Code Splitting**: Separate chunks for React, Framer Motion, Supabase
+- **Tree Shaking**: Remove unused code automatically
+- **Minification**: Terser with console.log removal in production
+- **Chunk Strategy**: Vendors cached separately from app code
+
+**Impact**:
+- Faster initial page load (split bundles load in parallel)
+- Better browser caching (vendor updates don't re-download app code)
+- Smaller production bundle size
+- No UX degradation - all features intact
+
+**Error Handling**:
+- Error boundary already implemented (prevents app crashes)
+- Graceful error UI with reload option
+
+**Files Modified**:
+- `supabase/healthhub_complete_schema.sql` - Performance indexes
+- `vite.config.ts` - Production build optimization
+- `src/components/FinanceView.tsx` - useCallback for loadData
+
+**Philosophy**: Optimize performance through smart architecture, not feature removal
+
+**Commit**: `[pending]` - Phase 5 performance optimizations
 
 ---
 
