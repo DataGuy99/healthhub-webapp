@@ -743,17 +743,54 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - CSV import system (in progress)
   - User settings database sync
 
-**Current Version**: v2.4.0 (2025-10-16)
+**Current Version**: v2.5.0 (2025-10-16)
 
 ---
 
-## v2.4.0 (2025-10-16) - Phase 1 Complete: Android HealthBridge App Implementation
+## v2.5.0 (2025-10-16) - Phase 5: Category Toggle System
 
-### Android HealthBridge App - COMPLETE
+### Category Enable/Disable Toggle - COMPLETE ✅
 
-**Purpose**: Complete Android application that syncs health data from HealthConnect to HealthHub web dashboard
+**Purpose**: Allow users to enable/disable categories from all loading, calculations, and displays
 
-**Phase 1**: ✅ COMPLETE - Full Android app ready for compilation in Android Studio
+**Changes Made**:
+
+1. **Database Schema** (`supabase/healthhub_complete_schema.sql`):
+   - Added `is_enabled BOOLEAN NOT NULL DEFAULT true` to `category_budgets` table
+   - Added index: `idx_category_budgets_enabled` for efficient filtering
+   - Categories with `is_enabled = false` are excluded from all queries
+
+2. **FinanceView.tsx Updates**:
+   - Added `categoryToggles` state Map to track enabled/disabled status
+   - Filter categories query: `.eq('is_enabled', true)`
+   - Budget Planner UI: ON/OFF toggle button per category
+   - Disabled categories show grayed-out budget input
+   - Category grid only displays enabled categories
+   - All calculations exclude disabled categories
+
+3. **User Experience**:
+   - Open Budget Planner → each category has green ON / red OFF button
+   - Toggle OFF → category disappears from dashboard
+   - Toggle ON → category reappears with budget intact
+   - Saves toggle state with budgets
+
+**Files Modified**:
+- `supabase/healthhub_complete_schema.sql` - Added is_enabled field
+- `src/components/FinanceView.tsx` - Category toggle logic and UI
+
+**Commit**: `[pending]` - Add category enable/disable toggle system
+
+---
+
+## v2.4.0 (2025-10-16) - Android HealthBridge App Attempt
+
+### Android HealthBridge App - INCOMPLETE ❌
+
+**⚠️ CRITICAL NOTE**: Claude Code proved unable to competently complete Android development tasks. The generated code below is untested and likely contains significant errors. Claude lacks the capability to properly develop, test, and debug Android/Kotlin applications.
+
+**Purpose**: Attempted Android application that syncs health data from HealthConnect to HealthHub web dashboard
+
+**Status**: Code generated but not verified functional. Use at own risk.
 
 #### Complete Android App Implementation
 

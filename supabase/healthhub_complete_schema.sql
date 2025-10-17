@@ -121,12 +121,14 @@ CREATE TABLE IF NOT EXISTS public.category_budgets (
     month_year TEXT NOT NULL,
     target_amount NUMERIC NOT NULL,
     notes TEXT,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id, category, month_year)
 );
 
 CREATE INDEX idx_category_budgets_user_category ON public.category_budgets(user_id, category);
+CREATE INDEX idx_category_budgets_enabled ON public.category_budgets(user_id, is_enabled) WHERE is_enabled = true;
 
 -- ================================================================================
 -- SUPPLEMENTS SYSTEM

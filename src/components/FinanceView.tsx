@@ -45,6 +45,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [showBudgetPlanner, setShowBudgetPlanner] = useState(false);
   const [budgetInputs, setBudgetInputs] = useState<Map<string, string>>(new Map());
+  const [categoryToggles, setCategoryToggles] = useState<Map<string, boolean>>(new Map());
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [showMerchantRules, setShowMerchantRules] = useState(false);
@@ -106,23 +107,27 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       });
       setCategorySpending(spendingMap);
 
-      // Load budgets for current month
+      // Load budgets for current month (only enabled categories)
       const { data: budgetsData, error: budgetsError } = await supabase
         .from('category_budgets')
         .select('*')
         .eq('user_id', user.id)
-        .eq('month_year', currentMonth);
+        .eq('month_year', currentMonth)
+        .eq('is_enabled', true);
 
       if (budgetsError) throw budgetsError;
 
       const budgetsMap = new Map<string, number>();
       const inputsMap = new Map<string, string>();
+      const togglesMap = new Map<string, boolean>();
       budgetsData?.forEach((budget: CategoryBudget) => {
         budgetsMap.set(budget.category, budget.target_amount);
         inputsMap.set(budget.category, budget.target_amount.toString());
+        togglesMap.set(budget.category, budget.is_enabled ?? true);
       });
       setCategoryBudgets(budgetsMap);
       setBudgetInputs(inputsMap);
+      setCategoryToggles(togglesMap);
 
       setLoading(false);
     } catch (error) {
@@ -141,11 +146,13 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       const budgetsToSave = CATEGORIES.map((category) => {
         const value = budgetInputs.get(category.id);
         const amount = value ? parseFloat(value) : 0;
+        const isEnabled = categoryToggles.get(category.id) ?? true;
         return {
           user_id: user.id,
           category: category.id,
           month_year: currentMonth,
-          target_amount: amount
+          target_amount: amount,
+          is_enabled: isEnabled
         };
       }).filter((budget) => budget.target_amount > 0);
 
@@ -493,25 +500,47 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
         >
           <h3 className="text-lg font-semibold text-white mb-4">Set Monthly Budgets</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CATEGORIES.map((category) => (
-              <div key={category.id} className="flex items-center gap-3">
-                <span className="text-2xl">{category.icon}</span>
-                <div className="flex-1">
-                  <label className="text-sm text-white/60 mb-1 block">{category.name}</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={budgetInputs.get(category.id) || ''}
-                    onChange={(e) => {
-                      const newInputs = new Map(budgetInputs);
-                      newInputs.set(category.id, e.target.value);
-                      setBudgetInputs(newInputs);
-                    }}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                  />
+            {CATEGORIES.map((category) => {
+              const isEnabled = categoryToggles.get(category.id) ?? true;
+              return (
+                <div key={category.id} className="flex items-center gap-3">
+                  <span className="text-2xl">{category.icon}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm text-white/60">{category.name}</label>
+                      <button
+                        onClick={() => {
+                          const newToggles = new Map(categoryToggles);
+                          newToggles.set(category.id, !isEnabled);
+                          setCategoryToggles(newToggles);
+                        }}
+                        className={`px-2 py-1 text-xs rounded transition-all ${
+                          isEnabled
+                            ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                            : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                        }`}
+                      >
+                        {isEnabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={budgetInputs.get(category.id) || ''}
+                      onChange={(e) => {
+                        const newInputs = new Map(budgetInputs);
+                        newInputs.set(category.id, e.target.value);
+                        setBudgetInputs(newInputs);
+                      }}
+                      disabled={!isEnabled}
+                      className={`w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+                        !isEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="flex gap-2 mt-6">
             <button
@@ -532,7 +561,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
 
       {/* Category Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {CATEGORIES.map((category) => {
+        {CATEGORIES.filter(category => categoryBudgets.has(category.id)).map((category) => {
           const spent = categorySpending.get(category.id) || 0;
           const budget = categoryBudgets.get(category.id) || 0;
           const percentUsed = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
