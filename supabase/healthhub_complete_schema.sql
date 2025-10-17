@@ -518,7 +518,6 @@ CREATE TABLE IF NOT EXISTS public.health_data_points (
 
 CREATE INDEX idx_health_data_user_type_time ON public.health_data_points(user_id, type, timestamp DESC);
 CREATE INDEX idx_health_data_high_accuracy ON public.health_data_points(user_id, accuracy DESC) WHERE accuracy >= 80;
-CREATE INDEX idx_health_data_recent ON public.health_data_points(user_id, timestamp DESC) WHERE timestamp > NOW() - INTERVAL '30 days';
 
 CREATE TABLE IF NOT EXISTS public.health_data_upload (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
