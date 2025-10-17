@@ -1042,7 +1042,6 @@ SELECT
     COUNT(*) as sample_count,
     AVG(accuracy) as avg_accuracy
 FROM health_data_points
-WHERE timestamp > NOW() - INTERVAL '90 days'
 GROUP BY user_id, DATE(timestamp), type;
 
 CREATE INDEX idx_daily_health_user_date ON daily_health_summary(user_id, date DESC, type);
@@ -1059,7 +1058,6 @@ SELECT
     MAX(sl.date) as last_logged_date
 FROM supplement_logs sl
 JOIN supplements s ON s.id = sl.supplement_id
-WHERE sl.date > NOW() - INTERVAL '30 days'
 GROUP BY sl.user_id, sl.supplement_id, s.name;
 
 CREATE INDEX idx_adherence_user_supplement ON supplement_adherence_30d(user_id, supplement_id);
@@ -1081,7 +1079,6 @@ SELECT
         ELSE NULL
     END as cost_per_mile
 FROM gas_fillups
-WHERE date > NOW() - INTERVAL '12 months'
 GROUP BY user_id, DATE_TRUNC('month', date);
 
 CREATE INDEX idx_auto_cost_user_month ON auto_cost_summary(user_id, month DESC);
