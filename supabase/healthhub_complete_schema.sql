@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS public.category_items (
     subcategory TEXT,
     tags TEXT[],
     is_active BOOLEAN DEFAULT true,
-    supplement_id UUID REFERENCES public.supplements(id) ON DELETE SET NULL,
-    recurring_bill_id UUID REFERENCES public.recurring_bills(id) ON DELETE SET NULL,
+    supplement_id UUID,
+    recurring_bill_id UUID,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -940,6 +940,19 @@ ALTER TABLE public.purchase_decisions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own budget allocations" ON public.health_budget_allocations FOR ALL USING ((select auth.uid()) = user_id);
 CREATE POLICY "Users can manage their own purchase queue" ON public.purchase_queue FOR ALL USING ((select auth.uid()) = user_id);
 CREATE POLICY "Users can manage their own purchase decisions" ON public.purchase_decisions FOR ALL USING ((select auth.uid()) = user_id);
+
+-- ================================================================================
+-- CROSS-POLLINATION: ADD FOREIGN KEY CONSTRAINTS
+-- ================================================================================
+
+-- Add FKs to category_items (now that supplements and recurring_bills exist)
+ALTER TABLE public.category_items
+    ADD CONSTRAINT fk_category_items_supplement
+    FOREIGN KEY (supplement_id) REFERENCES public.supplements(id) ON DELETE SET NULL;
+
+ALTER TABLE public.category_items
+    ADD CONSTRAINT fk_category_items_recurring_bill
+    FOREIGN KEY (recurring_bill_id) REFERENCES public.recurring_bills(id) ON DELETE SET NULL;
 
 -- ================================================================================
 -- CROSS-POLLINATION: AUTO-INSIGHTS FROM CORRELATIONS
