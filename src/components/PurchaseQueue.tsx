@@ -17,20 +17,24 @@ interface PurchaseQueueProps {
   availableBudget?: number;
 }
 
+// Phase 6.2: Status filter type for unified queue/funnel/wishlist
+type StatusFilter = 'queue' | 'funnel' | 'purchased';
+
 export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQueueProps) {
   const [queueItems, setQueueItems] = useState<PurchaseQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<PurchaseQueueItem | null>(null);
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('queue'); // Phase 6.2: Status filtering
 
   useEffect(() => {
     loadQueue();
-  }, [userId]);
+  }, [userId, statusFilter]); // Phase 6.2: Reload when filter changes
 
   const loadQueue = async () => {
     setLoading(true);
-    const items = await getPurchaseQueue(userId);
+    const items = await getPurchaseQueue(userId, statusFilter); // Phase 6.2: Pass status filter
     setQueueItems(items);
     setLoading(false);
   };
@@ -92,7 +96,7 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
         <div>
           <h2 className="text-2xl font-bold text-white">Smart Purchase Queue</h2>
           <p className="text-gray-400 mt-1">
-            {queueItems.length} items prioritized by health ROI
+            {queueItems.length} items in {statusFilter === 'queue' ? 'queue' : statusFilter === 'funnel' ? 'funnel' : 'purchased history'}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -108,11 +112,47 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
           >
             🔄 Refresh
           </button>
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Available Budget</p>
-            <p className="text-2xl font-bold text-white">${availableBudget.toFixed(2)}</p>
-          </div>
+          {statusFilter !== 'purchased' && (
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Available Budget</p>
+              <p className="text-2xl font-bold text-white">${availableBudget.toFixed(2)}</p>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Phase 6.2: Status Filter Tabs */}
+      <div className="flex gap-2 border-b border-white/10 pb-2">
+        <button
+          onClick={() => setStatusFilter('queue')}
+          className={`px-4 py-2 rounded-t-lg transition-all ${
+            statusFilter === 'queue'
+              ? 'bg-blue-500/20 border-b-2 border-blue-500 text-blue-300 font-semibold'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          📋 Queue
+        </button>
+        <button
+          onClick={() => setStatusFilter('funnel')}
+          className={`px-4 py-2 rounded-t-lg transition-all ${
+            statusFilter === 'funnel'
+              ? 'bg-yellow-500/20 border-b-2 border-yellow-500 text-yellow-300 font-semibold'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          🎯 Funnel
+        </button>
+        <button
+          onClick={() => setStatusFilter('purchased')}
+          className={`px-4 py-2 rounded-t-lg transition-all ${
+            statusFilter === 'purchased'
+              ? 'bg-green-500/20 border-b-2 border-green-500 text-green-300 font-semibold'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          ✅ Purchased
+        </button>
       </div>
 
       {/* Queue Items */}
@@ -229,34 +269,61 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
                       )}
                     </div>
 
-                    {/* Right: Actions */}
+                    {/* Right: Actions / Purchase Info */}
                     <div className="ml-6 text-right space-y-3">
-                      <div>
-                        <p className="text-sm text-gray-400">Estimated Cost</p>
-                        <p className="text-2xl font-bold text-white">${item.estimated_cost.toFixed(2)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Optimal Date</p>
-                        <p className="text-sm font-semibold text-blue-400">
-                          {formatDate(item.optimal_purchase_date)}
-                        </p>
-                      </div>
-                      <div className="space-y-2 pt-2">
-                        <button
-                          onClick={() => setSelectedItem(item)}
-                          disabled={!canAfford || purchasingItemId === item.id}
-                          className={`w-full px-4 py-2 rounded-lg font-semibold transition-all ${
-                            canAfford
-                              ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {purchasingItemId === item.id ? 'Processing...' : 'Purchase'}
-                        </button>
-                        {!canAfford && (
-                          <p className="text-xs text-red-400">Insufficient budget</p>
-                        )}
-                      </div>
+                      {/* Phase 6.2: Show different info for purchased items */}
+                      {statusFilter === 'purchased' ? (
+                        <>
+                          <div>
+                            <p className="text-sm text-gray-400">Purchase Date</p>
+                            <p className="text-lg font-semibold text-green-400">
+                              {item.purchase_date ? new Date(item.purchase_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-400">Actual Cost</p>
+                            <p className="text-2xl font-bold text-white">${(item.actual_cost || item.estimated_cost).toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-400">Estimated Cost</p>
+                            <p className="text-sm text-gray-500">${item.estimated_cost.toFixed(2)}</p>
+                            {item.actual_cost && item.actual_cost !== item.estimated_cost && (
+                              <p className={`text-xs ${item.actual_cost < item.estimated_cost ? 'text-green-400' : 'text-red-400'}`}>
+                                {item.actual_cost < item.estimated_cost ? 'Saved' : 'Over'}: ${Math.abs(item.actual_cost - item.estimated_cost).toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-sm text-gray-400">Estimated Cost</p>
+                            <p className="text-2xl font-bold text-white">${item.estimated_cost.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-400">Optimal Date</p>
+                            <p className="text-sm font-semibold text-blue-400">
+                              {formatDate(item.optimal_purchase_date)}
+                            </p>
+                          </div>
+                          <div className="space-y-2 pt-2">
+                            <button
+                              onClick={() => setSelectedItem(item)}
+                              disabled={!canAfford || purchasingItemId === item.id}
+                              className={`w-full px-4 py-2 rounded-lg font-semibold transition-all ${
+                                canAfford
+                                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                              }`}
+                            >
+                              {purchasingItemId === item.id ? 'Processing...' : 'Purchase'}
+                            </button>
+                            {!canAfford && (
+                              <p className="text-xs text-red-400">Insufficient budget</p>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </motion.div>

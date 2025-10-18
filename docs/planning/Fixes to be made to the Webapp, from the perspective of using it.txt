@@ -1,0 +1,68 @@
+home and garden & investments 
+so far behind they may as well not be there at all.
+these are much less important so they can go for now
+
+Bills:
+
+Providers should popullate from bill name from when adding to the calender. 
+Payment tracker should register payments when they are marked off on the calender. 
+The info entry form shouldnt be only on the top, but should pop up when a data is selected
+There isnt a way for me to add my rent(every friday except the first fri of each month), id like that logic to be inserted and maybe more flexible too. 
+I should be able to add income as well, and id like to work out some subtab to have income logic where i can take the total expenses and enter a post-tax pay rate and figure the amount of hours i need to work to cover expenses. or to give a range, or to do something. might not need to be a whole subtab, but maybe just a section of one of the existing subtabs, i dont know, ill leave that decision up to you.
+
+Misc Shopping:
+
+Wishlist is essentially the same as the queue and funnel system. i want items added to wishlist to populate into the queue and funnel. 
+Misc Spending is by default wants and i dont like the distinction here nor in home and garden of needs and wants, thats a bad system. leave home and garden for now, but purchases needs an overhaul and the interface needs freshening. 
+For setting the budget, the window is ridiculously large, too big. 
+The amount from the purchases tab doesnt register into the budget tracker so even though i added a purchase, the budget hasnt updated.
+The overview is responding, but it doesnt seem like the "Remaining" card registered that i had a budget set for misc shopping in the first place, it should collect the sums of the remaining budets across all categories im assuming. 
+
+Auto:
+
+Transactions, the e.g. for adding a new transaction is Walmart groceries, this is in the auto tab for transactions. 
+There isnt a way to edit entered values for bills nor transactions. Thus requiring the item deleted and ammended, there should be the ability to edit. 
+Under Gas Prices, Log a new Event shouldnt need a description, it is an interface specifically meant for gas fillup, entries from this specific interface will always be gas/petrol. It shouldnt use the want/need classifiers either. Ideally the logging process wont be 5 different windows but rather a single log form for the price/gal of petrol, mileage, amount of petrol filled, Total cost of transaction in a single form. 
+There shouldnt be a costs subtab and a maintenance subtab. if there is an expense that is in auto that isnt petrol, then it is maintenance. i want to enter projected maintenance for every x miles from the last entered mileage, and to enter items as they come up and to tic koff projected maintenance(and enter the amount it cost)
+MPG tracker should be in the overview and not in auto tab. It should populate the entered and tracked data and present the logic on overview.
+Id like it if the overview card for mpg tracker is pressed(mostly gonna be used for mobile) to open a pop up to log a fillup with the relevant data(in case youve forgotten, thats, mileage, price/gal, cost of transaction, amount filled, though something there may be redundant and be able to be deduced, so use discrescion. Also not attached to the other, maybe mileage last, price of trans and amount together, becasue they are on the pump, then price/gal because that is below, then mileage cause id see that when i get back in the car.)
+Presently, putting entries into gas prices populates to the overview as well. though i believe this will be overhauled so that is of little concern.
+
+Supplements:
+
+Right now i only see the optoin to add items in my supplement library to the queue.
+The costs section for supplements registers a cost calculation for each supplement added to the library. however, the logic for the calculation doesnt match the logic used for purchase nor consideratoin. Much like food, it goes by cost per serving and serving per day. It says cost, quantity, per day now, but can be cost per container, number of servings/doses(so you can extraplate cost per serving), then servings/doses per day. The number of doses should be inferred from the library, so if an item is listed to be taken twice a day, it shouldnt be explicitly asked here. This is just to find out the cost per container and number of servings/doses per that price. Use the amount of times that item appears in the daily log to find the cost accrued and we can establish a trend like(e.g. workout supplements use 2/3/4 times a week, morning supplements usually taken, evening supplemetns most likely to be missed)
+I like the logic that presents the day/week/month breakdown on each item. 
+I thikn we can make nicer looking cards for the costs sections too, not loving this wide blank look.
+I should be able to toggle a supplement on and off easily to signify if im out too, to exclude it from circulation and calculatoin.
+Also, the frequency can vary beyond 1 or more daily, there are workout supplements i dont take days i dont workout. there are some supplements that need to be cycled (e.g. alternating days, or 2 days on 5 days off, etc). Or like with gaba where i take one at night, but i also take one later in the day, days that i work, so maybe a day of the week selector would be good for each, in additoin to a comprehensive frequency setter, not sure how to handle that one really. Maybe for complex supplements, i can mark a checkbox for complex and get a little calender and set the intervals and itll repeat thereafter, so if i pick (e.g. sun, mon, tue and fri for the first week of the selector month, then skip a week and on the third week select wed, thur, sat. then that would siginify first week of each month like this, second week nothing third week like this, fourth week nothing, or whatever alternative you have to that, im plastic, just a thought with an example.)
+I also want a button that reads "Link" which i add the link to the item associated in that card and if there is a link present when it is pressed, to have a prompt to edit link or visit link to either update or replace to contents or to open the link when purchasing a replacement.
+I would also like a way to signify when ive bought a given item in my library and to have the amount denoted to have been purchased against my budget for supplements.
+I would also be able to set and manage the budget for supplemetns. 
+if there is a system to auto log suppleemtns that are selected in the daily logger, then there is no need for a manual log selected button, but i would like functionality to toggle collapsing taken supplemetns or view all taken/untaken supplements that would be a selectable that would allow supplemetns that are ticked and taken to auto collapse to be out of view when the setting is enables and the items whether taken or not come back when the setting is disabled. 
+Supplemtns in library do show on the overview and we can make it x/x taken today, or even by time of day as a reminder, so im only shown on the overview card the number i need to take for that time of day.
+If there is logging, we should have a tracker of days and varying degrees of darkness depending on how many of the active supplemetns i mark as taken daily.
+
+
+Grocery:
+
+For protein calculator, there should be an option on items that are calculated to add them to common purchases which should have its name changed to favorite food. there needs to also be a selector for number of and item that has been calculated that doesnt get favorited, that you can enter and mark as bought(e.g. in the calculator i enter chicken is 4 servings of 16oz, each serving is 391g of protein, costs 22usd. the calculator gives me cost per gram(which should be same as target, set to cents not dollars), then to the side one option to save this info the favs, then a field for how many and to click buy, to mark as bought against my shopping budget.)
+Budget tracker doesnt need to be a subtab in grocery. it can be a line graph broken down by color for each category that visible and interactive from overview. 
+i think items is redundant, there should be the option to denote how many of a thing when using the protien calculator and mark as bought, denote how many of a favorited item and mark as bought, or have a quick buy tab, that is a persistant form that can take in quick details for a one-off purchase like name, price, macros per serving, servings per container, notes and it can be listed below for the last 5 or 10 added and they can have an option to be added the favorited too, and they should have an option of how mnay too. costs subtab is completely useless here though. 
+
+So im getting the vibe there should be a place to see just budget info for all the catgories and manage the budgets and entries can go there and be pulled for logic from there rather than have 5 different budget subtab per categories. 
+
+Health: 
+
+The Supplemetn i added to queue isnt in the queue so it doesnt appear to work. i dont like that queue and funnel take up 2 spots, consolidate them into 1. 
+Not sure what ROI and RIO Timeline are either, but they can be 1 tab too for now.
+Not sure what heatmap is meant to do, but ill leave alone until i can figure how to add health data. Same for insights. 
+
+Overview:
+
+The remaining card can show how much i have left for each budget cycle by category. I dont know why there is a one-off card that is for my avg heart rate, but there can be a large card with a variety of my health info, but i will have to load my health data manually for now, so the data will be stale, so maybe choose data that is indicative of overall health and not something that reflects specific instances of health like (e.g. avg sleep, avg resting hr, avg workout duration, etc)
+I like the pie chart, we will have to designate a color to each category and keep it consistant throughout for line graph budget managing, pie chart, etc. i also really like the line 7- day trend. gimme more really nice chart and graphs like that. i like the quick action, but it can get consolidated with a overview page main budget section. 
+
+
+
+

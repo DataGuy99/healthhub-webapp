@@ -27,6 +27,7 @@ export interface PurchaseRecommendation {
   optimal_purchase_date: string;
 }
 
+// Phase 6.2: Enhanced interface with unified queue/funnel/wishlist fields
 export interface PurchaseQueueItem {
   id?: string;
   user_id?: string;
@@ -48,7 +49,12 @@ export interface PurchaseQueueItem {
   alternative_suggestions?: any[];
   notes?: string;
 
-  status?: string;
+  // Phase 6.2: Unified status system for queue/funnel/wishlist
+  status?: 'queue' | 'funnel' | 'purchased' | 'removed';
+  purchase_date?: string; // Phase 6.2: Date when item was purchased
+  actual_cost?: number; // Phase 6.2: Actual cost paid (vs estimated)
+  source?: string; // Phase 6.2: Source category (misc_shopping, supplements, etc.)
+
   supplement_id?: string;
 
   created_at?: string;
@@ -149,14 +155,18 @@ export function calculateUrgencyScore(
 
 /**
  * Get user's purchase queue
+ * Phase 6.2: Support filtering by status (queue, funnel, purchased, removed)
  */
-export async function getPurchaseQueue(userId: string): Promise<PurchaseQueueItem[]> {
+export async function getPurchaseQueue(
+  userId: string,
+  status: 'queue' | 'funnel' | 'purchased' | 'removed' = 'queue'
+): Promise<PurchaseQueueItem[]> {
   try {
     const { data, error } = await supabase
       .from('purchase_queue')
       .select('*')
       .eq('user_id', userId)
-      .eq('status', 'queued')
+      .eq('status', status)
       .order('queue_position', { ascending: true });
 
     if (error) throw error;
@@ -170,10 +180,14 @@ export async function getPurchaseQueue(userId: string): Promise<PurchaseQueueIte
 
 /**
  * Add item to purchase queue
+ * Phase 6.2: Updated to use 'queue' status and source field
  */
 export async function addToPurchaseQueue(
   userId: string,
-  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at' | 'priority_score' | 'affordability_score' | 'cost_effectiveness_score'> & { urgency_score?: number }
+  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at' | 'priority_score' | 'affordability_score' | 'cost_effectiveness_score'> & {
+    urgency_score?: number;
+    source?: string; // Phase 6.2: Source category
+  }
 ): Promise<boolean> {
   try {
     // Get current max position
@@ -181,7 +195,7 @@ export async function addToPurchaseQueue(
       .from('purchase_queue')
       .select('queue_position')
       .eq('user_id', userId)
-      .eq('status', 'queued')
+      .eq('status', 'queue') // Phase 6.2: Changed from 'queued' to 'queue'
       .order('queue_position', { ascending: false })
       .limit(1);
 
@@ -211,7 +225,8 @@ export async function addToPurchaseQueue(
         priority_score,
         queue_position: nextPosition,
         reasoning: item.reasoning || 'User-added item',
-        status: 'queued'
+        status: 'queue', // Phase 6.2: Changed from 'queued' to 'queue'
+        source: item.source || 'misc_shopping' // Phase 6.2: Default source
       });
 
     if (error) throw error;
@@ -228,6 +243,7 @@ export async function addToPurchaseQueue(
 
 /**
  * Reorder queue based on priority scores
+ * Phase 6.2: Updated to use 'queue' status
  */
 export async function reorderQueue(userId: string): Promise<void> {
   try {
@@ -236,7 +252,7 @@ export async function reorderQueue(userId: string): Promise<void> {
       .from('purchase_queue')
       .select('*')
       .eq('user_id', userId)
-      .eq('status', 'queued')
+      .eq('status', 'queue') // Phase 6.2: Changed from 'queued' to 'queue'
       .order('priority_score', { ascending: false });
 
     if (error) throw error;
@@ -263,6 +279,7 @@ export async function reorderQueue(userId: string): Promise<void> {
 
 /**
  * Mark queue item as purchased
+ * Phase 6.2: Updated to set purchase_date and actual_cost on queue item
  */
 export async function markAsPurchased(
   userId: string,
@@ -279,10 +296,14 @@ export async function markAsPurchased(
 
     if (!queueItem) return false;
 
-    // Update queue item status
+    // Update queue item status with Phase 6.2 fields
     const { error: queueError } = await supabase
       .from('purchase_queue')
-      .update({ status: 'purchased' })
+      .update({
+        status: 'purchased',
+        purchase_date: new Date().toISOString().split('T')[0], // Phase 6.2: Record purchase date
+        actual_cost: actualCost // Phase 6.2: Record actual cost
+      })
       .eq('id', queueItemId);
 
     if (queueError) throw queueError;
