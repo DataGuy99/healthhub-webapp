@@ -714,59 +714,95 @@ ALTER TABLE public.correlation_jobs ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies (SELECT, INSERT, UPDATE, DELETE for user's own data)
 -- User Settings
+DROP POLICY IF EXISTS "Users can manage their own settings" ON public.user_settings;
 CREATE POLICY "Users can manage their own settings" ON public.user_settings FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own budget settings" ON public.budget_settings;
 CREATE POLICY "Users can manage their own budget settings" ON public.budget_settings FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own categories" ON public.user_categories;
 CREATE POLICY "Users can manage their own categories" ON public.user_categories FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Category System
+DROP POLICY IF EXISTS "Users can manage their own category items" ON public.category_items;
 CREATE POLICY "Users can manage their own category items" ON public.category_items FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own category logs" ON public.category_logs;
 CREATE POLICY "Users can manage their own category logs" ON public.category_logs FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own category budgets" ON public.category_budgets;
 CREATE POLICY "Users can manage their own category budgets" ON public.category_budgets FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Supplements
+DROP POLICY IF EXISTS "Users can manage their own supplement sections" ON public.supplement_sections;
 CREATE POLICY "Users can manage their own supplement sections" ON public.supplement_sections FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own supplements" ON public.supplements;
 CREATE POLICY "Users can manage their own supplements" ON public.supplements FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own supplement logs" ON public.supplement_logs;
 CREATE POLICY "Users can manage their own supplement logs" ON public.supplement_logs FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Finance
+DROP POLICY IF EXISTS "Users can manage their own bank accounts" ON public.bank_accounts;
 CREATE POLICY "Users can manage their own bank accounts" ON public.bank_accounts FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own plaid sync cursors" ON public.plaid_sync_cursors;
 CREATE POLICY "Users can manage their own plaid sync cursors" ON public.plaid_sync_cursors FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own budget categories" ON public.budget_categories;
 CREATE POLICY "Users can manage their own budget categories" ON public.budget_categories FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own transactions" ON public.transactions;
 CREATE POLICY "Users can manage their own transactions" ON public.transactions FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own transaction items" ON public.transaction_items;
 CREATE POLICY "Users can manage their own transaction items" ON public.transaction_items FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own transaction rules" ON public.transaction_rules;
 CREATE POLICY "Users can manage their own transaction rules" ON public.transaction_rules FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own budget goals" ON public.budget_goals;
 CREATE POLICY "Users can manage their own budget goals" ON public.budget_goals FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Bills
+DROP POLICY IF EXISTS "Users can manage their own recurring bills" ON public.recurring_bills;
 CREATE POLICY "Users can manage their own recurring bills" ON public.recurring_bills FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own bill payments" ON public.bill_payments;
 CREATE POLICY "Users can manage their own bill payments" ON public.bill_payments FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Grocery
+DROP POLICY IF EXISTS "Users can manage their own grocery budgets" ON public.grocery_budgets;
 CREATE POLICY "Users can manage their own grocery budgets" ON public.grocery_budgets FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own grocery purchases" ON public.grocery_purchases;
 CREATE POLICY "Users can manage their own grocery purchases" ON public.grocery_purchases FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own protein targets" ON public.protein_targets;
 CREATE POLICY "Users can manage their own protein targets" ON public.protein_targets FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own protein calculations" ON public.protein_calculations;
 CREATE POLICY "Users can manage their own protein calculations" ON public.protein_calculations FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Misc Shopping
+DROP POLICY IF EXISTS "Users can manage their own misc shop budgets" ON public.misc_shop_budgets;
 CREATE POLICY "Users can manage their own misc shop budgets" ON public.misc_shop_budgets FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own misc shop purchases" ON public.misc_shop_purchases;
 CREATE POLICY "Users can manage their own misc shop purchases" ON public.misc_shop_purchases FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Auto
+DROP POLICY IF EXISTS "Users can manage their own gas fillups" ON public.gas_fillups;
 CREATE POLICY "Users can manage their own gas fillups" ON public.gas_fillups FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own maintenance items" ON public.maintenance_items;
 CREATE POLICY "Users can manage their own maintenance items" ON public.maintenance_items FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own auto cost analysis" ON public.auto_cost_analysis;
 CREATE POLICY "Users can manage their own auto cost analysis" ON public.auto_cost_analysis FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Health (Note: health_exports uses TEXT user_id, not UUID)
+DROP POLICY IF EXISTS "Users can view their own health exports" ON public.health_exports;
 CREATE POLICY "Users can view their own health exports" ON public.health_exports FOR SELECT USING (user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "Users can insert their own health exports" ON public.health_exports;
 CREATE POLICY "Users can insert their own health exports" ON public.health_exports FOR INSERT WITH CHECK (user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "Users can manage their own health data points" ON public.health_data_points;
 CREATE POLICY "Users can manage their own health data points" ON public.health_data_points FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own health data uploads" ON public.health_data_upload;
 CREATE POLICY "Users can manage their own health data uploads" ON public.health_data_upload FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own health sync status" ON public.health_sync_status;
 CREATE POLICY "Users can manage their own health sync status" ON public.health_sync_status FOR ALL USING ((select auth.uid()) = user_id);
 
 -- Health Correlations & Insights
+DROP POLICY IF EXISTS "Users can manage their own correlations" ON public.health_supplement_correlations;
 CREATE POLICY "Users can manage their own correlations" ON public.health_supplement_correlations FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own insights" ON public.health_insights;
 CREATE POLICY "Users can manage their own insights" ON public.health_insights FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own ROI analysis" ON public.supplement_roi_analysis;
 CREATE POLICY "Users can manage their own ROI analysis" ON public.supplement_roi_analysis FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own correlation jobs" ON public.correlation_jobs;
 CREATE POLICY "Users can manage their own correlation jobs" ON public.correlation_jobs FOR ALL USING ((select auth.uid()) = user_id);
 
 -- ================================================================================
@@ -957,8 +993,11 @@ ALTER TABLE public.health_budget_allocations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_decisions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own budget allocations" ON public.health_budget_allocations;
 CREATE POLICY "Users can manage their own budget allocations" ON public.health_budget_allocations FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own purchase queue" ON public.purchase_queue;
 CREATE POLICY "Users can manage their own purchase queue" ON public.purchase_queue FOR ALL USING ((select auth.uid()) = user_id);
+DROP POLICY IF EXISTS "Users can manage their own purchase decisions" ON public.purchase_decisions;
 CREATE POLICY "Users can manage their own purchase decisions" ON public.purchase_decisions FOR ALL USING ((select auth.uid()) = user_id);
 
 -- ================================================================================
