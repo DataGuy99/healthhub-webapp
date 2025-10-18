@@ -48,20 +48,36 @@ export function useOverviewData() {
       const startDate = `${currentMonth}-01`;
       const endDate = `${currentMonth}-31`;
 
-      // Fetch category spending
+      // Fetch ALL category spending (including one-off purchases)
       const { data: logsData } = await supabase
         .from('category_logs')
-        .select('*, category_items!inner(category)')
+        .select('*, category_items(category)')  // LEFT JOIN, not INNER
         .eq('user_id', user.id)
         .gte('date', startDate)
         .lte('date', endDate);
 
       const spendingMap = new Map<string, number>();
       logsData?.forEach((log: any) => {
-        const category = log.category_items?.category;
+        let category: string | null = null;
+
+        // First try to get category from category_items
+        if (log.category_items?.category) {
+          category = log.category_items.category;
+        }
+        // Otherwise, infer category from notes for one-off purchases
+        else if (log.notes) {
+          if (log.notes.startsWith('Grocery:')) {
+            category = 'groceries';
+          } else if (log.notes.startsWith('Supplement:')) {
+            category = 'supplements';
+          } else {
+            category = 'misc';  // Default for misc shop purchases
+          }
+        }
+
         if (category) {
           const current = spendingMap.get(category) || 0;
-          spendingMap.set(category, current + (log.actual_amount || 0));
+          spendingMap.set(category, current + Number(log.actual_amount || 0));
         }
       });
 
