@@ -49,52 +49,257 @@ export function HealthConnectImport() {
       // Determine if it's a zip or db file
       const isZip = file.name.endsWith('.zip');
 
-      // Send to Netlify function for processing
-      const response = await fetch('/.netlify/functions/health-connect-import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileData: base64,
-          isZip: isZip,
-          userId: user.id
-        })
-      });
+      let result;
+      let usedFallback = false;
 
-      setProgress(50);
+      try {
+        // STEP 1: Try Netlify function first (faster, server-side)
+        console.log('Attempting server-side import via Netlify...');
 
-      if (!response.ok) {
-        // Try to parse JSON error, but handle HTML error pages
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Import failed');
-        } else {
-          const errorText = await response.text();
-          throw new Error(`Server error (${response.status}): Function not found or not deployed`);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('No active session');
         }
+
+        const response = await fetch('/.netlify/functions/health-connect-import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            fileData: base64,
+            isZip: isZip,
+            userId: user.id
+          }),
+          signal: AbortSignal.timeout(30000) // 30 second timeout
+        });
+
+        setProgress(50);
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Server-side import failed');
+          } else {
+            throw new Error(`Server error (${response.status})`);
+          }
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response from server');
+        }
+
+        result = await response.json();
+        console.log('✓ Server-side import succeeded');
+
+      } catch (serverError) {
+        // STEP 2: Fallback to client-side parsing
+        console.warn('Server-side import failed, falling back to client-side:', serverError);
+        usedFallback = true;
+        setProgress(40);
+
+        // Import sql.js dynamically (only when needed)
+        const initSqlJs = (await import('sql.js')).default;
+        const SQL = await initSqlJs({
+          locateFile: (file) => `https://sql.js.org/dist/${file}`
+        });
+
+        setProgress(50);
+
+        let dbBuffer: Uint8Array;
+
+        if (isZip) {
+          // Extract .db from zip
+          const AdmZip = (await import('adm-zip')).default;
+          const zip = new AdmZip(Buffer.from(arrayBuffer));
+          const zipEntries = zip.getEntries();
+          const dbEntry = zipEntries.find(entry => entry.entryName.endsWith('.db'));
+
+          if (!dbEntry) {
+            throw new Error('No .db file found in zip');
+          }
+
+          dbBuffer = new Uint8Array(dbEntry.getData());
+        } else {
+          dbBuffer = new Uint8Array(arrayBuffer);
+        }
+
+        setProgress(60);
+
+        // Parse database client-side
+        const db = new SQL.Database(dbBuffer);
+        const dataPoints: any[] = [];
+        const breakdown = {
+          heart_rate: 0,
+          blood_oxygen: 0,
+          respiratory_rate: 0,
+          steps: 0,
+          distance: 0,
+          calories: 0,
+          sleep: 0,
+          nutrition: 0,
+          exercise: 0
+        };
+
+        // Extract data from all tables
+        const extractors = [
+          {
+            query: 'SELECT epoch_millis, beats_per_minute FROM heart_rate_record_series_table ORDER BY epoch_millis',
+            type: 'heart_rate',
+            map: ([epochMillis, bpm]: any[]) => ({
+              timestamp: new Date(Number(epochMillis)).toISOString(),
+              type: 'heart_rate',
+              value: Number(bpm),
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, percentage FROM oxygen_saturation_record_table ORDER BY start_time',
+            type: 'blood_oxygen',
+            map: ([startTime, percentage]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'blood_oxygen',
+              value: Number(percentage),
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, rate FROM respiratory_rate_record_table ORDER BY start_time',
+            type: 'respiratory_rate',
+            map: ([startTime, rate]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'respiratory_rate',
+              value: Number(rate),
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, count FROM steps_record_table ORDER BY start_time',
+            type: 'steps',
+            map: ([startTime, count]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'steps',
+              value: Number(count),
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, distance_meters FROM distance_record_table ORDER BY start_time',
+            type: 'distance',
+            map: ([startTime, meters]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'distance',
+              value: Number(meters) / 1000,
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, energy_kcal FROM total_calories_burned_record_table ORDER BY start_time',
+            type: 'calories',
+            map: ([startTime, kcal]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'calories_burned',
+              value: Number(kcal),
+              source: 'health_connect'
+            })
+          },
+          {
+            query: 'SELECT start_time, end_time FROM sleep_session_record_table ORDER BY start_time',
+            type: 'sleep',
+            map: ([startTime, endTime]: any[]) => ({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'sleep_duration',
+              value: (Number(endTime) - Number(startTime)) / (1000 * 60 * 60),
+              source: 'health_connect',
+              metadata: { end_time: new Date(Number(endTime)).toISOString() }
+            })
+          }
+        ];
+
+        setProgress(70);
+
+        for (const extractor of extractors) {
+          try {
+            const queryResult = db.exec(extractor.query);
+            if (queryResult[0]) {
+              queryResult[0].values.forEach((row: any) => {
+                dataPoints.push(extractor.map(row));
+                breakdown[extractor.type as keyof typeof breakdown]++;
+              });
+            }
+          } catch (e) {
+            console.warn(`Failed to extract ${extractor.type}:`, e);
+          }
+        }
+
+        db.close();
+        setProgress(80);
+
+        // Insert to Supabase in batches
+        const BATCH_SIZE = 1000;
+        let insertedCount = 0;
+
+        for (let i = 0; i < dataPoints.length; i += BATCH_SIZE) {
+          const batch = dataPoints.slice(i, i + BATCH_SIZE).map(dp => ({
+            user_id: user.id,
+            timestamp: dp.timestamp,
+            type: dp.type,
+            value: dp.value,
+            source: dp.source,
+            accuracy: 95,
+            metadata: dp.metadata || {}
+          }));
+
+          const { error } = await supabase
+            .from('health_data_points')
+            .insert(batch);
+
+          if (error) {
+            console.error('Batch insert error:', error);
+            throw new Error(`Failed to insert batch: ${error.message}`);
+          }
+
+          insertedCount += batch.length;
+          setProgress(80 + (20 * (i / dataPoints.length)));
+        }
+
+        // Update sync status
+        await supabase
+          .from('health_sync_status')
+          .upsert({
+            user_id: user.id,
+            last_sync_timestamp: new Date().toISOString(),
+            data_points_count: insertedCount
+          }, { onConflict: 'user_id' });
+
+        result = {
+          success: true,
+          imported: insertedCount,
+          breakdown
+        };
+
+        console.log('✓ Client-side fallback import succeeded');
       }
 
-      // Parse response with error handling
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Invalid response from server - expected JSON');
-      }
-
-      const result = await response.json();
       setProgress(100);
 
-      // Display real import stats from backend
-      setImportStats({
-        heartRate: result.breakdown?.heart_rate || 0,
-        bloodOxygen: result.breakdown?.blood_oxygen || 0,
-        respiratoryRate: result.breakdown?.respiratory_rate || 0,
-        steps: result.breakdown?.steps || 0,
-        distance: result.breakdown?.distance || 0,
-        calories: result.breakdown?.calories || 0,
-        sleep: result.breakdown?.sleep || 0,
-        nutrition: result.breakdown?.nutrition || 0,
-        exercise: result.breakdown?.exercise || 0
-      });
+      // Display import stats (from either server or client-side import)
+      if (result && result.breakdown) {
+        setImportStats({
+          heartRate: result.breakdown.heart_rate || 0,
+          bloodOxygen: result.breakdown.blood_oxygen || 0,
+          respiratoryRate: result.breakdown.respiratory_rate || 0,
+          steps: result.breakdown.steps || 0,
+          distance: result.breakdown.distance || 0,
+          calories: result.breakdown.calories || 0,
+          sleep: result.breakdown.sleep || 0,
+          nutrition: result.breakdown.nutrition || 0,
+          exercise: result.breakdown.exercise || 0
+        });
+      }
 
       setTimeout(() => {
         setIsProcessing(false);
