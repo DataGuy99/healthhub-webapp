@@ -632,24 +632,43 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply updated_at trigger to all tables with updated_at column
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON public.user_settings;
 CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON public.user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_budget_settings_updated_at ON public.budget_settings;
 CREATE TRIGGER update_budget_settings_updated_at BEFORE UPDATE ON public.budget_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_user_categories_updated_at ON public.user_categories;
 CREATE TRIGGER update_user_categories_updated_at BEFORE UPDATE ON public.user_categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_category_items_updated_at ON public.category_items;
 CREATE TRIGGER update_category_items_updated_at BEFORE UPDATE ON public.category_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_category_budgets_updated_at ON public.category_budgets;
 CREATE TRIGGER update_category_budgets_updated_at BEFORE UPDATE ON public.category_budgets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_bank_accounts_updated_at ON public.bank_accounts;
 CREATE TRIGGER update_bank_accounts_updated_at BEFORE UPDATE ON public.bank_accounts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_budget_categories_updated_at ON public.budget_categories;
 CREATE TRIGGER update_budget_categories_updated_at BEFORE UPDATE ON public.budget_categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_transactions_updated_at ON public.transactions;
 CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_transaction_items_updated_at ON public.transaction_items;
 CREATE TRIGGER update_transaction_items_updated_at BEFORE UPDATE ON public.transaction_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_transaction_rules_updated_at ON public.transaction_rules;
 CREATE TRIGGER update_transaction_rules_updated_at BEFORE UPDATE ON public.transaction_rules FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_budget_goals_updated_at ON public.budget_goals;
 CREATE TRIGGER update_budget_goals_updated_at BEFORE UPDATE ON public.budget_goals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_recurring_bills_updated_at ON public.recurring_bills;
 CREATE TRIGGER update_recurring_bills_updated_at BEFORE UPDATE ON public.recurring_bills FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_bill_payments_updated_at ON public.bill_payments;
 CREATE TRIGGER update_bill_payments_updated_at BEFORE UPDATE ON public.bill_payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_grocery_budgets_updated_at ON public.grocery_budgets;
 CREATE TRIGGER update_grocery_budgets_updated_at BEFORE UPDATE ON public.grocery_budgets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_protein_targets_updated_at ON public.protein_targets;
 CREATE TRIGGER update_protein_targets_updated_at BEFORE UPDATE ON public.protein_targets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_misc_shop_budgets_updated_at ON public.misc_shop_budgets;
 CREATE TRIGGER update_misc_shop_budgets_updated_at BEFORE UPDATE ON public.misc_shop_budgets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_auto_cost_analysis_updated_at ON public.auto_cost_analysis;
 CREATE TRIGGER update_auto_cost_analysis_updated_at BEFORE UPDATE ON public.auto_cost_analysis FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_health_sync_status_updated_at ON public.health_sync_status;
 CREATE TRIGGER update_health_sync_status_updated_at BEFORE UPDATE ON public.health_sync_status FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_correlations_updated_at ON public.health_supplement_correlations;
 CREATE TRIGGER update_correlations_updated_at BEFORE UPDATE ON public.health_supplement_correlations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ================================================================================
@@ -925,7 +944,9 @@ $$ LANGUAGE plpgsql;
 -- PHASE 3 TRIGGERS
 -- ================================================================================
 
+DROP TRIGGER IF EXISTS update_budget_allocations_updated_at ON public.health_budget_allocations;
 CREATE TRIGGER update_budget_allocations_updated_at BEFORE UPDATE ON public.health_budget_allocations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_purchase_queue_updated_at ON public.purchase_queue;
 CREATE TRIGGER update_purchase_queue_updated_at BEFORE UPDATE ON public.purchase_queue FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ================================================================================
