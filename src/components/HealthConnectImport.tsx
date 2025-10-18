@@ -57,8 +57,21 @@ export function HealthConnectImport() {
       setProgress(50);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Import failed');
+        // Try to parse JSON error, but handle HTML error pages
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Import failed');
+        } else {
+          const errorText = await response.text();
+          throw new Error(`Server error (${response.status}): Function not found or not deployed`);
+        }
+      }
+
+      // Parse response with error handling
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response from server - expected JSON');
       }
 
       const result = await response.json();
