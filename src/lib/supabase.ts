@@ -196,6 +196,7 @@ export interface CategoryBudget {
   category: string;
   month_year: string; // Format: 'YYYY-MM'
   target_amount: number;
+  is_enabled?: boolean;
   notes?: string;
   created_at?: string;
   updated_at?: string;

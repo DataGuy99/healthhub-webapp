@@ -52,10 +52,6 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   const [showBudgetSettings, setShowBudgetSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   const loadData = useCallback(async () => {
     try {
       const user = await getCurrentUser();
@@ -136,6 +132,10 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const saveBudgets = async () => {
     try {
