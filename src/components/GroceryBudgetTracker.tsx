@@ -73,19 +73,35 @@ export function GroceryBudgetTracker() {
       const user = await getCurrentUser();
       if (!user) return;
 
-      // Load budget settings
+      // Load budget settings from category_budgets
+      const viewPeriod = calculateViewPeriod();
+      const monthYear = viewPeriod.startDate.toISOString().slice(0, 7);
+
       const { data: budgetData, error: budgetError } = await supabase
-        .from('grocery_budgets')
+        .from('category_budgets')
         .select('*')
         .eq('user_id', user.id)
+        .eq('category', 'groceries')
+        .eq('month_year', monthYear)
         .single();
 
       if (budgetError && budgetError.code !== 'PGRST116') throw budgetError;
-      setBudget(budgetData);
 
-      if (budgetData) {
-        setBudgetAmount(budgetData.weekly_budget.toString());
-        setDailyProteinGoal((budgetData.daily_protein_goal || 150).toString());
+      // Normalize to old format (weekly_budget was monthly/4.33)
+      const normalizedBudget = budgetData ? {
+        id: budgetData.id,
+        user_id: budgetData.user_id,
+        weekly_budget: Number(budgetData.target_amount) / 4.33,  // Convert monthly back to weekly
+        daily_protein_goal: 150,  // Default, can be stored in notes if needed
+        created_at: budgetData.created_at,
+        updated_at: budgetData.updated_at,
+      } : null;
+
+      setBudget(normalizedBudget);
+
+      if (normalizedBudget) {
+        setBudgetAmount(normalizedBudget.weekly_budget.toFixed(2));
+        setDailyProteinGoal('150');  // Default
       }
 
       // Load protein calculations from protein calculator
@@ -99,24 +115,57 @@ export function GroceryBudgetTracker() {
       if (proteinError) throw proteinError;
       setProteinCalculations(proteinData || []);
 
-      // Calculate viewing period based on offset
-      const viewPeriod = calculateViewPeriod();
+      // Load purchases for viewing period from category_logs
       const periodStart = viewPeriod.startDate.toISOString().split('T')[0];
       const periodEnd = new Date(viewPeriod.endDate);
       periodEnd.setDate(periodEnd.getDate() - 1); // End date is exclusive, so subtract 1 day
       const periodEndStr = periodEnd.toISOString().split('T')[0];
 
-      // Load purchases for viewing period
-      const { data: purchasesData, error: purchasesError } = await supabase
-        .from('grocery_purchases')
+      const { data: logsData, error: purchasesError } = await supabase
+        .from('category_logs')
         .select('*')
         .eq('user_id', user.id)
         .gte('date', periodStart)
         .lte('date', periodEndStr)
+        .eq('is_planned', false)
         .order('date', { ascending: false });
 
       if (purchasesError) throw purchasesError;
-      setPurchases(purchasesData || []);
+
+      // Filter and parse grocery purchases
+      const groceryPurchases = (logsData || [])
+        .filter(log => log.notes?.startsWith('Grocery:'))
+        .map(log => {
+          // Extract store and protein from notes
+          // Format: "Grocery: StoreName, XXg protein. Additional notes"
+          const storeMatch = log.notes?.match(/Grocery:\s*([^,]+)/);
+          const store = storeMatch ? storeMatch[1].trim() : 'Unknown';
+
+          const proteinMatch = log.notes?.match(/(\d+\.?\d*)g protein/);
+          const proteinGrams = proteinMatch ? parseFloat(proteinMatch[1]) : null;
+
+          return {
+            id: log.id,
+            user_id: log.user_id,
+            store,
+            amount: Number(log.actual_amount || 0),
+            date: log.date,
+            notes: log.notes || null,
+            protein_grams: proteinGrams,
+            days_covered: null,
+            is_protein_source: !!proteinGrams,
+            cost_per_gram: proteinGrams ? Number(log.actual_amount) / proteinGrams : null,
+            created_at: log.timestamp,
+            quantity: 1,
+            favorite_food_id: null,
+            carbs_grams: null,
+            fat_grams: null,
+            calories: null,
+            servings: null,
+          };
+        });
+
+      setPurchases(groceryPurchases);
 
       setLoading(false);
     } catch (error) {
@@ -155,31 +204,26 @@ export function GroceryBudgetTracker() {
         return;
       }
 
-      if (budget) {
-        // Update existing
-        const { error } = await supabase
-          .from('grocery_budgets')
-          .update({
-            weekly_budget: amount,
-            daily_protein_goal: proteinGoal,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', budget.id);
+      const monthlyAmount = amount * 4.33;  // Convert weekly to monthly
+      const viewPeriod = calculateViewPeriod();
+      const monthYear = viewPeriod.startDate.toISOString().slice(0, 7);
 
-        if (error) throw error;
-      } else {
-        // Create new
-        const { error } = await supabase
-          .from('grocery_budgets')
-          .insert({
-            user_id: user.id,
-            weekly_budget: amount,
-            daily_protein_goal: proteinGoal,
-            created_at: new Date().toISOString(),
-          });
+      // Upsert to category_budgets
+      const { error } = await supabase
+        .from('category_budgets')
+        .upsert({
+          user_id: user.id,
+          category: 'groceries',
+          month_year: monthYear,
+          target_amount: monthlyAmount,
+          notes: `Weekly: $${amount.toFixed(2)}, Protein goal: ${proteinGoal}g/day`,
+          is_enabled: true,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,category,month_year'
+        });
 
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       setShowBudgetSettings(false);
       loadData();
@@ -211,18 +255,26 @@ export function GroceryBudgetTracker() {
         }
       }
 
+      // Format notes: "Grocery: StoreName, XXg protein. Additional notes"
+      const proteinGrams = formIsProteinSource ? parseFloat(formProteinGrams) : null;
+      let combinedNotes = `Grocery: ${formStore.trim()}`;
+      if (proteinGrams) {
+        combinedNotes += `, ${proteinGrams}g protein`;
+      }
+      if (formNotes.trim()) {
+        combinedNotes += `. ${formNotes.trim()}`;
+      }
+
       const { error } = await supabase
-        .from('grocery_purchases')
+        .from('category_logs')
         .insert({
           user_id: user.id,
-          store: formStore.trim(),
-          amount: parseFloat(formAmount),
+          category_item_id: null,  // One-off purchase
           date: formDate,
-          notes: formNotes.trim() || null,
-          is_protein_source: formIsProteinSource,
-          protein_grams: formIsProteinSource ? parseFloat(formProteinGrams) : null,
-          days_covered: formIsProteinSource ? parseFloat(formDaysCovered) : null,
-          created_at: new Date().toISOString(),
+          actual_amount: parseFloat(formAmount),
+          notes: combinedNotes,
+          is_planned: false,
+          timestamp: new Date().toISOString(),
         });
 
       if (error) throw error;
@@ -248,7 +300,7 @@ export function GroceryBudgetTracker() {
 
     try {
       const { error } = await supabase
-        .from('grocery_purchases')
+        .from('category_logs')
         .delete()
         .eq('id', id);
 

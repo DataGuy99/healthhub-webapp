@@ -73,11 +73,16 @@ export const MiscShopTracker: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load budget settings
-      let { data: budgetData, error: budgetError } = await supabase
-        .from('misc_shop_budgets')
+      // Load budget settings from category_budgets
+      const viewPeriod = calculateViewPeriod();
+      const monthYear = viewPeriod.startDate.toISOString().slice(0, 7); // "YYYY-MM"
+
+      let { data: budgetData, error: budgetError} = await supabase
+        .from('category_budgets')
         .select('*')
         .eq('user_id', user.id)
+        .eq('category', 'misc')
+        .eq('month_year', monthYear)
         .single();
 
       if (budgetError && budgetError.code !== 'PGRST116') {
@@ -87,11 +92,13 @@ export const MiscShopTracker: React.FC = () => {
       // Create default budget if doesn't exist
       if (!budgetData) {
         const { data: newBudget, error: createError } = await supabase
-          .from('misc_shop_budgets')
+          .from('category_budgets')
           .insert({
             user_id: user.id,
-            monthly_budget: 30.00,
-            rollover_savings: 0.00
+            category: 'misc',
+            month_year: monthYear,
+            target_amount: 30.00,
+            is_enabled: true
           })
           .select()
           .single();
@@ -103,12 +110,15 @@ export const MiscShopTracker: React.FC = () => {
         }
       }
 
-      // Normalize numeric fields from Supabase
+      // Normalize to old format for compatibility
       const normalizedBudget = budgetData
         ? {
-            ...budgetData,
-            monthly_budget: Number(budgetData.monthly_budget),
-            rollover_savings: Number(budgetData.rollover_savings),
+            id: budgetData.id,
+            user_id: budgetData.user_id,
+            monthly_budget: Number(budgetData.target_amount),
+            rollover_savings: 0.00,  // deprecated, set to 0
+            created_at: budgetData.created_at,
+            updated_at: budgetData.updated_at || '',
           }
         : null;
 
@@ -117,31 +127,47 @@ export const MiscShopTracker: React.FC = () => {
         normalizedBudget ? normalizedBudget.monthly_budget.toFixed(2) : '30.00'
       );
 
-      // Calculate viewing period based on offset
-      const viewPeriod = calculateViewPeriod();
+      // Load purchases for viewing period from category_logs
       const periodStart = viewPeriod.startDate.toISOString().split('T')[0];
       const periodEnd = new Date(viewPeriod.endDate);
       periodEnd.setDate(periodEnd.getDate() - 1); // End date is exclusive
       const periodEndStr = periodEnd.toISOString().split('T')[0];
 
-      // Load purchases for viewing period
-      const { data: purchasesData, error: purchasesError } = await supabase
-        .from('misc_shop_purchases')
+      const { data: logsData, error: purchasesError } = await supabase
+        .from('category_logs')
         .select('*')
         .eq('user_id', user.id)
         .gte('date', periodStart)
         .lte('date', periodEndStr)
+        .eq('is_planned', false)  // Only actual purchases
         .order('date', { ascending: false });
 
       if (purchasesError) {
         console.error('Error loading purchases:', purchasesError);
       } else {
-        setPurchases(
-          (purchasesData || []).map((purchase) => ({
-            ...purchase,
-            amount: Number(purchase.amount),
-          }))
-        );
+        // Filter for misc purchases and parse from notes
+        const miscPurchases = (logsData || [])
+          .filter(log => !log.notes?.startsWith('Grocery:') && !log.notes?.startsWith('Supplement:'))
+          .map((log) => {
+            // Extract item name from notes (format: "Item name. Additional notes")
+            const notesMatch = log.notes?.match(/^([^.]+)/);
+            const itemName = notesMatch ? notesMatch[1].trim() : 'Misc purchase';
+            const additionalNotes = log.notes?.includes('.') ? log.notes.split('.').slice(1).join('.').trim() : '';
+
+            return {
+              id: log.id,
+              user_id: log.user_id,
+              item_name: itemName,
+              amount: Number(log.actual_amount || 0),
+              date: log.date,
+              category: 'misc',
+              notes: additionalNotes || null,
+              is_wishlist: false,  // wishlist not supported in new system yet
+              created_at: log.timestamp,
+            };
+          });
+
+        setPurchases(miscPurchases);
       }
 
     } catch (error) {
@@ -156,9 +182,9 @@ export const MiscShopTracker: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('misc_shop_budgets')
+        .from('category_budgets')
         .update({
-          monthly_budget: parseFloat(editMonthlyBudget),
+          target_amount: parseFloat(editMonthlyBudget),
           updated_at: new Date().toISOString()
         })
         .eq('id', budget.id);
@@ -188,24 +214,29 @@ export const MiscShopTracker: React.FC = () => {
 
       const amount = parseFloat(newAmount);
 
-      // Phase 6.2: Removed is_big_purchase, added category and wishlist
+      // Format notes: "Item name. Additional notes"
+      const combinedNotes = newNotes.trim()
+        ? `${newItemName.trim()}. ${newNotes.trim()}`
+        : newItemName.trim();
+
+      // Insert to category_logs
       const { error } = await supabase
-        .from('misc_shop_purchases')
+        .from('category_logs')
         .insert({
           user_id: user.id,
-          item_name: newItemName.trim(),
-          amount: amount,
+          category_item_id: null,  // One-off purchase
           date: newDate,
-          category: newCategory || 'misc',
-          notes: newNotes.trim() || null,
-          is_wishlist: newIsWishlist
+          actual_amount: amount,
+          notes: combinedNotes,
+          is_planned: false,
+          timestamp: new Date().toISOString(),
         });
 
       if (error) {
         console.error('Error adding purchase:', error);
         alert('Failed to add purchase');
       } else {
-        // Reset form - Phase 6.2: Updated to use category and wishlist
+        // Reset form
         setNewItemName('');
         setNewAmount('');
         setNewDate(new Date().toISOString().split('T')[0]);
@@ -228,7 +259,7 @@ export const MiscShopTracker: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('misc_shop_purchases')
+        .from('category_logs')
         .delete()
         .eq('id', id);
 
