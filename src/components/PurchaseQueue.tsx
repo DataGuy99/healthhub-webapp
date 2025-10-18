@@ -93,9 +93,17 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
             {queueItems.length} items prioritized by health ROI
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-400">Available Budget</p>
-          <p className="text-2xl font-bold text-white">${availableBudget.toFixed(2)}</p>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={loadQueue}
+            className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 rounded-lg transition-all"
+          >
+            🔄 Refresh Queue
+          </button>
+          <div className="text-right">
+            <p className="text-sm text-gray-400">Available Budget</p>
+            <p className="text-2xl font-bold text-white">${availableBudget.toFixed(2)}</p>
+          </div>
         </div>
       </div>
 
@@ -105,7 +113,10 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
           <div className="text-6xl mb-4">🎯</div>
           <p className="text-gray-400">Your purchase queue is empty</p>
           <p className="text-sm text-gray-500 mt-2">
-            Run correlation analysis to get personalized recommendations
+            Go to Supplements → Library and click "Add to Queue" on items you want to purchase
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            The system will prioritize based on health ROI, affordability, and timing
           </p>
         </div>
       ) : (

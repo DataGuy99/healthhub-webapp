@@ -21,6 +21,7 @@ import { AutoCostAnalysis } from './AutoCostAnalysis';
 import { MiscShopTracker } from './MiscShopTracker';
 import { HealthTimeline } from './HealthTimeline';
 import { HealthInsights } from './HealthInsights';
+import { HealthConnectImport } from './HealthConnectImport';
 import PurchaseQueue from './PurchaseQueue';
 import ROIAnalyzer from './ROIAnalyzer';
 import CorrelationHeatmap from './CorrelationHeatmap';
@@ -31,7 +32,7 @@ import { clearAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
-type HealthSubTab = 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
+type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
@@ -58,7 +59,7 @@ const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: 
 };
 
 export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
-  const [healthSubTab, setHealthSubTab] = useState<HealthSubTab>('timeline');
+  const [healthSubTab, setHealthSubTab] = useState<HealthSubTab>('import');
   const [supplementsSubTab, setSupplementsSubTab] = useState<SupplementsSubTab>('daily');
   const [grocerySubTab, setGrocerySubTab] = useState<GrocerySubTab>('items');
   const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('mpg-tracker');
@@ -84,6 +85,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const renderSubTabs = () => {
     if (activeTab === 'health') {
       const tabs: { id: HealthSubTab; label: string; icon: string }[] = [
+        { id: 'import', label: 'Import Data', icon: '📥' },
         { id: 'timeline', label: 'Timeline', icon: '📊' },
         { id: 'insights', label: 'Insights', icon: '🧠' },
         { id: 'heatmap', label: 'Heatmap', icon: '🔥' },
@@ -370,6 +372,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Health category with sub-tabs
     if (activeTab === 'health') {
+      if (healthSubTab === 'import') {
+        return <HealthConnectImport />;
+      }
       if (healthSubTab === 'timeline') {
         return <HealthTimeline />;
       }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, Supplement, SupplementSection, Ingredient } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { ConfirmModal } from './ConfirmModal';
+import { addToPurchaseQueue } from '../lib/budgetOptimizer';
 
 export function SupplementsView() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
@@ -272,6 +273,30 @@ export function SupplementsView() {
 
   const deselectAll = () => {
     setSelectedSupplements(new Set());
+  };
+
+  const handleAddToQueue = async (supplement: Supplement) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        alert('Please log in to add to queue');
+        return;
+      }
+
+      await addToPurchaseQueue(user.id, {
+        item_name: supplement.name,
+        category: 'supplements',
+        estimated_cost: supplement.cost || 25.00, // Default if no cost set
+        health_impact_score: 0, // Will be calculated by correlation engine
+        timing_optimality_score: 50, // Default middle score
+        notes: supplement.notes || undefined
+      });
+
+      alert(`${supplement.name} added to purchase queue!`);
+    } catch (error) {
+      console.error('Error adding to queue:', error);
+      alert('Failed to add to purchase queue');
+    }
   };
 
   const EditFormComponent = () => (
@@ -621,6 +646,13 @@ export function SupplementsView() {
                   </div>
                   {!isSelectionMode && (
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAddToQueue(supplement)}
+                        className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-green-300 transition-all text-sm"
+                        title="Add to Purchase Queue"
+                      >
+                        📋 Queue
+                      </button>
                       <button
                         onClick={() => handleEdit(supplement)}
                         className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-300 transition-all"
