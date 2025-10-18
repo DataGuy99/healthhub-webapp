@@ -16,6 +16,7 @@ interface GasFillup {
   created_at?: string;
 }
 
+// Phase 6.2: Enhanced maintenance interface with projected maintenance fields
 interface MaintenanceItem {
   id?: string;
   user_id?: string;
@@ -25,6 +26,13 @@ interface MaintenanceItem {
   is_active: boolean;
   icon?: string;
   created_at?: string;
+  // Phase 6.2: New projected maintenance fields
+  is_projected?: boolean; // True if this is a projected future maintenance
+  projected_interval_miles?: number; // e.g., 3000 for oil change
+  last_completed_mileage?: number; // When last actually completed
+  next_due_mileage?: number; // When next maintenance is due
+  is_completed?: boolean; // If projected maintenance was completed
+  completed_date?: string; // Date when completed
 }
 
 export function AutoMPGTracker() {
