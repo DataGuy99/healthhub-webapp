@@ -16,23 +16,21 @@ interface GasFillup {
   created_at?: string;
 }
 
-// Phase 6.2: Enhanced maintenance interface with projected maintenance fields
 interface MaintenanceItem {
   id?: string;
   user_id?: string;
   service_name: string;
-  interval_miles: number; // How often (e.g., 5000 for oil change)
+  interval_miles: number;
   last_done_mileage: number;
   is_active: boolean;
   icon?: string;
   created_at?: string;
-  // Phase 6.2: New projected maintenance fields
-  is_projected?: boolean; // True if this is a projected future maintenance
-  projected_interval_miles?: number; // e.g., 3000 for oil change
-  last_completed_mileage?: number; // When last actually completed
-  next_due_mileage?: number; // When next maintenance is due
-  is_completed?: boolean; // If projected maintenance was completed
-  completed_date?: string; // Date when completed
+  is_projected?: boolean;
+  projected_interval_miles?: number;
+  last_completed_mileage?: number;
+  next_due_mileage?: number;
+  is_completed?: boolean;
+  completed_date?: string;
 }
 
 export function AutoMPGTracker() {
@@ -41,6 +39,7 @@ export function AutoMPGTracker() {
   const [loading, setLoading] = useState(true);
   const [showAddFillup, setShowAddFillup] = useState(false);
   const [showAddMaintenance, setShowAddMaintenance] = useState(false);
+  const [showProjectedMaintenance, setShowProjectedMaintenance] = useState(false);
 
   // Edit state
   const [editingFillup, setEditingFillup] = useState<GasFillup | null>(null);
@@ -58,6 +57,12 @@ export function AutoMPGTracker() {
   const [maintIntervalMiles, setMaintIntervalMiles] = useState('');
   const [maintLastDoneMileage, setMaintLastDoneMileage] = useState('');
   const [maintIcon, setMaintIcon] = useState('🔧');
+
+  // Projected maintenance form
+  const [projectedServiceName, setProjectedServiceName] = useState('');
+  const [projectedIntervalMiles, setProjectedIntervalMiles] = useState('');
+  const [projectedNextDueMileage, setProjectedNextDueMileage] = useState('');
+  const [projectedIcon, setProjectedIcon] = useState('🔮');
 
   useEffect(() => {
     loadData();
@@ -95,12 +100,13 @@ export function AutoMPGTracker() {
         setFormMileage(normalizedFillups[0].mileage.toString());
       }
 
-      // Load maintenance items
+      // Load maintenance items (completed and projected)
       const { data: maintData, error: maintError } = await supabase
         .from('maintenance_items')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true)
+        .order('is_projected', { ascending: true })
         .order('service_name', { ascending: true });
 
       if (maintError) throw maintError;
@@ -109,7 +115,10 @@ export function AutoMPGTracker() {
       const normalizedMaintenance = (maintData || []).map((item) => ({
         ...item,
         interval_miles: Number(item.interval_miles),
-        last_done_mileage: Number(item.last_done_mileage),
+        last_done_mileage: Number(item.last_done_mileage || 0),
+        projected_interval_miles: item.projected_interval_miles ? Number(item.projected_interval_miles) : undefined,
+        next_due_mileage: item.next_due_mileage ? Number(item.next_due_mileage) : undefined,
+        last_completed_mileage: item.last_completed_mileage ? Number(item.last_completed_mileage) : undefined,
       }));
 
       setMaintenance(normalizedMaintenance);
@@ -286,6 +295,84 @@ export function AutoMPGTracker() {
     }
   };
 
+  const addProjectedMaintenance = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      if (!projectedServiceName.trim() || !projectedIntervalMiles || !projectedNextDueMileage) {
+        alert('Please fill in all projected maintenance fields');
+        return;
+      }
+
+      const interval = parseInt(projectedIntervalMiles);
+      const nextDue = parseInt(projectedNextDueMileage);
+
+      if (interval <= 0 || nextDue <= 0) {
+        alert('Invalid values');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('maintenance_items')
+        .insert({
+          user_id: user.id,
+          service_name: projectedServiceName.trim(),
+          interval_miles: interval,
+          last_done_mileage: 0,
+          is_active: true,
+          icon: projectedIcon,
+          is_projected: true,
+          projected_interval_miles: interval,
+          next_due_mileage: nextDue,
+          is_completed: false,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      setProjectedServiceName('');
+      setProjectedIntervalMiles('');
+      setProjectedNextDueMileage('');
+      setProjectedIcon('🔮');
+      setShowProjectedMaintenance(false);
+      loadData();
+    } catch (error) {
+      console.error('Error adding projected maintenance:', error);
+      alert('Failed to add projected maintenance');
+    }
+  };
+
+  const completeProjectedMaintenance = async (item: MaintenanceItem) => {
+    if (!fillups.length) {
+      alert('Please log a gas fillup first to get current mileage');
+      return;
+    }
+
+    const currentMileage = fillups[0].mileage;
+
+    if (!confirm(`Mark "${item.service_name}" as completed at ${currentMileage} miles?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('maintenance_items')
+        .update({
+          is_completed: true,
+          completed_date: new Date().toISOString(),
+          last_completed_mileage: currentMileage,
+        })
+        .eq('id', item.id);
+
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Error completing projected maintenance:', error);
+      alert('Failed to complete projected maintenance');
+    }
+  };
+
   const completeMaintenance = async (item: MaintenanceItem) => {
     if (!fillups.length) {
       alert('Please log a gas fillup first to get current mileage');
@@ -352,15 +439,31 @@ export function AutoMPGTracker() {
     if (!fillups.length) return { status: 'unknown', milesUntilDue: 0 };
 
     const currentMileage = fillups[0].mileage;
-    const nextDueMileage = item.last_done_mileage + item.interval_miles;
-    const milesUntilDue = nextDueMileage - currentMileage;
 
-    if (milesUntilDue < 0) {
-      return { status: 'overdue', milesUntilDue: Math.abs(milesUntilDue) };
-    } else if (milesUntilDue <= 500) {
-      return { status: 'due-soon', milesUntilDue };
+    if (item.is_projected) {
+      const nextDueMileage = item.next_due_mileage || 0;
+      const milesUntilDue = nextDueMileage - currentMileage;
+
+      if (item.is_completed) {
+        return { status: 'completed', milesUntilDue: 0 };
+      } else if (milesUntilDue < 0) {
+        return { status: 'overdue', milesUntilDue: Math.abs(milesUntilDue) };
+      } else if (milesUntilDue <= 500) {
+        return { status: 'due-soon', milesUntilDue };
+      } else {
+        return { status: 'ok', milesUntilDue };
+      }
     } else {
-      return { status: 'ok', milesUntilDue };
+      const nextDueMileage = item.last_done_mileage + item.interval_miles;
+      const milesUntilDue = nextDueMileage - currentMileage;
+
+      if (milesUntilDue < 0) {
+        return { status: 'overdue', milesUntilDue: Math.abs(milesUntilDue) };
+      } else if (milesUntilDue <= 500) {
+        return { status: 'due-soon', milesUntilDue };
+      } else {
+        return { status: 'ok', milesUntilDue };
+      }
     }
   };
 
@@ -391,6 +494,12 @@ export function AutoMPGTracker() {
           <p className="text-white/60 text-sm">Track MPG and maintenance</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowProjectedMaintenance(!showProjectedMaintenance)}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 border border-purple-500/30 text-purple-300 font-medium transition-all"
+          >
+            {showProjectedMaintenance ? '✕ Cancel' : '🔮 Projected'}
+          </button>
           <button
             onClick={() => setShowAddMaintenance(!showAddMaintenance)}
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/30 text-orange-300 font-medium transition-all"
@@ -436,16 +545,22 @@ export function AutoMPGTracker() {
           <h3 className="text-xl font-bold text-white">🔧 Maintenance Schedule</h3>
           {maintenance.map((item) => {
             const { status, milesUntilDue } = getMaintenanceStatus(item);
-            const nextDueMileage = item.last_done_mileage + item.interval_miles;
+            const nextDueMileage = item.is_projected
+              ? item.next_due_mileage || 0
+              : item.last_done_mileage + item.interval_miles;
 
             return (
               <div
                 key={item.id}
                 className={`backdrop-blur-xl rounded-2xl border p-5 transition-all ${
-                  status === 'overdue'
+                  status === 'completed'
+                    ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/50'
+                    : status === 'overdue'
                     ? 'bg-gradient-to-r from-red-500/30 to-rose-500/30 border-red-500/50 ring-2 ring-red-500/30'
                     : status === 'due-soon'
                     ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/50'
+                    : item.is_projected
+                    ? 'bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-purple-500/30'
                     : 'bg-white/5 border-white/10'
                 }`}
               >
@@ -454,11 +569,19 @@ export function AutoMPGTracker() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="text-3xl">{item.icon}</div>
                       <div>
-                        <div className="font-bold text-white text-lg">{item.service_name}</div>
+                        <div className="font-bold text-white text-lg">
+                          {item.service_name}
+                          {item.is_projected && <span className="text-purple-400 text-sm ml-2">(Projected)</span>}
+                        </div>
                         <div className="text-sm text-white/60">
                           Every {item.interval_miles.toLocaleString()} miles
                         </div>
                       </div>
+                      {status === 'completed' && (
+                        <span className="px-3 py-1 rounded-lg bg-green-500/30 border border-green-500/50 text-green-300 text-sm font-semibold">
+                          ✅ COMPLETED
+                        </span>
+                      )}
                       {status === 'overdue' && (
                         <span className="px-3 py-1 rounded-lg bg-red-500/30 border border-red-500/50 text-red-300 text-sm font-semibold">
                           🔴 OVERDUE
@@ -472,8 +595,16 @@ export function AutoMPGTracker() {
                     </div>
                     <div className="ml-11 grid grid-cols-3 gap-4">
                       <div>
-                        <div className="text-xs text-white/50 mb-1">Last Done</div>
-                        <div className="text-white font-semibold">{item.last_done_mileage.toLocaleString()} mi</div>
+                        <div className="text-xs text-white/50 mb-1">
+                          {item.is_projected ? 'Completed At' : 'Last Done'}
+                        </div>
+                        <div className="text-white font-semibold">
+                          {item.is_projected && item.last_completed_mileage
+                            ? `${item.last_completed_mileage.toLocaleString()} mi`
+                            : item.is_projected
+                            ? 'Not yet'
+                            : `${item.last_done_mileage.toLocaleString()} mi`}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs text-white/50 mb-1">Next Due</div>
@@ -483,37 +614,107 @@ export function AutoMPGTracker() {
                         <div className="text-xs text-white/50 mb-1">
                           {status === 'overdue' ? 'Overdue By' : 'Miles Until Due'}
                         </div>
-                        <div className={`font-semibold ${status === 'overdue' ? 'text-red-400' : status === 'due-soon' ? 'text-yellow-400' : 'text-green-400'}`}>
-                          {milesUntilDue.toLocaleString()} mi
+                        <div className={`font-semibold ${status === 'completed' ? 'text-green-400' : status === 'overdue' ? 'text-red-400' : status === 'due-soon' ? 'text-yellow-400' : 'text-green-400'}`}>
+                          {status === 'completed' ? 'Done!' : `${milesUntilDue.toLocaleString()} mi`}
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => completeMaintenance(item)}
-                      className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
-                    >
-                      ✓ Done
-                    </button>
-                    <button
-                      onClick={() => startEditMaintenance(item)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm transition-all"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteMaintenance(item.id!)}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
-                    >
-                      Delete
-                    </button>
+                    {item.is_projected ? (
+                      <>
+                        {!item.is_completed && (
+                          <button
+                            onClick={() => completeProjectedMaintenance(item)}
+                            className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                          >
+                            ✓ Complete
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteMaintenance(item.id!)}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => completeMaintenance(item)}
+                          className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                        >
+                          ✓ Done
+                        </button>
+                        <button
+                          onClick={() => startEditMaintenance(item)}
+                          className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm transition-all"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteMaintenance(item.id!)}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Add Projected Maintenance Form */}
+      {showProjectedMaintenance && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6"
+        >
+          <h3 className="text-lg font-semibold text-white mb-4">🔮 Add Projected Maintenance</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Service Name</label>
+              <input
+                type="text"
+                value={projectedServiceName}
+                onChange={(e) => setProjectedServiceName(e.target.value)}
+                placeholder="e.g., Brake Pads, Timing Belt"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Interval (miles)</label>
+              <input
+                type="number"
+                value={projectedIntervalMiles}
+                onChange={(e) => setProjectedIntervalMiles(e.target.value)}
+                placeholder="e.g., 30000"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Due at (miles)</label>
+              <input
+                type="number"
+                value={projectedNextDueMileage}
+                onChange={(e) => setProjectedNextDueMileage(e.target.value)}
+                placeholder="e.g., 85000"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
+          </div>
+          <button
+            onClick={addProjectedMaintenance}
+            className="mt-4 px-6 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold transition-all"
+          >
+            Add Projected Maintenance
+          </button>
+        </motion.div>
       )}
 
       {/* Add Maintenance Form */}
