@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
+import { supabase, FavoriteFood } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 interface ProteinCalculation {
@@ -28,6 +28,7 @@ interface ProteinTarget {
 
 export function ProteinCalculator() {
   const [calculations, setCalculations] = useState<ProteinCalculation[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [target, setTarget] = useState<ProteinTarget | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,15 +77,68 @@ export function ProteinCalculator() {
       setTarget(targetData);
 
       if (targetData) {
-        // Convert from dollars to cents for display
         setTargetCost((targetData.target_cost_per_gram * 100).toFixed(1));
         setTolerancePercent(targetData.tolerance_percentage.toString());
       }
+
+      const { data: favoritesData, error: favoritesError } = await supabase
+        .from('favorite_foods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (favoritesError) throw favoritesError;
+      setFavorites(favoritesData || []);
 
       setLoading(false);
     } catch (error) {
       console.error('Error loading data:', error);
       setLoading(false);
+    }
+  };
+
+  const addToFavorites = async (calc: ProteinCalculation) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('favorite_foods')
+        .insert({
+          user_id: user.id,
+          food_name: calc.food_name,
+          serving_size: calc.serving_size,
+          serving_unit: calc.serving_unit,
+          protein_grams: calc.protein_grams,
+          price: calc.price,
+          cost_per_gram: calc.cost_per_gram,
+          notes: calc.notes,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+      alert(`${calc.food_name} added to favorites!`);
+      loadData();
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      alert('Failed to add to favorites');
+    }
+  };
+
+  const removeFavorite = async (id: string) => {
+    if (!confirm('Remove from favorites?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('favorite_foods')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      loadData();
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      alert('Failed to remove favorite');
     }
   };
 
@@ -108,7 +162,6 @@ export function ProteinCalculator() {
         return;
       }
 
-      // Calculate total protein: protein per serving × number of servings
       const totalProtein = protein * servings;
       const costPerGram = cost / totalProtein;
 
@@ -130,7 +183,6 @@ export function ProteinCalculator() {
 
       if (error) throw error;
 
-      // Reset form
       setFoodName('');
       setServingSize('');
       setProteinGrams('');
@@ -461,6 +513,43 @@ export function ProteinCalculator() {
         </button>
       </div>
 
+      {/* Favorites */}
+      {favorites.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xl font-bold text-white">⭐ Favorite Foods</h3>
+          {favorites.map((fav) => (
+            <div
+              key={fav.id}
+              className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 backdrop-blur-xl rounded-2xl border border-yellow-500/30 p-5"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="text-3xl">⭐</div>
+                    <div>
+                      <div className="font-bold text-white text-lg">{fav.food_name}</div>
+                      <div className="text-sm text-white/60">
+                        {fav.serving_size}{fav.serving_unit} • {fav.protein_grams}g protein • ${fav.price.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ml-11">
+                    <div className="text-xs text-white/50 mb-1">Cost per Gram</div>
+                    <div className="text-white text-xl font-bold">${fav.cost_per_gram.toFixed(3)}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeFavorite(fav.id!)}
+                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Calculation History */}
       <div className="space-y-3">
         <h3 className="text-xl font-bold text-white">Recent Calculations</h3>
@@ -518,10 +607,16 @@ export function ProteinCalculator() {
                   </div>
                   <div className="flex gap-2">
                     <button
+                      onClick={() => addToFavorites(calc)}
+                      className="px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-sm transition-all"
+                    >
+                      ⭐ Favorite
+                    </button>
+                    <button
                       onClick={() => markAsBought(calc)}
                       className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
                     >
-                      🛒 Mark as Bought
+                      🛒 Buy
                     </button>
                     <button
                       onClick={() => deleteCalculation(calc.id!)}

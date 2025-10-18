@@ -100,6 +100,23 @@ export interface SupplementBudget {
 }
 
 // ============================================================================
+// Grocery Types
+// ============================================================================
+
+export interface FavoriteFood {
+  id?: string;
+  user_id?: string;
+  food_name: string;
+  serving_size: number;
+  serving_unit: string;
+  protein_grams: number;
+  price: number;
+  cost_per_gram: number;
+  notes?: string;
+  created_at?: string;
+}
+
+// ============================================================================
 // User Settings Types
 // ============================================================================
 
