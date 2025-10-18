@@ -71,6 +71,7 @@ export function BillsCalendar() {
   const [loading, setLoading] = useState(true);
   const [showAddBill, setShowAddBill] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDateModal, setShowDateModal] = useState(false); // Modal for date-specific form
   const [showIncome, setShowIncome] = useState(false); // Toggle income/expense view
 
   // Form state - Phase 6.2 enhanced
@@ -134,7 +135,7 @@ export function BillsCalendar() {
 
   const handleDateClick = (day: CalendarDay) => {
     setSelectedDate(day.date);
-    setShowAddBill(true);
+    setShowDateModal(true);
 
     // Pre-populate form based on clicked date
     if (formRecurrenceType === 'weekly' || formRecurrenceType === 'biweekly') {
@@ -742,6 +743,180 @@ export function BillsCalendar() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* Date Click Modal */}
+      {showDateModal && selectedDate && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowDateModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/20 p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-white">
+                Add {formIsIncome ? 'Income' : 'Bill'} for {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+              </h3>
+              <button
+                onClick={() => setShowDateModal(false)}
+                className="text-white/60 hover:text-white text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Income Toggle */}
+            <div className="mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formIsIncome}
+                  onChange={(e) => {
+                    setFormIsIncome(e.target.checked);
+                    setFormIcon(e.target.checked ? '💵' : '💳');
+                  }}
+                  className="w-5 h-5 rounded border-white/20 bg-white/5 text-green-500 focus:ring-green-500/50"
+                />
+                <span className="text-white/80">This is income (not an expense)</span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-white/80 text-sm mb-2">Name *</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Netflix Subscription"
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-yellow-500/50 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm mb-2">Provider (auto-filled)</label>
+                <input
+                  type="text"
+                  value={formProvider}
+                  onChange={(e) => setFormProvider(e.target.value)}
+                  placeholder="Auto-populated"
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-yellow-500/50 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm mb-2">Amount *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formAmount}
+                  onChange={(e) => setFormAmount(e.target.value)}
+                  placeholder="12.99"
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-yellow-500/50 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm mb-2">Icon</label>
+                <input
+                  type="text"
+                  value={formIcon}
+                  onChange={(e) => setFormIcon(e.target.value)}
+                  placeholder="💵"
+                  maxLength={2}
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-yellow-500/50 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Recurrence Type */}
+            <div className="mb-4">
+              <label className="block text-white/80 text-sm mb-2">Recurrence *</label>
+              <select
+                value={formRecurrenceType}
+                onChange={(e) => setFormRecurrenceType(e.target.value as any)}
+                className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-yellow-500/50 focus:outline-none"
+              >
+                <option value="monthly" className="bg-slate-800">Monthly</option>
+                <option value="weekly" className="bg-slate-800">Weekly</option>
+                <option value="biweekly" className="bg-slate-800">Biweekly (every 2 weeks)</option>
+              </select>
+            </div>
+
+            {/* Weekly/Biweekly Options */}
+            {(formRecurrenceType === 'weekly' || formRecurrenceType === 'biweekly') && (
+              <div className="mb-4">
+                <label className="block text-white/80 text-sm mb-2">Day of Week</label>
+                <select
+                  value={formDayOfWeek}
+                  onChange={(e) => setFormDayOfWeek(Number(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-yellow-500/50 focus:outline-none"
+                >
+                  <option value={0} className="bg-slate-800">Sunday</option>
+                  <option value={1} className="bg-slate-800">Monday</option>
+                  <option value={2} className="bg-slate-800">Tuesday</option>
+                  <option value={3} className="bg-slate-800">Wednesday</option>
+                  <option value={4} className="bg-slate-800">Thursday</option>
+                  <option value={5} className="bg-slate-800">Friday</option>
+                  <option value={6} className="bg-slate-800">Saturday</option>
+                </select>
+
+                {/* Skip First Week Option */}
+                <div className="mt-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formExcludeWeeks.includes(1)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormExcludeWeeks([...formExcludeWeeks, 1]);
+                        } else {
+                          setFormExcludeWeeks(formExcludeWeeks.filter(w => w !== 1));
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-white/20 bg-white/5 text-yellow-500 focus:ring-yellow-500/50"
+                    />
+                    <span className="text-white/80">Skip first week of month (e.g., rent pattern)</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Monthly Options */}
+            {formRecurrenceType === 'monthly' && (
+              <div className="mb-4">
+                <label className="block text-white/80 text-sm mb-2">Day of Month</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formDayOfMonth}
+                  onChange={(e) => setFormDayOfMonth(Number(e.target.value))}
+                  className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-yellow-500/50 focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  addRecurringBill();
+                  setShowDateModal(false);
+                }}
+                className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold transition-all"
+              >
+                Add {formIsIncome ? 'Income' : 'Bill'}
+              </button>
+              <button
+                onClick={() => setShowDateModal(false)}
+                className="px-6 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </motion.div>
