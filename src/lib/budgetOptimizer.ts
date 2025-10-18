@@ -38,7 +38,7 @@ export interface PurchaseQueueItem {
   affordability_score: number;
   timing_optimality_score: number;
   cost_effectiveness_score: number;
-  urgency_score: number;
+  urgency_score?: number;
 
   priority_score: number;
   queue_position: number;
@@ -173,7 +173,7 @@ export async function getPurchaseQueue(userId: string): Promise<PurchaseQueueIte
  */
 export async function addToPurchaseQueue(
   userId: string,
-  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at' | 'priority_score' | 'affordability_score' | 'cost_effectiveness_score'>
+  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at' | 'priority_score' | 'affordability_score' | 'cost_effectiveness_score'> & { urgency_score?: number }
 ): Promise<boolean> {
   try {
     // Get current max position
@@ -187,7 +187,8 @@ export async function addToPurchaseQueue(
 
     const nextPosition = maxData && maxData.length > 0 ? maxData[0].queue_position + 1 : 1;
 
-    // Calculate derived scores
+    // Calculate derived scores with defaults
+    const urgency_score = item.urgency_score ?? 50; // Default medium urgency
     const affordability_score = 50; // Default - will be calculated by budget optimizer
     const cost_effectiveness_score = 50; // Default - will be calculated by correlation engine
     const priority_score = calculatePriorityScore(
@@ -195,7 +196,7 @@ export async function addToPurchaseQueue(
       affordability_score,
       item.timing_optimality_score,
       cost_effectiveness_score,
-      item.urgency_score
+      urgency_score
     );
 
     // Insert new item
@@ -204,6 +205,7 @@ export async function addToPurchaseQueue(
       .insert({
         user_id: userId,
         ...item,
+        urgency_score,
         affordability_score,
         cost_effectiveness_score,
         priority_score,
