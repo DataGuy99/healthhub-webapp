@@ -22,7 +22,7 @@ export function HealthConnectImport() {
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const processHealthConnectZip = useCallback(async (file: File) => {
+  const processHealthConnectFile = useCallback(async (file: File) => {
     try {
       setIsProcessing(true);
       setProgress(10);
@@ -46,12 +46,16 @@ export function HealthConnectImport() {
       );
       setProgress(30);
 
+      // Determine if it's a zip or db file
+      const isZip = file.name.endsWith('.zip');
+
       // Send to Netlify function for processing
       const response = await fetch('/.netlify/functions/health-connect-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          zipData: base64,
+          fileData: base64,
+          isZip: isZip,
           userId: user.id
         })
       });
@@ -112,25 +116,25 @@ export function HealthConnectImport() {
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.zip')) {
-      setError('Please upload a .zip file');
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.db')) {
+      setError('Please upload a .zip or .db file');
       return;
     }
 
-    processHealthConnectZip(file);
-  }, [processHealthConnectZip]);
+    processHealthConnectFile(file);
+  }, [processHealthConnectFile]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.zip')) {
-      setError('Please upload a .zip file');
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.db')) {
+      setError('Please upload a .zip or .db file');
       return;
     }
 
-    processHealthConnectZip(file);
-  }, [processHealthConnectZip]);
+    processHealthConnectFile(file);
+  }, [processHealthConnectFile]);
 
   return (
     <div className="space-y-6">
@@ -150,7 +154,7 @@ export function HealthConnectImport() {
       >
         <input
           type="file"
-          accept=".zip"
+          accept=".zip,.db"
           onChange={handleFileSelect}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={isProcessing}
@@ -162,7 +166,7 @@ export function HealthConnectImport() {
             {isProcessing ? 'Processing Health Data...' : 'Import Health Connect Data'}
           </h3>
           <p className="text-white/60 mb-4">
-            Drop your Health Connect export (.zip) here or click to browse
+            Drop your Health Connect export (.zip or .db) here or click to browse
           </p>
 
           {isProcessing && (
@@ -309,7 +313,7 @@ export function HealthConnectImport() {
           </li>
           <li className="flex gap-2">
             <span className="text-purple-400 font-bold">4.</span>
-            <span>Save the .zip file and upload it here</span>
+            <span>Upload the .zip file here, or extract and upload the .db file directly</span>
           </li>
         </ol>
       </div>

@@ -26,31 +26,37 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const { zipData, userId } = JSON.parse(event.body || '{}');
+    const { fileData, isZip, userId } = JSON.parse(event.body || '{}');
 
-    if (!zipData || !userId) {
+    if (!fileData || !userId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Missing zipData or userId' })
+        body: JSON.stringify({ error: 'Missing fileData or userId' })
       };
     }
 
-    // Decode base64 zip data
-    const zipBuffer = Buffer.from(zipData, 'base64');
-    const zip = new AdmZip(zipBuffer);
-    const zipEntries = zip.getEntries();
+    let dbBuffer: Buffer;
 
-    // Find the .db file
-    const dbEntry = zipEntries.find(entry => entry.entryName.endsWith('.db'));
-    if (!dbEntry) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'No .db file found in zip' })
-      };
+    if (isZip) {
+      // Decode base64 zip data and extract .db file
+      const zipBuffer = Buffer.from(fileData, 'base64');
+      const zip = new AdmZip(zipBuffer);
+      const zipEntries = zip.getEntries();
+
+      // Find the .db file
+      const dbEntry = zipEntries.find(entry => entry.entryName.endsWith('.db'));
+      if (!dbEntry) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'No .db file found in zip' })
+        };
+      }
+
+      dbBuffer = dbEntry.getData();
+    } else {
+      // Direct .db file - decode base64
+      dbBuffer = Buffer.from(fileData, 'base64');
     }
-
-    // Extract database file
-    const dbBuffer = dbEntry.getData();
 
     // Initialize SQL.js
     const SQL = await initSqlJs();
