@@ -42,6 +42,10 @@ export function AutoMPGTracker() {
   const [showAddFillup, setShowAddFillup] = useState(false);
   const [showAddMaintenance, setShowAddMaintenance] = useState(false);
 
+  // Edit state
+  const [editingFillup, setEditingFillup] = useState<GasFillup | null>(null);
+  const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceItem | null>(null);
+
   // Fillup form
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [formMileage, setFormMileage] = useState('');
@@ -117,6 +121,16 @@ export function AutoMPGTracker() {
     }
   };
 
+  const startEditFillup = (fillup: GasFillup) => {
+    setEditingFillup(fillup);
+    setFormDate(fillup.date);
+    setFormMileage(fillup.mileage.toString());
+    setFormGallons(fillup.gallons.toString());
+    setFormCost(fillup.cost.toString());
+    setFormNotes(fillup.notes || '');
+    setShowAddFillup(true);
+  };
+
   const addFillup = async () => {
     try {
       const user = await getCurrentUser();
@@ -148,21 +162,40 @@ export function AutoMPGTracker() {
         }
       }
 
-      const { error } = await supabase
-        .from('gas_fillups')
-        .insert({
-          user_id: user.id,
-          date: formDate,
-          mileage: mileage,
-          gallons: gallons,
-          cost: cost,
-          price_per_gallon: pricePerGallon,
-          mpg: mpg,
-          notes: formNotes.trim() || null,
-          created_at: new Date().toISOString(),
-        });
+      if (editingFillup) {
+        // Update existing fillup
+        const { error } = await supabase
+          .from('gas_fillups')
+          .update({
+            date: formDate,
+            mileage: mileage,
+            gallons: gallons,
+            cost: cost,
+            price_per_gallon: pricePerGallon,
+            mpg: mpg,
+            notes: formNotes.trim() || null,
+          })
+          .eq('id', editingFillup.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Insert new fillup
+        const { error } = await supabase
+          .from('gas_fillups')
+          .insert({
+            user_id: user.id,
+            date: formDate,
+            mileage: mileage,
+            gallons: gallons,
+            cost: cost,
+            price_per_gallon: pricePerGallon,
+            mpg: mpg,
+            notes: formNotes.trim() || null,
+            created_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+      }
 
       // Reset form
       setFormDate(new Date().toISOString().split('T')[0]);
@@ -171,11 +204,21 @@ export function AutoMPGTracker() {
       setFormCost('');
       setFormNotes('');
       setShowAddFillup(false);
+      setEditingFillup(null);
       loadData();
     } catch (error) {
       console.error('Error adding fillup:', error);
       alert('Failed to add fillup');
     }
+  };
+
+  const startEditMaintenance = (item: MaintenanceItem) => {
+    setEditingMaintenance(item);
+    setMaintServiceName(item.service_name);
+    setMaintIntervalMiles(item.interval_miles.toString());
+    setMaintLastDoneMileage(item.last_done_mileage.toString());
+    setMaintIcon(item.icon || '🔧');
+    setShowAddMaintenance(true);
   };
 
   const addMaintenanceItem = async () => {
@@ -196,19 +239,35 @@ export function AutoMPGTracker() {
         return;
       }
 
-      const { error } = await supabase
-        .from('maintenance_items')
-        .insert({
-          user_id: user.id,
-          service_name: maintServiceName.trim(),
-          interval_miles: interval,
-          last_done_mileage: lastDone,
-          is_active: true,
-          icon: maintIcon,
-          created_at: new Date().toISOString(),
-        });
+      if (editingMaintenance) {
+        // Update existing maintenance item
+        const { error } = await supabase
+          .from('maintenance_items')
+          .update({
+            service_name: maintServiceName.trim(),
+            interval_miles: interval,
+            last_done_mileage: lastDone,
+            icon: maintIcon,
+          })
+          .eq('id', editingMaintenance.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Insert new maintenance item
+        const { error } = await supabase
+          .from('maintenance_items')
+          .insert({
+            user_id: user.id,
+            service_name: maintServiceName.trim(),
+            interval_miles: interval,
+            last_done_mileage: lastDone,
+            is_active: true,
+            icon: maintIcon,
+            created_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+      }
 
       // Reset form
       setMaintServiceName('');
@@ -216,6 +275,7 @@ export function AutoMPGTracker() {
       setMaintLastDoneMileage('');
       setMaintIcon('🔧');
       setShowAddMaintenance(false);
+      setEditingMaintenance(null);
       loadData();
     } catch (error) {
       console.error('Error adding maintenance item:', error);
@@ -434,6 +494,12 @@ export function AutoMPGTracker() {
                       ✓ Done
                     </button>
                     <button
+                      onClick={() => startEditMaintenance(item)}
+                      className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm transition-all"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => deleteMaintenance(item.id!)}
                       className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
                     >
@@ -491,7 +557,7 @@ export function AutoMPGTracker() {
             onClick={addMaintenanceItem}
             className="mt-4 px-6 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all"
           >
-            Add Maintenance
+            {editingMaintenance ? 'Update Maintenance' : 'Add Maintenance'}
           </button>
         </motion.div>
       )}
@@ -567,7 +633,7 @@ export function AutoMPGTracker() {
             onClick={addFillup}
             className="mt-4 px-6 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold transition-all"
           >
-            Log Fillup
+            {editingFillup ? 'Update Fillup' : 'Log Fillup'}
           </button>
         </motion.div>
       )}
@@ -627,12 +693,20 @@ export function AutoMPGTracker() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => deleteFillup(fillup.id!)}
-                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
-                >
-                  Delete
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEditFillup(fillup)}
+                    className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm transition-all"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteFillup(fillup.id!)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))
