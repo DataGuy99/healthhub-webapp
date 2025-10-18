@@ -11,6 +11,8 @@ interface ImportStats {
   distance: number;
   calories: number;
   sleep: number;
+  nutrition: number;
+  exercise: number;
 }
 
 export function HealthConnectImport() {
@@ -85,7 +87,9 @@ export function HealthConnectImport() {
         steps: result.breakdown?.steps || 0,
         distance: result.breakdown?.distance || 0,
         calories: result.breakdown?.calories || 0,
-        sleep: result.breakdown?.sleep || 0
+        sleep: result.breakdown?.sleep || 0,
+        nutrition: result.breakdown?.nutrition || 0,
+        exercise: result.breakdown?.exercise || 0
       });
 
       setTimeout(() => {
@@ -258,11 +262,23 @@ export function HealthConnectImport() {
               </div>
 
               <div className="bg-white/5 rounded-xl p-4">
+                <div className="text-2xl mb-1">🍽️</div>
+                <div className="text-2xl font-bold text-white">{importStats.nutrition.toLocaleString()}</div>
+                <div className="text-xs text-white/60">Nutrition Logs</div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
+                <div className="text-2xl mb-1">💪</div>
+                <div className="text-2xl font-bold text-white">{importStats.exercise.toLocaleString()}</div>
+                <div className="text-xs text-white/60">Workouts</div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4">
                 <div className="text-2xl mb-1">📊</div>
                 <div className="text-2xl font-bold text-green-400">
-                  {(importStats.heartRate + importStats.bloodOxygen + importStats.respiratoryRate + importStats.steps + importStats.distance + importStats.calories + importStats.sleep).toLocaleString()}
+                  {(importStats.heartRate + importStats.bloodOxygen + importStats.respiratoryRate + importStats.steps + importStats.distance + importStats.calories + importStats.sleep + importStats.nutrition + importStats.exercise).toLocaleString()}
                 </div>
-                <div className="text-xs text-white/60">Total Points</div>
+                <div className="text-xs text-white/60">Total Records</div>
               </div>
             </div>
 

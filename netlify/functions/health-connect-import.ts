@@ -64,7 +64,9 @@ export const handler: Handler = async (event) => {
       steps: 0,
       distance: 0,
       calories: 0,
-      sleep: 0
+      sleep: 0,
+      nutrition: 0,
+      exercise: 0
     };
 
     // Extract heart rate data
@@ -228,6 +230,102 @@ export const handler: Handler = async (event) => {
       }
     } catch (e) {
       console.error('Error extracting sleep:', e);
+    }
+
+    // Extract nutrition (daily totals)
+    try {
+      const nutritionResult = db.exec(`
+        SELECT
+          start_time,
+          protein,
+          total_carbohydrate,
+          total_fat,
+          energy,
+          dietary_fiber,
+          sugar,
+          sodium,
+          calcium,
+          iron,
+          vitamin_c,
+          vitamin_d
+        FROM nutrition_record_table
+        ORDER BY start_time
+      `);
+
+      if (nutritionResult[0]) {
+        nutritionResult[0].values.forEach(([startTime, protein, carbs, fat, energy, fiber, sugar, sodium, calcium, iron, vitC, vitD]) => {
+          const timestamp = new Date(Number(startTime)).toISOString();
+
+          // Store each macro/micronutrient as separate data points
+          if (Number(protein) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_protein', value: Number(protein), source: 'health_connect' });
+          }
+          if (Number(carbs) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_carbs', value: Number(carbs), source: 'health_connect' });
+          }
+          if (Number(fat) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_fat', value: Number(fat), source: 'health_connect' });
+          }
+          if (Number(energy) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_calories', value: Number(energy), source: 'health_connect' });
+          }
+          if (Number(fiber) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_fiber', value: Number(fiber), source: 'health_connect' });
+          }
+          if (Number(sugar) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_sugar', value: Number(sugar), source: 'health_connect' });
+          }
+          if (Number(sodium) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_sodium', value: Number(sodium), source: 'health_connect' });
+          }
+          if (Number(calcium) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_calcium', value: Number(calcium), source: 'health_connect' });
+          }
+          if (Number(iron) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_iron', value: Number(iron), source: 'health_connect' });
+          }
+          if (Number(vitC) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_vitamin_c', value: Number(vitC), source: 'health_connect' });
+          }
+          if (Number(vitD) > 0) {
+            dataPoints.push({ timestamp, type: 'nutrition_vitamin_d', value: Number(vitD), source: 'health_connect' });
+          }
+
+          importCounts.nutrition++;
+        });
+      }
+    } catch (e) {
+      console.error('Error extracting nutrition:', e);
+    }
+
+    // Extract exercise sessions
+    try {
+      const exerciseResult = db.exec(`
+        SELECT start_time, end_time, exercise_type, title, notes
+        FROM exercise_session_record_table
+        ORDER BY start_time
+      `);
+
+      if (exerciseResult[0]) {
+        exerciseResult[0].values.forEach(([startTime, endTime, exerciseType, title, notes]) => {
+          const durationMinutes = (Number(endTime) - Number(startTime)) / (1000 * 60);
+          dataPoints.push({
+            timestamp: new Date(Number(startTime)).toISOString(),
+            type: 'exercise_duration',
+            value: durationMinutes,
+            source: 'health_connect',
+            metadata: {
+              end_time: new Date(Number(endTime)).toISOString(),
+              exercise_type: Number(exerciseType),
+              title: title || 'Unknown',
+              notes: notes || ''
+            }
+          });
+          importCounts.exercise++;
+        });
+      }
+    } catch (e) {
+      console.error('Error extracting exercise:', e);
     }
 
     // Close database
