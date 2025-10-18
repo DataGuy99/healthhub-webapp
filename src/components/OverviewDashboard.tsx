@@ -30,11 +30,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   supplements: '#a855f7',
   auto: '#ef4444',
   bills: '#f59e0b',
-  investment: '#6366f1',
   'misc-shop': '#ec4899',
   'misc-health': '#14b8a6',
-  'home-garden': '#84cc16',
   rent: '#3b82f6',
+  // Phase 6.2: Removed investment and home-garden colors
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -42,11 +41,10 @@ const CATEGORY_ICONS: Record<string, string> = {
   supplements: '💊',
   auto: '🚗',
   bills: '💡',
-  investment: '📈',
   'misc-shop': '🛍️',
   'misc-health': '🏥',
-  'home-garden': '🌱',
   rent: '🏠',
+  // Phase 6.2: Removed investment and home-garden icons
 };
 
 export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) {

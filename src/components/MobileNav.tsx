@@ -1,4 +1,5 @@
-type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
+type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills';
+// Phase 6.2: Removed 'investment' and 'home-garden' from CategoryTab
 
 interface MobileNavProps {
   activeTab: CategoryTab;
@@ -13,8 +14,7 @@ const NAV_ITEMS: Array<{ id: CategoryTab; label: string; icon: string }> = [
   { id: 'auto', label: 'Auto', icon: '🚗' },
   { id: 'misc-shop', label: 'Shop', icon: '🛍️' },
   { id: 'bills', label: 'Bills', icon: '💳' },
-  { id: 'investment', label: 'Invest', icon: '📈' },
-  { id: 'home-garden', label: 'Home', icon: '🌱' },
+  // Phase 6.2: Removed investment and home-garden nav items
 ];
 
 export function MobileNav({ activeTab, onTabChange }: MobileNavProps) {

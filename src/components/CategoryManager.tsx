@@ -12,7 +12,7 @@ const TEMPLATE_OPTIONS: { value: CategoryTemplate; label: string; description: s
   { value: 'checklist', label: '✓ Checklist', description: 'Recurring items to check off (supplements, groceries, tasks)' },
   { value: 'spending', label: '💰 Spending Tracker', description: 'Track expenses and costs over time' },
   { value: 'events', label: '📅 Events Log', description: 'One-time events and records (purchases, appointments)' },
-  { value: 'investments', label: '📈 Investments', description: 'Track assets and their value changes' },
+  // Phase 6.2: Removed 'investments' template option
 ];
 
 const COLOR_OPTIONS = [

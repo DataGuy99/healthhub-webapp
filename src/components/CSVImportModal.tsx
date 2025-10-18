@@ -30,11 +30,10 @@ const CATEGORY_OPTIONS = [
   { id: 'auto', name: 'Auto', icon: '🚗' },
   { id: 'rent', name: 'Rent', icon: '🏠' },
   { id: 'bills', name: 'Bills & Utilities', icon: '💡' },
-  { id: 'investment', name: 'Investment', icon: '📈' },
   { id: 'supplements', name: 'Supplements', icon: '💊' },
   { id: 'misc-shop', name: 'Misc Shopping', icon: '🛍️' },
   { id: 'misc-health', name: 'Misc Health', icon: '🏥' },
-  { id: 'home-garden', name: 'Home & Garden', icon: '🌱' },
+  // Phase 6.2: Removed investment and home-garden categories
 ];
 
 export function CSVImportModal({ transactions, onClose, onImport }: CSVImportModalProps) {

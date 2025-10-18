@@ -20,11 +20,10 @@ const CATEGORIES = [
   { id: 'grocery', name: 'Grocery', icon: '🛒' },
   { id: 'auto', name: 'Auto', icon: '🚗' },
   { id: 'bills', name: 'Bills & Utilities', icon: '💡' },
-  { id: 'investment', name: 'Investment', icon: '📈' },
   { id: 'misc-shop', name: 'Misc Shopping', icon: '🛍️' },
   { id: 'misc-health', name: 'Misc Health', icon: '🏥' },
-  { id: 'home-garden', name: 'Home & Garden', icon: '🌱' },
   { id: 'other', name: 'Other', icon: '📦' },
+  // Phase 6.2: Removed investment and home-garden categories
 ];
 
 export function AddToQueueModal({ isOpen, onClose, onSuccess, prefillData }: AddToQueueModalProps) {

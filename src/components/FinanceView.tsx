@@ -25,10 +25,9 @@ const CATEGORIES: Category[] = [
   { id: 'rent', name: 'Rent', icon: '🏠', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30', route: 'rent' },
   { id: 'bills', name: 'Bills & Utilities', icon: '💡', color: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30', route: 'bills' },
   { id: 'auto', name: 'Auto', icon: '🚗', color: 'from-red-500/20 to-rose-500/20 border-red-500/30', route: 'auto' },
-  { id: 'investment', name: 'Investment', icon: '📈', color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/30', route: 'investment' },
   { id: 'misc-shop', name: 'Misc Shopping', icon: '🛍️', color: 'from-pink-500/20 to-fuchsia-500/20 border-pink-500/30', route: 'misc-shop' },
   { id: 'misc-health', name: 'Misc Health', icon: '🏥', color: 'from-teal-500/20 to-cyan-500/20 border-teal-500/30', route: 'misc-health' },
-  { id: 'home-garden', name: 'Home & Garden', icon: '🌱', color: 'from-lime-500/20 to-green-500/20 border-lime-500/30', route: 'home-garden' },
+  // Phase 6.2: Removed investment and home-garden categories
 ];
 
 interface FinanceViewProps {
@@ -466,7 +465,8 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
     }
 
     // Use CHRONICLE template for misc categories
-    if (selectedCategory.id === 'misc-shop' || selectedCategory.id === 'misc-health' || selectedCategory.id === 'home-garden') {
+    // Phase 6.2: Removed home-garden from condition
+    if (selectedCategory.id === 'misc-shop' || selectedCategory.id === 'misc-health') {
       return (
         <ChronicleTemplate
           category={selectedCategory.id}
@@ -478,18 +478,7 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
       );
     }
 
-    // Use TREASURY template for investment
-    if (selectedCategory.id === 'investment') {
-      return (
-        <TreasuryTemplate
-          category={selectedCategory.id}
-          categoryName={selectedCategory.name}
-          icon={selectedCategory.icon}
-          color={selectedCategory.color}
-          onBack={() => setSelectedCategory(null)}
-        />
-      );
-    }
+    // Phase 6.2: Removed TREASURY template for investment category
 
     // Use MARKET template for grocery and auto
     return (
