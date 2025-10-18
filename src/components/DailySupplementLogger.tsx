@@ -11,6 +11,7 @@ export function DailySupplementLogger() {
   const [loading, setLoading] = useState(true);
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+  const [collapseTaken, setCollapseTaken] = useState(false); // Collapse taken supplements
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
   const [autoLogTime, setAutoLogTime] = useState('00:00'); // Will be loaded from DB
   const [isHistoryMode, setIsHistoryMode] = useState(false);
@@ -442,6 +443,20 @@ export function DailySupplementLogger() {
           </div>
         )}
 
+        {/* Collapse Taken Toggle */}
+        <div className="mt-4">
+          <button
+            onClick={() => setCollapseTaken(!collapseTaken)}
+            className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+              collapseTaken
+                ? 'bg-purple-500/30 border border-purple-500/40 text-purple-300'
+                : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+            }`}
+          >
+            {collapseTaken ? '👁️ Show Taken' : '🚫 Hide Taken'}
+          </button>
+        </div>
+
         {/* Log Selected Button */}
         {Object.values(logs).some(val => val) && (
           <div className="mt-4">
@@ -458,6 +473,11 @@ export function DailySupplementLogger() {
           <div className="text-2xl font-bold text-white">
             {takenCount} / {totalSupplements} taken today
           </div>
+          {collapseTaken && takenCount > 0 && (
+            <div className="text-sm text-purple-300 mt-1">
+              🚫 {takenCount} supplement{takenCount !== 1 ? 's' : ''} hidden
+            </div>
+          )}
           <div className="w-full bg-white/20 rounded-full h-3 mt-2">
             <div
               className="bg-green-500 h-3 rounded-full transition-all duration-300"
@@ -539,7 +559,13 @@ export function DailySupplementLogger() {
                   {/* Supplements in this section */}
                   {!hiddenSections.has(section) && (
                     <div className="space-y-2">
-                      {sectionSupplements.map(supplement => {
+                      {sectionSupplements
+                        .filter(supplement => {
+                          // Filter out taken supplements if collapseTaken is enabled
+                          if (!collapseTaken) return true;
+                          return supplement.id ? !savedLogs.has(supplement.id) : true;
+                        })
+                        .map(supplement => {
                         // In history mode, show what's saved. In today mode, show visual selections
                         const isTaken = isHistoryMode
                           ? (supplement.id ? savedLogs.has(supplement.id) : false)
@@ -669,7 +695,13 @@ export function DailySupplementLogger() {
                 {/* Supplements in this section */}
                 {!hiddenSections.has(section) && (
                   <div className="space-y-2">
-                    {sectionSupplements.map(supplement => {
+                    {sectionSupplements
+                      .filter(supplement => {
+                        // Filter out taken supplements if collapseTaken is enabled
+                        if (!collapseTaken) return true;
+                        return supplement.id ? !savedLogs.has(supplement.id) : true;
+                      })
+                      .map(supplement => {
                       // In history mode, show what's saved. In today mode, show visual selections
                       const isTaken = isHistoryMode
                         ? (supplement.id ? savedLogs.has(supplement.id) : false)
