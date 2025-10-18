@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, TransactionRule } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
-import { mapBankCategory, type ParsedTransaction } from '../utils/csvParser';
+import { type ParsedTransaction } from '../utils/robustCsvParser';
+import { mapBankCategory } from '../utils/csvParser';
 import { TEMPLATE_MAP } from '../constants/templates';
 
 interface CSVImportModalProps {
@@ -42,6 +43,7 @@ export function CSVImportModal({ transactions, onClose, onImport }: CSVImportMod
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [splittingIndex, setSplittingIndex] = useState<number | null>(null);
+  const [showRawIndex, setShowRawIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadRulesAndMap();
@@ -293,8 +295,25 @@ export function CSVImportModal({ transactions, onClose, onImport }: CSVImportMod
 
                       {/* Merchant */}
                       <div className="flex-1 min-w-0">
-                        <div className="text-white font-medium truncate">{tx.merchant}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-white font-medium truncate">{tx.merchant}</div>
+                          <button
+                            onClick={() => setShowRawIndex(showRawIndex === index ? null : index)}
+                            className="text-white/40 hover:text-white/80 text-xs transition-colors"
+                            title="Show raw CSV row"
+                          >
+                            {showRawIndex === index ? '👁️' : '🔍'}
+                          </button>
+                        </div>
                         <div className="text-white/40 text-xs">{tx.bankCategory}</div>
+                        {showRawIndex === index && tx.raw && (
+                          <div className="mt-2 p-2 bg-black/30 rounded text-xs font-mono text-green-400 overflow-x-auto max-w-full">
+                            <div className="text-white/60 mb-1">Raw CSV Data:</div>
+                            <pre className="whitespace-pre-wrap break-all">
+                              {JSON.stringify(tx.raw, null, 2)}
+                            </pre>
+                          </div>
+                        )}
                       </div>
 
                       {!tx.splits ? (

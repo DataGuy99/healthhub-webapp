@@ -1,0 +1,9 @@
+Date,Original Date,Account Type,Account Name,Account Number,Institution Name,Name,Custom Name,Amount,Description,Category,Note,Ignored From,Tax Deductible
+2025-10-09,2025-10-09,Cash,Best Checking Pkg,7480,KTVA,ALDI 70012,,31.98,Card Purchase ALDI 70012,Groceries,,,
+2025-10-08,2025-10-08,Cash,Best Checking Pkg,7480,KTVA,CASEYS 2574,,45.50,Card Purchase CASEYS,Auto & Transport,,,
+2025-10-07,2025-10-07,Cash,Best Checking Pkg,7480,KTVA,KROGER 8901,,28.47,Card Purchase KROGER,Groceries,,,
+2025-10-06,2025-10-06,Cash,Best Checking Pkg,7480,KTVA,AMAZON MKTP,,19.99,Card Purchase AMAZON,Shopping,,,
+2025-10-05,2025-10-05,Cash,Best Checking Pkg,7480,KTVA,KUB PAYMENT,,125.00,Bill Payment KUB,Bills & Utilities,,,
+2025-10-04,2025-10-04,Cash,Best Checking Pkg,7480,KTVA,SAMSCLUB 6234,,85.33,Card Purchase SAMSCLUB,Groceries,,,
+2025-10-03,2025-10-03,Cash,Best Checking Pkg,7480,KTVA,Savings Transfer,,-500.00,Internal Transfer,Transfer,,,
+2025-10-02,2025-10-02,Cash,Best Checking Pkg,7480,KTVA,Paycheck Deposit,,-1850.00,Direct Deposit,Income,,,

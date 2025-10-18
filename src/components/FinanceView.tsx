@@ -6,7 +6,7 @@ import { CategoryHub } from './CategoryHub';
 import { CovenantTemplate } from './CovenantTemplate';
 import { ChronicleTemplate } from './ChronicleTemplate';
 import { TreasuryTemplate } from './TreasuryTemplate';
-import { parseBankCSV, validateCSVFile, downloadCSVTemplate, type ParsedTransaction } from '../utils/csvParser';
+import { parseBankCSV, validateCSVFile, downloadCSVTemplate, type ParsedTransaction } from '../utils/robustCsvParser';
 import { CSVImportModal, type MappedTransaction } from './CSVImportModal';
 import { MerchantRulesModal } from './MerchantRulesModal';
 import { BudgetSettingsModal } from './BudgetSettingsModal';
