@@ -77,15 +77,15 @@ export function HealthConnectImport() {
       const result = await response.json();
       setProgress(100);
 
-      // Mock stats for now - will be real once backend is implemented
+      // Display real import stats from backend
       setImportStats({
-        heartRate: 91881,
-        bloodOxygen: 4445,
-        respiratoryRate: 15523,
-        steps: 2319,
-        distance: 491,
-        calories: 505,
-        sleep: 96
+        heartRate: result.breakdown?.heart_rate || 0,
+        bloodOxygen: result.breakdown?.blood_oxygen || 0,
+        respiratoryRate: result.breakdown?.respiratory_rate || 0,
+        steps: result.breakdown?.steps || 0,
+        distance: result.breakdown?.distance || 0,
+        calories: result.breakdown?.calories || 0,
+        sleep: result.breakdown?.sleep || 0
       });
 
       setTimeout(() => {

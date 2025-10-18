@@ -6,7 +6,9 @@
   "dependencies": {
     "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.39.0",
-    "plaid": "^30.0.0"
+    "adm-zip": "^0.5.16",
+    "plaid": "^30.0.0",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
