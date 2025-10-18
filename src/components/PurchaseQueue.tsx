@@ -10,6 +10,7 @@ import {
   markAsPurchased,
   type PurchaseQueueItem
 } from '../lib/budgetOptimizer';
+import { AddToQueueModal } from './AddToQueueModal';
 
 interface PurchaseQueueProps {
   userId: string;
@@ -21,6 +22,7 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<PurchaseQueueItem | null>(null);
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadQueue();
@@ -95,10 +97,16 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
         </div>
         <div className="flex items-center gap-4">
           <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 rounded-lg transition-all font-semibold"
+          >
+            + Add Item
+          </button>
+          <button
             onClick={loadQueue}
             className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 rounded-lg transition-all"
           >
-            🔄 Refresh Queue
+            🔄 Refresh
           </button>
           <div className="text-right">
             <p className="text-sm text-gray-400">Available Budget</p>
@@ -111,9 +119,15 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
       {queueItems.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎯</div>
-          <p className="text-gray-400">Your purchase queue is empty</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Go to Supplements → Library and click "Add to Queue" on items you want to purchase
+          <p className="text-gray-400 text-lg mb-4">Your purchase queue is empty</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border border-purple-400/50 rounded-xl text-white font-semibold transition-all"
+          >
+            + Add Your First Item
+          </button>
+          <p className="text-sm text-gray-500 mt-4">
+            Add anything you're considering purchasing - supplements, groceries, electronics, etc.
           </p>
           <p className="text-sm text-gray-500 mt-1">
             The system will prioritize based on health ROI, affordability, and timing
@@ -185,9 +199,34 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
                       </div>
 
                       {/* Reasoning */}
-                      <p className="text-sm text-gray-300 mt-4 bg-white/5 rounded-lg p-3">
-                        💡 {item.reasoning}
-                      </p>
+                      {item.reasoning && (
+                        <p className="text-sm text-gray-300 mt-4 bg-white/5 rounded-lg p-3">
+                          💡 {item.reasoning}
+                        </p>
+                      )}
+
+                      {/* Notes with Product Link */}
+                      {item.notes && (
+                        <div className="text-sm text-gray-300 mt-2 bg-white/5 rounded-lg p-3">
+                          {item.notes.split('\n').map((line, i) => {
+                            if (line.startsWith('Link: ')) {
+                              const url = line.substring(6);
+                              return (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1"
+                                >
+                                  🔗 View Product
+                                </a>
+                              );
+                            }
+                            return <p key={i}>{line}</p>;
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Right: Actions */}
@@ -281,6 +320,13 @@ export default function PurchaseQueue({ userId, availableBudget = 0 }: PurchaseQ
           </motion.div>
         </div>
       )}
+
+      {/* Add Item Modal */}
+      <AddToQueueModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={loadQueue}
+      />
     </div>
   );
 }
