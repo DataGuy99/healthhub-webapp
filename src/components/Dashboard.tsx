@@ -42,7 +42,7 @@ const Loading = () => (
 
 type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills';
 // Phase 6.2: Removed 'investment' and 'home-garden' from CategoryTab
-type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
+type HealthSubTab = 'import' | 'timeline' | 'insights' | 'heatmap' | 'roi-timeline' | 'purchase-queue';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'overview' | 'cost-analysis';
@@ -96,10 +96,8 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         { id: 'timeline', label: 'Timeline', icon: '📊' },
         { id: 'insights', label: 'Insights', icon: '🧠' },
         { id: 'heatmap', label: 'Heatmap', icon: '🔥' },
-        { id: 'roi-timeline', label: 'ROI Timeline', icon: '📈' },
-        { id: 'funnel', label: 'Funnel', icon: '🎯' },
-        { id: 'purchase-queue', label: 'Queue', icon: '📋' },
-        { id: 'roi-analysis', label: 'ROI', icon: '💰' },
+        { id: 'roi-timeline', label: 'ROI', icon: '💰' },
+        { id: 'purchase-queue', label: 'Queue/Funnel', icon: '🎯' },
       ];
 
       return (
@@ -370,14 +368,8 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       if (healthSubTab === 'roi-timeline') {
         return <ROITimeline data={[]} timeRange="month" />;
       }
-      if (healthSubTab === 'funnel') {
-        return userId ? <PurchaseFunnel queueItems={[]} onItemClick={() => {}} /> : null;
-      }
       if (healthSubTab === 'purchase-queue') {
         return userId ? <PurchaseQueue userId={userId} availableBudget={1000} /> : null;
-      }
-      if (healthSubTab === 'roi-analysis') {
-        return userId ? <ROIAnalyzer userId={userId} /> : null;
       }
     }
 
