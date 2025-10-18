@@ -29,6 +29,7 @@ const SpendingTracker = lazy(() => import('./SpendingTracker').then(m => ({ defa
 const AutoMPGTracker = lazy(() => import('./AutoMPGTracker').then(m => ({ default: m.AutoMPGTracker })));
 const AutoCostAnalysis = lazy(() => import('./AutoCostAnalysis').then(m => ({ default: m.AutoCostAnalysis })));
 const BillsCalendar = lazy(() => import('./BillsCalendar').then(m => ({ default: m.BillsCalendar })));
+const IncomeCalculator = lazy(() => import('./IncomeCalculator').then(m => ({ default: m.IncomeCalculator })));
 const CryptoMetalsTracker = lazy(() => import('./CryptoMetalsTracker').then(m => ({ default: m.CryptoMetalsTracker })));
 const MiscShopTracker = lazy(() => import('./MiscShopTracker').then(m => ({ default: m.MiscShopTracker })));
 
@@ -45,7 +46,7 @@ type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatm
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
-type BillsSubTab = 'calendar' | 'tracker' | 'providers';
+type BillsSubTab = 'calendar' | 'tracker' | 'providers' | 'income'; // Phase 6.2: Added income calculator
 type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
 // Phase 6.2: Removed InvestmentSubTab and HomeGardenSubTab - categories removed per user feedback
 
@@ -312,6 +313,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
           { id: 'calendar', label: 'Calendar', icon: '📅' },
           { id: 'tracker', label: 'Payment Tracker', icon: '✅' },
           { id: 'providers', label: 'Providers', icon: '🏢' },
+          { id: 'income', label: 'Income Calculator', icon: '💰' }, // Phase 6.2: Added income calculator
         ],
         billsSubTab,
         setBillsSubTab,
@@ -504,6 +506,10 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
             onBack={() => setActiveTab('overview')}
           />
         );
+      }
+      // Phase 6.2: Income Calculator
+      if (billsSubTab === 'income') {
+        return <IncomeCalculator />;
       }
       // Service providers using CategoryHub
       return (
