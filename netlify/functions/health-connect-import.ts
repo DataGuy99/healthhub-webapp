@@ -298,17 +298,42 @@ export const handler: Handler = async (event) => {
       console.error('Error extracting nutrition:', e);
     }
 
-    // Extract exercise sessions
+    // Extract exercise sessions with segments/reps
     try {
       const exerciseResult = db.exec(`
-        SELECT start_time, end_time, exercise_type, title, notes
-        FROM exercise_session_record_table
-        ORDER BY start_time
+        SELECT
+          e.row_id,
+          e.start_time,
+          e.end_time,
+          e.exercise_type,
+          e.title,
+          e.notes
+        FROM exercise_session_record_table e
+        ORDER BY e.start_time
       `);
 
       if (exerciseResult[0]) {
-        exerciseResult[0].values.forEach(([startTime, endTime, exerciseType, title, notes]) => {
+        exerciseResult[0].values.forEach(([rowId, startTime, endTime, exerciseType, title, notes]) => {
           const durationMinutes = (Number(endTime) - Number(startTime)) / (1000 * 60);
+
+          // Get segments/reps for this exercise
+          let totalReps = 0;
+          try {
+            const segmentsResult = db.exec(`
+              SELECT repetitions_count
+              FROM exercise_segments_table
+              WHERE parent_key = ${rowId}
+            `);
+
+            if (segmentsResult[0]) {
+              segmentsResult[0].values.forEach(([reps]) => {
+                totalReps += Number(reps);
+              });
+            }
+          } catch (segErr) {
+            // No segments for this exercise
+          }
+
           dataPoints.push({
             timestamp: new Date(Number(startTime)).toISOString(),
             type: 'exercise_duration',
@@ -318,9 +343,25 @@ export const handler: Handler = async (event) => {
               end_time: new Date(Number(endTime)).toISOString(),
               exercise_type: Number(exerciseType),
               title: title || 'Unknown',
-              notes: notes || ''
+              notes: notes || '',
+              total_reps: totalReps
             }
           });
+
+          // If there are reps, add a separate data point for rep tracking
+          if (totalReps > 0) {
+            dataPoints.push({
+              timestamp: new Date(Number(startTime)).toISOString(),
+              type: 'exercise_reps',
+              value: totalReps,
+              source: 'health_connect',
+              metadata: {
+                exercise_type: Number(exerciseType),
+                title: title || 'Unknown'
+              }
+            });
+          }
+
           importCounts.exercise++;
         });
       }
