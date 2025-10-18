@@ -12,13 +12,14 @@ interface MiscShopBudget {
   updated_at: string;
 }
 
+// Phase 6.2: Updated to remove is_big_purchase (needs/wants distinction)
 interface MiscShopPurchase {
   id: string;
   user_id: string;
   item_name: string;
   amount: number;
   date: string;
-  is_big_purchase: boolean;
+  category?: string; // Phase 6.2: Added category field
   notes: string | null;
   created_at: string;
 }
@@ -34,12 +35,12 @@ export const MiscShopTracker: React.FC = () => {
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [editMonthlyBudget, setEditMonthlyBudget] = useState('30.00');
 
-  // New purchase form
+  // New purchase form - Phase 6.2: Removed is_big_purchase, added category
   const [showAddPurchase, setShowAddPurchase] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newIsBigPurchase, setNewIsBigPurchase] = useState(false);
+  const [newCategory, setNewCategory] = useState('misc'); // Phase 6.2: Category instead of needs/wants
   const [newNotes, setNewNotes] = useState('');
 
   useEffect(() => {
@@ -183,6 +184,7 @@ export const MiscShopTracker: React.FC = () => {
 
       const amount = parseFloat(newAmount);
 
+      // Phase 6.2: Removed is_big_purchase, added category
       const { error } = await supabase
         .from('misc_shop_purchases')
         .insert({
@@ -190,7 +192,7 @@ export const MiscShopTracker: React.FC = () => {
           item_name: newItemName.trim(),
           amount: amount,
           date: newDate,
-          is_big_purchase: newIsBigPurchase,
+          category: newCategory || 'misc',
           notes: newNotes.trim() || null
         });
 
@@ -198,11 +200,11 @@ export const MiscShopTracker: React.FC = () => {
         console.error('Error adding purchase:', error);
         alert('Failed to add purchase');
       } else {
-        // Reset form
+        // Reset form - Phase 6.2: Updated to use category
         setNewItemName('');
         setNewAmount('');
         setNewDate(new Date().toISOString().split('T')[0]);
-        setNewIsBigPurchase(false);
+        setNewCategory('misc');
         setNewNotes('');
         setShowAddPurchase(false);
 
@@ -576,17 +578,21 @@ export const MiscShopTracker: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isBigPurchase"
-                checked={newIsBigPurchase}
-                onChange={(e) => setNewIsBigPurchase(e.target.checked)}
-                className="w-4 h-4 text-purple-500 bg-gray-800 border-gray-700 rounded focus:ring-purple-500"
-              />
-              <label htmlFor="isBigPurchase" className="text-sm text-gray-300">
-                Big Purchase (using savings)
-              </label>
+            {/* Phase 6.2: Replaced needs/wants checkbox with category selector */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Category (optional)</label>
+              <select
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="w-full bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none"
+              >
+                <option value="misc">Miscellaneous</option>
+                <option value="electronics">Electronics</option>
+                <option value="clothing">Clothing</option>
+                <option value="home">Home & Decor</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="other">Other</option>
+              </select>
             </div>
 
             <div>
@@ -613,7 +619,7 @@ export const MiscShopTracker: React.FC = () => {
                   setNewItemName('');
                   setNewAmount('');
                   setNewDate(new Date().toISOString().split('T')[0]);
-                  setNewIsBigPurchase(false);
+                  setNewCategory('misc'); // Phase 6.2: Reset category
                   setNewNotes('');
                 }}
                 className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
@@ -648,17 +654,16 @@ export const MiscShopTracker: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className={`bg-gray-800/50 rounded-lg p-4 border ${
-                  purchase.is_big_purchase ? 'border-purple-500/30' : 'border-gray-700'
-                }`}
+                className="bg-gray-800/50 rounded-lg p-4 border border-gray-700"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h4 className="text-lg font-semibold text-white">{purchase.item_name}</h4>
-                      {purchase.is_big_purchase && (
-                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded-full">
-                          Big Purchase
+                      {/* Phase 6.2: Show category instead of needs/wants badge */}
+                      {purchase.category && purchase.category !== 'misc' && (
+                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-xs rounded-full capitalize">
+                          {purchase.category}
                         </span>
                       )}
                     </div>
