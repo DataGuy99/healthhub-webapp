@@ -45,7 +45,7 @@ type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 
 type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
-type AutoSubTab = 'overview' | 'cost-analysis'; // Phase 6.2: Consolidated costs+maintenance+gas into overview, removed mpg-tracker
+type AutoSubTab = 'overview' | 'cost-analysis';
 type BillsSubTab = 'calendar' | 'tracker' | 'providers' | 'income'; // Phase 6.2: Added income calculator
 type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
 // Phase 6.2: Removed InvestmentSubTab and HomeGardenSubTab - categories removed per user feedback
@@ -70,7 +70,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const [healthSubTab, setHealthSubTab] = useState<HealthSubTab>('import');
   const [supplementsSubTab, setSupplementsSubTab] = useState<SupplementsSubTab>('daily');
   const [grocerySubTab, setGrocerySubTab] = useState<GrocerySubTab>('items');
-  const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('overview'); // Phase 6.2: Default to overview
+  const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('overview');
   const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('calendar');
   const [miscShopSubTab, setMiscShopSubTab] = useState<MiscShopSubTab>('budget');
   const [userId, setUserId] = useState<string>('');
@@ -217,10 +217,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     }
 
     if (activeTab === 'auto') {
-      // Phase 6.2: Consolidated subtabs (removed mpg-tracker, maintenance, gas, costs)
       const tabs: { id: AutoSubTab; label: string; icon: string }[] = [
         { id: 'overview', label: 'Overview', icon: '🚗' },
-        { id: 'cost-analysis', label: 'Cost Analysis', icon: '💵' },
+        { id: 'cost-analysis', label: 'Costs', icon: '💵' },
       ];
 
       return (
@@ -447,9 +446,8 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
     // Auto category with sub-tabs
     if (activeTab === 'auto') {
-      // Phase 6.2: Consolidated auto view - overview contains gas+maintenance+costs
       if (autoSubTab === 'overview') {
-        return <AutoMPGTracker />; // Phase 6.2: Unified auto overview component
+        return <AutoMPGTracker />;
       }
       if (autoSubTab === 'cost-analysis') {
         return <AutoCostAnalysis />;

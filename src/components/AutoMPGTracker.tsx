@@ -627,7 +627,7 @@ export function AutoMPGTracker() {
                 type="text"
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="e.g., Shell, Highway 101"
+                placeholder="e.g., Shell, Highway 101, 3/4 tank"
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
