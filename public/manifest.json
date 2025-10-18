@@ -1,7 +1,7 @@
 {
-  "name": "HealthHub - Supplement Tracker",
-  "short_name": "HealthHub",
-  "description": "Track your daily supplements and vitamins with ease",
+  "name": "LifeDashHub",
+  "short_name": "LifeDashHub",
+  "description": "Comprehensive health, finance, and lifestyle dashboard",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
