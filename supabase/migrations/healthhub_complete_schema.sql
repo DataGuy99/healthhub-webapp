@@ -418,6 +418,24 @@ CREATE INDEX IF NOT EXISTS idx_income_settings_user ON public.income_settings(us
 -- GROCERY & PROTEIN TRACKING
 -- ================================================================================
 
+-- Phase 6.2: Favorite foods (must be created before grocery_purchases due to FK)
+CREATE TABLE IF NOT EXISTS public.favorite_foods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    item_name TEXT NOT NULL,
+    total_cost NUMERIC(10,2) NOT NULL,
+    protein_grams NUMERIC(8,2),
+    cost_per_gram NUMERIC(10,4),
+    servings INTEGER,
+    serving_size_oz NUMERIC(6,2),
+    macros JSONB,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, item_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorite_foods_user ON public.favorite_foods(user_id);
+
 CREATE TABLE IF NOT EXISTS public.grocery_budgets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -762,24 +780,6 @@ CREATE TRIGGER update_correlations_updated_at BEFORE UPDATE ON public.health_sup
 -- ================================================================================
 -- PHASE 6.2: NEW TABLES
 -- ================================================================================
-
--- Favorite foods (Grocery enhancement)
-CREATE TABLE IF NOT EXISTS public.favorite_foods (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    item_name TEXT NOT NULL,
-    total_cost NUMERIC(10,2) NOT NULL,
-    protein_grams NUMERIC(8,2),
-    cost_per_gram NUMERIC(10,4),
-    servings INTEGER,
-    serving_size_oz NUMERIC(6,2),
-    macros JSONB,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, item_name)
-);
-
-CREATE INDEX IF NOT EXISTS idx_favorite_foods_user ON public.favorite_foods(user_id);
 
 -- Auto transactions (consolidates gas/maintenance/other)
 CREATE TABLE IF NOT EXISTS public.auto_transactions (
