@@ -40,6 +40,7 @@ export function ProteinCalculator() {
   const [numServings, setNumServings] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   // Target settings state
   const [showTargetSettings, setShowTargetSettings] = useState(false);
@@ -129,7 +130,7 @@ export function ProteinCalculator() {
     if (!confirm('Remove from favorites?')) return;
 
     try {
-      const { error } = await supabase
+      const { error} = await supabase
         .from('favorite_foods')
         .delete()
         .eq('id', id);
@@ -139,6 +140,34 @@ export function ProteinCalculator() {
     } catch (error) {
       console.error('Error removing favorite:', error);
       alert('Failed to remove favorite');
+    }
+  };
+
+  const markAsBought = async (calc: ProteinCalculation, quantity: number = 1) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const totalCost = calc.price * quantity;
+
+      const { error } = await supabase
+        .from('category_logs')
+        .insert({
+          user_id: user.id,
+          category_item_id: null,
+          date: new Date().toISOString().split('T')[0],
+          actual_amount: totalCost,
+          notes: `Bought ${quantity}x ${calc.food_name}`,
+          timestamp: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+      alert(`Marked ${quantity}x ${calc.food_name} as bought ($${totalCost.toFixed(2)})`);
+      setQuantities(prev => ({ ...prev, [calc.created_at!]: 1 }));
+    } catch (error) {
+      console.error('Error marking as bought:', error);
+      alert('Failed to mark as bought');
     }
   };
 
@@ -267,7 +296,7 @@ export function ProteinCalculator() {
     }
   };
 
-  const markAsBought = async (calc: ProteinCalculation) => {
+  const markAsBoughtOld = async (calc: ProteinCalculation) => {
     if (!confirm('Add this to Grocery purchases?')) return;
 
     try {
@@ -538,12 +567,42 @@ export function ProteinCalculator() {
                     <div className="text-white text-xl font-bold">${fav.cost_per_gram.toFixed(3)}</div>
                   </div>
                 </div>
-                <button
-                  onClick={() => removeFavorite(fav.id!)}
-                  className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
-                >
-                  Remove
-                </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantities[fav.id!] || 1}
+                      onChange={(e) => setQuantities(prev => ({ ...prev, [fav.id!]: parseInt(e.target.value) || 1 }))}
+                      className="w-16 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        const favCalc: ProteinCalculation = {
+                          food_name: fav.food_name,
+                          serving_size: fav.serving_size,
+                          serving_unit: fav.serving_unit,
+                          protein_grams: fav.protein_grams,
+                          num_servings: 1,
+                          price: fav.price,
+                          cost_per_gram: fav.cost_per_gram,
+                          date: new Date().toISOString(),
+                          created_at: fav.id
+                        };
+                        markAsBought(favCalc, quantities[fav.id!] || 1);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                    >
+                      🛒 Buy
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => removeFavorite(fav.id!)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -605,19 +664,28 @@ export function ProteinCalculator() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2">
                     <button
                       onClick={() => addToFavorites(calc)}
                       className="px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-sm transition-all"
                     >
                       ⭐ Favorite
                     </button>
-                    <button
-                      onClick={() => markAsBought(calc)}
-                      className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
-                    >
-                      🛒 Buy
-                    </button>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantities[calc.created_at!] || 1}
+                        onChange={(e) => setQuantities(prev => ({ ...prev, [calc.created_at!]: parseInt(e.target.value) || 1 }))}
+                        className="w-16 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      />
+                      <button
+                        onClick={() => markAsBought(calc, quantities[calc.created_at!] || 1)}
+                        className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                      >
+                        🛒 Buy
+                      </button>
+                    </div>
                     <button
                       onClick={() => deleteCalculation(calc.id!)}
                       className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
