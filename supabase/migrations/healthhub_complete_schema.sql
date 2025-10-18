@@ -1299,7 +1299,7 @@ $$ LANGUAGE plpgsql;
 -- Composite indexes for query performance
 CREATE INDEX IF NOT EXISTS idx_recurring_bills_user_active ON public.recurring_bills(user_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_protein_calculations_user_created ON public.protein_calculations(user_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_misc_shop_purchases_user_month_date ON public.misc_shop_purchases(user_id, month, date);
+-- misc_shop_purchases already has idx_misc_shop_purchases_user_date index
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_user_active ON public.bank_accounts(user_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON public.transactions(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_bill_payments_user_date ON public.bill_payments(user_id, date);
