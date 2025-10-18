@@ -171,19 +171,22 @@ export function BillsCalendar() {
         }
       }
 
-      const { error } = await supabase
+      const { error} = await supabase
         .from('recurring_bills')
         .insert({
           user_id: user.id,
           name: formName.trim(),
           amount: parseFloat(formAmount),
-          recurrence_type: formRecurrenceType,
+          frequency: formRecurrenceType, // Old field (backward compat)
+          recurrence_type: formRecurrenceType, // New Phase 6.2 field
           recurrence_config: Object.keys(recurrence_config).length > 0 ? recurrence_config : null,
+          day_of_week: formRecurrenceType === 'weekly' || formRecurrenceType === 'biweekly' ? formDayOfWeek : null,
+          day_of_month: formRecurrenceType === 'monthly' ? formDayOfMonth : null,
+          skip_first_week: formExcludeWeeks.includes(1),
           provider: formProvider.trim() || extractProvider(formName),
           is_income: formIsIncome,
           is_active: true,
           icon: formIcon,
-          created_at: new Date().toISOString(),
         });
 
       if (error) throw error;

@@ -96,6 +96,20 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
         }
       });
 
+      // Load gas fillup costs for current month
+      const { data: gasFillupsData } = await supabase
+        .from('gas_fillups')
+        .select('cost')
+        .eq('user_id', user.id)
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      const gasFillupTotal = gasFillupsData?.reduce((sum, fillup) => sum + (fillup.cost || 0), 0) || 0;
+
+      // Add gas fillups to 'auto' category spending
+      const currentAutoSpending = spendingMap.get('auto') || 0;
+      spendingMap.set('auto', currentAutoSpending + gasFillupTotal);
+
       const spending: CategorySpending[] = Array.from(spendingMap.entries()).map(([name, value]) => ({
         name,
         value,
@@ -190,6 +204,7 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
         .select('mileage, mpg')
         .eq('user_id', user.id)
         .order('date', { ascending: false })
+        .order('mileage', { ascending: false })
         .limit(10);
 
       if (fillups && fillups.length > 0) {

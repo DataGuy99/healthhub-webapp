@@ -44,7 +44,7 @@ type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 
 // Phase 6.2: Removed 'investment' and 'home-garden' from CategoryTab
 type HealthSubTab = 'import' | 'timeline' | 'insights' | 'heatmap' | 'roi-timeline' | 'purchase-queue';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
-type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
+type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs';
 type AutoSubTab = 'overview' | 'cost-analysis';
 type BillsSubTab = 'calendar' | 'tracker' | 'providers' | 'income'; // Phase 6.2: Added income calculator
 type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
@@ -179,7 +179,6 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
         { id: 'protein', label: 'Protein Calculator', icon: '🥩' },
         { id: 'budget', label: 'Budget Tracker', icon: '💵' },
         { id: 'costs', label: 'Costs', icon: '💰' },
-        { id: 'common', label: 'Common Purchases', icon: '⭐' },
       ];
 
       return (
@@ -412,17 +411,6 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       if (grocerySubTab === 'budget') {
         return <GroceryBudgetTracker />;
       }
-      if (grocerySubTab === 'common') {
-        return (
-          <CategoryHub
-            category="grocery-common"
-            categoryName="Common Purchases"
-            icon="⭐"
-            color="from-green-500/20 to-emerald-500/20 border-green-500/30"
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
       if (grocerySubTab === 'costs') {
         return (
           <SpendingTracker
@@ -537,7 +525,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       <div className="max-w-7xl mx-auto mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div onClick={() => setActiveTab('overview')} className="cursor-pointer">
-            <AnimatedTitle text="Overview" />
+            <AnimatedTitle text="LifeDashHub" />
           </div>
           <button
             onClick={handleLogout}

@@ -109,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_category_items_bill ON public.category_items(recu
 CREATE TABLE IF NOT EXISTS public.category_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    category_item_id UUID NOT NULL REFERENCES public.category_items(id) ON DELETE CASCADE,
+    category_item_id UUID REFERENCES public.category_items(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     actual_amount NUMERIC,
     notes TEXT,

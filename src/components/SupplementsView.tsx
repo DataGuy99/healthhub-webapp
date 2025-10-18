@@ -79,17 +79,38 @@ export function SupplementsView() {
         .from('supplements')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false});
 
       if (supplementsError) throw supplementsError;
 
-      const { data: sectionsData, error: sectionsError } = await supabase
+      let { data: sectionsData, error: sectionsError } = await supabase
         .from('supplement_sections')
         .select('*')
         .eq('user_id', user.id)
         .order('order', { ascending: true });
 
       if (sectionsError) throw sectionsError;
+
+      // If no sections exist, create default sections
+      if (!sectionsData || sectionsData.length === 0) {
+        const defaultSections = [
+          { user_id: user.id, name: 'Morning', order: 1 },
+          { user_id: user.id, name: 'Afternoon', order: 2 },
+          { user_id: user.id, name: 'Evening', order: 3 },
+          { user_id: user.id, name: 'Before Bed', order: 4 },
+        ];
+
+        const { data: createdSections, error: createError } = await supabase
+          .from('supplement_sections')
+          .insert(defaultSections)
+          .select();
+
+        if (createError) {
+          console.error('Error creating default sections:', createError);
+        } else {
+          sectionsData = createdSections;
+        }
+      }
 
       setSupplements(supplementsData || []);
       setSections(sectionsData || []);
