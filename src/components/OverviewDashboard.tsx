@@ -56,6 +56,13 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
   const [supplementCount, setSupplementCount] = useState(0);
   const [topInsights, setTopInsights] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [avgMPG, setAvgMPG] = useState(0);
+  const [currentMileage, setCurrentMileage] = useState(0);
+  const [showMPGPopup, setShowMPGPopup] = useState(false);
+  const [popupMileage, setPopupMileage] = useState('');
+  const [popupCost, setPopupCost] = useState('');
+  const [popupGallons, setPopupGallons] = useState('');
+  const [popupPricePerGallon, setPopupPricePerGallon] = useState('');
 
   useEffect(() => {
     loadOverviewData();
@@ -175,6 +182,23 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
 
       setSupplementCount(supps?.length || 0);
 
+      // Load MPG data
+      const { data: fillups } = await supabase
+        .from('gas_fillups')
+        .select('mileage, mpg')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(10);
+
+      if (fillups && fillups.length > 0) {
+        setCurrentMileage(Number(fillups[0].mileage) || 0);
+        const mpgValues = fillups.filter(f => f.mpg !== null).map(f => Number(f.mpg));
+        if (mpgValues.length > 0) {
+          const avgMpg = mpgValues.reduce((sum, mpg) => sum + mpg, 0) / mpgValues.length;
+          setAvgMPG(avgMpg);
+        }
+      }
+
       // Generate insights
       const insights: string[] = [];
       const budgetUsagePercent = total > 0 ? (totalSpent / total) * 100 : 0;
@@ -217,6 +241,47 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
   const budgetRemaining = Math.max(totalBudget - totalSpent, 0);
   const budgetUsagePercent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
+  const logMPGFillup = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      if (!popupMileage || !popupCost || !popupGallons) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      const mileage = parseInt(popupMileage);
+      const cost = parseFloat(popupCost);
+      const gallons = parseFloat(popupGallons);
+      const pricePerGallon = popupPricePerGallon ? parseFloat(popupPricePerGallon) : cost / gallons;
+
+      const { error } = await supabase
+        .from('gas_fillups')
+        .insert({
+          user_id: user.id,
+          date: new Date().toISOString().split('T')[0],
+          mileage,
+          gallons,
+          cost,
+          price_per_gallon: pricePerGallon,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      setShowMPGPopup(false);
+      setPopupMileage('');
+      setPopupCost('');
+      setPopupGallons('');
+      setPopupPricePerGallon('');
+      loadOverviewData();
+    } catch (error) {
+      console.error('Error logging fillup:', error);
+      alert('Failed to log fillup');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -224,7 +289,7 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
       className="space-y-6"
     >
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6"
@@ -288,7 +353,98 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
           <p className="text-3xl font-bold text-white">{supplementCount}</p>
           <p className="text-xs text-white/40 mt-2">in library</p>
         </motion.div>
+
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          onClick={() => setShowMPGPopup(true)}
+          className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-xl rounded-2xl border border-blue-500/30 p-6 cursor-pointer"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-4xl">🚗</div>
+            <div className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">
+              {currentMileage > 0 ? `${currentMileage.toLocaleString()} mi` : 'N/A'}
+            </div>
+          </div>
+          <h3 className="text-white/60 text-sm font-medium mb-1">Avg MPG</h3>
+          <p className="text-3xl font-bold text-white">{avgMPG > 0 ? avgMPG.toFixed(1) : '--'}</p>
+          <p className="text-xs text-white/40 mt-2">click to log fillup</p>
+        </motion.div>
       </div>
+
+      {/* MPG Popup Form */}
+      {showMPGPopup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-blue-500/30 p-6 max-w-md w-full"
+          >
+            <h3 className="text-2xl font-bold text-white mb-4">⛽ Log Fillup</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-white/70 text-sm">Cost & Gallons</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={popupCost}
+                    onChange={(e) => setPopupCost(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                    placeholder="$45.00"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={popupGallons}
+                    onChange={(e) => setPopupGallons(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                    placeholder="12.5 gal"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-white/70 text-sm">Price/Gallon (optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={popupPricePerGallon}
+                  onChange={(e) => setPopupPricePerGallon(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  placeholder="$3.60 (auto-calculated if empty)"
+                />
+              </div>
+
+              <div>
+                <label className="text-white/70 text-sm">Mileage</label>
+                <input
+                  type="number"
+                  value={popupMileage}
+                  onChange={(e) => setPopupMileage(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
+                  placeholder={currentMileage > 0 ? currentMileage.toString() : "12500"}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowMPGPopup(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={logMPGFillup}
+                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border border-blue-500/30 text-blue-300 font-medium transition-all"
+                >
+                  Log Fillup
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Insights */}
       {topInsights.length > 0 && (
