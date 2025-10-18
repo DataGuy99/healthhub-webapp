@@ -4,9 +4,9 @@ import { supabase, Supplement, SupplementSection } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 
 interface SupplementCost extends Supplement {
-  cost?: number;
-  quantity?: number;
-  frequency?: number; // times per day
+  cost_per_container?: number;
+  servings_per_container?: number;
+  frequency?: number;
 }
 
 export function CostCalculator() {
@@ -36,8 +36,8 @@ export function CostCalculator() {
 
       setSupplements((supplementsData || []).map(s => ({
         ...s,
-        cost: s.cost || 0,
-        quantity: s.quantity || 0,
+        cost_per_container: s.cost_per_container || s.cost || 0,
+        servings_per_container: s.servings_per_container || s.quantity || 0,
         frequency: s.frequency || 1
       })));
       setSections(sectionsData || []);
@@ -48,15 +48,13 @@ export function CostCalculator() {
     }
   };
 
-  const updateCost = async (id: string, field: 'cost' | 'quantity' | 'frequency', value: number) => {
+  const updateCost = async (id: string, field: 'cost_per_container' | 'servings_per_container' | 'frequency', value: number) => {
     const previousValue = supplements.find(s => s.id === id)?.[field];
 
-    // Optimistic update
     setSupplements(prev => prev.map(s =>
       s.id === id ? { ...s, [field]: value } : s
     ));
 
-    // Save to database
     try {
       const { error } = await supabase
         .from('supplements')
@@ -66,18 +64,17 @@ export function CostCalculator() {
       if (error) throw error;
     } catch (error) {
       console.error('Error updating cost:', error);
-      // Revert on error
       setSupplements(prev => prev.map(s =>
         s.id === id ? { ...s, [field]: previousValue } : s
       ));
-      alert('Failed to update. Please run the SQL migration in add_cost_columns.sql');
+      alert('Failed to update');
     }
   };
 
   const calculateDailyCost = (supp: SupplementCost): number => {
-    if (!supp.cost || !supp.quantity || !supp.frequency) return 0;
-    const costPerUnit = supp.cost / supp.quantity;
-    const dailyCost = costPerUnit * supp.frequency;
+    if (!supp.cost_per_container || !supp.servings_per_container || !supp.frequency) return 0;
+    const costPerServing = supp.cost_per_container / supp.servings_per_container;
+    const dailyCost = costPerServing * supp.frequency;
 
     // Adjust for frequency pattern
     if (supp.frequency_pattern === '5/2') {
@@ -158,28 +155,28 @@ export function CostCalculator() {
 
                       <div className="grid grid-cols-3 gap-2 mb-2">
                         <div>
-                          <label className="text-white/70 text-xs">Cost ($)</label>
+                          <label className="text-white/70 text-xs">Cost/Container ($)</label>
                           <input
                             type="number"
                             step="0.01"
-                            value={supp.cost || ''}
-                            onChange={(e) => updateCost(supp.id!, 'cost', parseFloat(e.target.value) || 0)}
+                            value={supp.cost_per_container || ''}
+                            onChange={(e) => updateCost(supp.id!, 'cost_per_container', parseFloat(e.target.value) || 0)}
                             className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
                             placeholder="0.00"
                           />
                         </div>
                         <div>
-                          <label className="text-white/70 text-xs">Quantity</label>
+                          <label className="text-white/70 text-xs">Servings/Container</label>
                           <input
                             type="number"
-                            value={supp.quantity || ''}
-                            onChange={(e) => updateCost(supp.id!, 'quantity', parseInt(e.target.value) || 0)}
+                            value={supp.servings_per_container || ''}
+                            onChange={(e) => updateCost(supp.id!, 'servings_per_container', parseInt(e.target.value) || 0)}
                             className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
                             placeholder="0"
                           />
                         </div>
                         <div>
-                          <label className="text-white/70 text-xs">Per Day</label>
+                          <label className="text-white/70 text-xs">Servings/Day</label>
                           <input
                             type="number"
                             value={supp.frequency || ''}
