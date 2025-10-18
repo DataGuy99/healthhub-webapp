@@ -71,10 +71,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const [grocerySubTab, setGrocerySubTab] = useState<GrocerySubTab>('items');
   const [autoSubTab, setAutoSubTab] = useState<AutoSubTab>('mpg-tracker');
   const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('calendar');
-  const [investmentSubTab, setInvestmentSubTab] = useState<InvestmentSubTab>('portfolio');
   const [miscShopSubTab, setMiscShopSubTab] = useState<MiscShopSubTab>('budget');
-  const [homeGardenSubTab, setHomeGardenSubTab] = useState<HomeGardenSubTab>('projects');
   const [userId, setUserId] = useState<string>('');
+  // Phase 6.2: Removed investmentSubTab and homeGardenSubTab state variables
 
   // Get user ID from Supabase auth
   useEffect(() => {
@@ -320,18 +319,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       );
     }
 
-    if (activeTab === 'investment') {
-      return renderGenericSubTabs(
-        [
-          { id: 'portfolio', label: 'Portfolio', icon: '💼' },
-          { id: 'crypto-metals', label: 'Crypto & Metals', icon: '🪙' },
-          { id: 'performance', label: 'Performance', icon: '📈' },
-        ],
-        investmentSubTab,
-        setInvestmentSubTab,
-        'indigo'
-      );
-    }
+    // Phase 6.2: Removed investment sub-tab rendering
 
     if (activeTab === 'misc-shop') {
       return renderGenericSubTabs(
@@ -347,18 +335,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       );
     }
 
-    if (activeTab === 'home-garden') {
-      return renderGenericSubTabs(
-        [
-          { id: 'projects', label: 'Projects', icon: '🔨' },
-          { id: 'maintenance', label: 'Maintenance', icon: '🔧' },
-          { id: 'purchases', label: 'Purchases', icon: '🛒' },
-        ],
-        homeGardenSubTab,
-        setHomeGardenSubTab,
-        'lime'
-      );
-    }
+    // Phase 6.2: Removed home-garden sub-tab rendering
 
     // For categories without sub-tabs
     return null;
@@ -540,34 +517,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       );
     }
 
-    // Investment category with sub-tabs
-    if (activeTab === 'investment') {
-      if (investmentSubTab === 'crypto-metals') {
-        return <CryptoMetalsTracker />;
-      }
-      // Portfolio using CategoryHub (track investments as items)
-      if (investmentSubTab === 'portfolio') {
-        return (
-          <CategoryHub
-            category="investment-portfolio"
-            categoryName="Investment Portfolio"
-            icon="💼"
-            color="from-indigo-500/20 to-violet-500/20 border-indigo-500/30"
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      // Performance using TreasuryTemplate (track gains/losses)
-      return (
-        <TreasuryTemplate
-          category="investment-performance"
-          categoryName="Performance Analysis"
-          icon="📊"
-          color="from-indigo-500/20 to-violet-500/20 border-indigo-500/30"
-          onBack={() => setActiveTab('overview')}
-        />
-      );
-    }
+    // Phase 6.2: Removed investment category content rendering
 
     // Misc Shop category with sub-tabs
     if (activeTab === 'misc-shop') {
@@ -610,43 +560,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
       );
     }
 
-    // Home & Garden category with sub-tabs
-    if (activeTab === 'home-garden') {
-      const config = CATEGORY_CONFIG[activeTab];
-      if (homeGardenSubTab === 'projects') {
-        return (
-          <ChronicleTemplate
-            category="home-garden-projects"
-            categoryName="Home Projects"
-            icon="🔨"
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      if (homeGardenSubTab === 'maintenance') {
-        return (
-          <CategoryHub
-            category="home-garden-maintenance"
-            categoryName="Maintenance"
-            icon="🔧"
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-      if (homeGardenSubTab === 'purchases') {
-        return (
-          <ChronicleTemplate
-            category="home-garden-purchases"
-            categoryName="Purchases"
-            icon="🛒"
-            color={config.color}
-            onBack={() => setActiveTab('overview')}
-          />
-        );
-      }
-    }
+    // Phase 6.2: Removed home-garden category content rendering
 
     return null;
   };
