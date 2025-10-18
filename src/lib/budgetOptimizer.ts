@@ -44,8 +44,9 @@ export interface PurchaseQueueItem {
   queue_position: number;
 
   optimal_purchase_date?: string;
-  reasoning: string;
+  reasoning?: string;
   alternative_suggestions?: any[];
+  notes?: string;
 
   status?: string;
   supplement_id?: string;
@@ -172,7 +173,7 @@ export async function getPurchaseQueue(userId: string): Promise<PurchaseQueueIte
  */
 export async function addToPurchaseQueue(
   userId: string,
-  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at'>
+  item: Omit<PurchaseQueueItem, 'id' | 'user_id' | 'queue_position' | 'created_at' | 'updated_at' | 'priority_score' | 'affordability_score' | 'cost_effectiveness_score'>
 ): Promise<boolean> {
   try {
     // Get current max position
@@ -186,13 +187,29 @@ export async function addToPurchaseQueue(
 
     const nextPosition = maxData && maxData.length > 0 ? maxData[0].queue_position + 1 : 1;
 
+    // Calculate derived scores
+    const affordability_score = 50; // Default - will be calculated by budget optimizer
+    const cost_effectiveness_score = 50; // Default - will be calculated by correlation engine
+    const priority_score = calculatePriorityScore(
+      item.health_impact_score,
+      affordability_score,
+      item.timing_optimality_score,
+      cost_effectiveness_score,
+      item.urgency_score
+    );
+
     // Insert new item
     const { error } = await supabase
       .from('purchase_queue')
       .insert({
         user_id: userId,
         ...item,
-        queue_position: nextPosition
+        affordability_score,
+        cost_effectiveness_score,
+        priority_score,
+        queue_position: nextPosition,
+        reasoning: item.reasoning || 'User-added item',
+        status: 'queued'
       });
 
     if (error) throw error;
