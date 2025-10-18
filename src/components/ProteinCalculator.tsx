@@ -215,6 +215,35 @@ export function ProteinCalculator() {
     }
   };
 
+  const markAsBought = async (calc: ProteinCalculation) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const totalProtein = calc.protein_grams * calc.num_servings;
+
+      const { error } = await supabase
+        .from('grocery_purchases')
+        .insert({
+          user_id: user.id,
+          store: calc.notes || 'Grocery Store',
+          amount: calc.price,
+          date: new Date().toISOString().split('T')[0],
+          notes: `${calc.food_name} - ${calc.serving_size}${calc.serving_unit} × ${calc.num_servings} servings`,
+          protein_grams: totalProtein,
+          is_protein_source: true,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      alert(`✓ Added ${calc.food_name} to Grocery purchases!`);
+    } catch (error) {
+      console.error('Error marking as bought:', error);
+      alert('Failed to mark as bought');
+    }
+  };
+
   const getCostStatus = (costPerGram: number) => {
     if (!target) return 'neutral';
 
@@ -484,12 +513,20 @@ export function ProteinCalculator() {
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => deleteCalculation(calc.id!)}
-                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => markAsBought(calc)}
+                      className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                    >
+                      🛒 Mark as Bought
+                    </button>
+                    <button
+                      onClick={() => deleteCalculation(calc.id!)}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 text-sm transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );
