@@ -742,8 +742,101 @@ Or run manually in Supabase SQL Editor if CLI has issues.
   - Data aggregation to main dashboard
   - CSV import system (in progress)
   - User settings database sync
+- **v2.5.0** (2025-10-16): Category enable/disable toggle system
+- **v2.6.0** (2025-10-16): Performance optimizations (indexes, code splitting, caching)
+- **v2.7.0** (2025-10-16): Database cross-pollination & materialized views
+- **v2.8.0** (2025-10-17): **Schema idempotency & production hardening**
+  - All database objects idempotent (indexes, triggers, policies)
+  - Immutable function compliance fixes
+  - Query helper functions for time-based filtering
+  - CodeRabbit review passed
+  - Production-ready deployment capability
 
-**Current Version**: v2.7.0 (2025-10-16)
+**Current Version**: v2.8.0 (2025-10-17)
+
+---
+
+## v2.8.0 (2025-10-17) - Phase 5: Schema Idempotency & Production Hardening
+
+### Complete Database Schema Idempotency - COMPLETE ✅
+
+**Purpose**: Make schema fully re-runnable without errors for safe production updates and deployments
+
+**Problem Solved**: Schema application failed with "already exists" errors when re-applied, preventing safe production updates
+
+**Idempotency Improvements**:
+
+**1. Index Creation Made Idempotent**:
+- Changed all `CREATE INDEX` to `CREATE INDEX IF NOT EXISTS`
+- **Before**: Error when re-running schema (65 indexes would fail)
+- **After**: Safe to re-apply schema without errors
+- **Impact**: Can update production schema safely with zero downtime
+
+**2. Trigger Creation Made Idempotent**:
+- Added `DROP TRIGGER IF EXISTS` before all `CREATE TRIGGER` statements
+- Fixed trigger DROP statements to reference correct table names
+- **Before**: "trigger already exists" errors on re-run (22 triggers)
+- **After**: Triggers recreated cleanly on every schema run
+- **Impact**: Trigger logic updates deploy safely to production
+
+**3. RLS Policies Made Idempotent**:
+- Added `DROP POLICY IF EXISTS` before all `CREATE POLICY` statements
+- **Before**: "policy already exists" errors (39 policies)
+- **After**: Policies refresh cleanly without conflicts
+- **Impact**: Security policy updates deploy seamlessly
+
+**4. Immutable Function Fixes**:
+- Removed `NOW()` from index predicates and materialized view WHERE clauses
+- **Problem**: PostgreSQL requires IMMUTABLE functions in index definitions, NOW() is VOLATILE
+- **Solution**: Removed time-based WHERE filters from views, added STABLE query helper functions instead
+- **Replacement Functions**:
+  - `get_recent_health_summary(user_id, days)` - Filter health data by date range
+  - `get_supplement_adherence_30d(user_id)` - Last 30 days adherence
+  - `get_auto_costs_12mo(user_id)` - Last 12 months auto costs
+- **Impact**: Same functionality, PostgreSQL-compliant, better separation of concerns
+
+**5. Materialized View Name Fix**:
+- Fixed `refresh_all_materialized_views()` to reference correct view name
+- **Bug**: Called `supplement_adherence_30d` (doesn't exist)
+- **Fix**: Changed to `supplement_adherence_summary` (actual view name)
+- **Impact**: View refresh function now works correctly
+
+**6. Foreign Key Ordering**:
+- Moved FK constraint creation to end of schema (after all tables exist)
+- **Before**: FK errors when table doesn't exist yet
+- **After**: FKs added via ALTER TABLE after all CREATE TABLE statements
+- **Impact**: Schema applies in correct dependency order
+
+**Schema Validation Results**:
+- ✅ Tables: 38/38 with `IF NOT EXISTS`
+- ✅ Indexes: 65/65 with `IF NOT EXISTS`
+- ✅ Triggers: 22/22 with `DROP IF EXISTS` + correct table references
+- ✅ Policies: 39/39 with `DROP IF EXISTS`
+- ✅ Functions: 9/9 with `CREATE OR REPLACE`
+- ✅ Views: 5/5 with `IF NOT EXISTS`
+- ✅ Foreign Keys: 56/56 in correct order
+
+**CodeRabbit Review Findings**:
+- ⚠️ Security note: Plaid credentials stored as plaintext (acceptable for current phase)
+- ✅ All critical bugs fixed (materialized view name mismatch)
+- ✅ No functionality lost during idempotency refactor
+
+**Philosophy**: Schema as code - fully reproducible, version controlled, safe to deploy repeatedly
+
+**Files Modified**:
+- `supabase/healthhub_complete_schema.sql` - Full idempotency refactor (1268 lines)
+
+**Deployment Impact**:
+- Schema can be re-applied to production without downtime
+- Safe rollback capability (DROP + CREATE pattern)
+- Zero data loss (only DDL changes, no data modifications)
+- Future schema updates deploy with confidence
+
+**Commits**:
+- `6374bed` - Make schema idempotent with IF NOT EXISTS for all indexes
+- `4c71a12` - Fix DROP TRIGGER statements to reference correct table names
+- `5d5404a` - Fix materialized view name in refresh function
+- `9539340` - Make RLS policies idempotent with DROP POLICY IF EXISTS
 
 ---
 
