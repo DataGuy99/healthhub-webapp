@@ -1,35 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
-import { FinanceView } from './FinanceView';
-import { DailySupplementLogger } from './DailySupplementLogger';
-import { SupplementsView } from './SupplementsView';
-import { SectionsView } from './SectionsView';
-import { CostCalculator } from './CostCalculator';
-import { SupplementImportExport } from './SupplementImportExport';
-import { CategoryHub } from './CategoryHub';
-import { CovenantTemplate } from './CovenantTemplate';
-import { ChronicleTemplate } from './ChronicleTemplate';
-import { TreasuryTemplate } from './TreasuryTemplate';
 import { AnimatedTitle } from './AnimatedTitle';
-import { CryptoMetalsTracker } from './CryptoMetalsTracker';
-import { SpendingTracker } from './SpendingTracker';
-import { BillsCalendar } from './BillsCalendar';
-import { ProteinCalculator } from './ProteinCalculator';
-import { GroceryBudgetTracker } from './GroceryBudgetTracker';
-import { AutoMPGTracker } from './AutoMPGTracker';
-import { AutoCostAnalysis } from './AutoCostAnalysis';
-import { MiscShopTracker } from './MiscShopTracker';
-import { HealthTimeline } from './HealthTimeline';
-import { HealthInsights } from './HealthInsights';
-import { HealthConnectImport } from './HealthConnectImport';
-import PurchaseQueue from './PurchaseQueue';
-import ROIAnalyzer from './ROIAnalyzer';
-import CorrelationHeatmap from './CorrelationHeatmap';
-import ROITimeline from './ROITimeline';
-import PurchaseFunnel from './PurchaseFunnel';
-import { OverviewDashboard } from './OverviewDashboard';
 import { clearAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+
+// Lazy load all heavy components
+const OverviewDashboard = lazy(() => import('./OverviewDashboard').then(m => ({ default: m.OverviewDashboard })));
+const HealthConnectImport = lazy(() => import('./HealthConnectImport').then(m => ({ default: m.HealthConnectImport })));
+const HealthTimeline = lazy(() => import('./HealthTimeline').then(m => ({ default: m.HealthTimeline })));
+const HealthInsights = lazy(() => import('./HealthInsights').then(m => ({ default: m.HealthInsights })));
+const CorrelationHeatmap = lazy(() => import('./CorrelationHeatmap'));
+const ROITimeline = lazy(() => import('./ROITimeline'));
+const PurchaseFunnel = lazy(() => import('./PurchaseFunnel'));
+const PurchaseQueue = lazy(() => import('./PurchaseQueue'));
+const ROIAnalyzer = lazy(() => import('./ROIAnalyzer'));
+const DailySupplementLogger = lazy(() => import('./DailySupplementLogger').then(m => ({ default: m.DailySupplementLogger })));
+const SupplementsView = lazy(() => import('./SupplementsView').then(m => ({ default: m.SupplementsView })));
+const SectionsView = lazy(() => import('./SectionsView').then(m => ({ default: m.SectionsView })));
+const CostCalculator = lazy(() => import('./CostCalculator').then(m => ({ default: m.CostCalculator })));
+const SupplementImportExport = lazy(() => import('./SupplementImportExport').then(m => ({ default: m.SupplementImportExport })));
+const CategoryHub = lazy(() => import('./CategoryHub').then(m => ({ default: m.CategoryHub })));
+const CovenantTemplate = lazy(() => import('./CovenantTemplate').then(m => ({ default: m.CovenantTemplate })));
+const ChronicleTemplate = lazy(() => import('./ChronicleTemplate').then(m => ({ default: m.ChronicleTemplate })));
+const TreasuryTemplate = lazy(() => import('./TreasuryTemplate').then(m => ({ default: m.TreasuryTemplate })));
+const ProteinCalculator = lazy(() => import('./ProteinCalculator').then(m => ({ default: m.ProteinCalculator })));
+const GroceryBudgetTracker = lazy(() => import('./GroceryBudgetTracker').then(m => ({ default: m.GroceryBudgetTracker })));
+const SpendingTracker = lazy(() => import('./SpendingTracker').then(m => ({ default: m.SpendingTracker })));
+const AutoMPGTracker = lazy(() => import('./AutoMPGTracker').then(m => ({ default: m.AutoMPGTracker })));
+const AutoCostAnalysis = lazy(() => import('./AutoCostAnalysis').then(m => ({ default: m.AutoCostAnalysis })));
+const BillsCalendar = lazy(() => import('./BillsCalendar').then(m => ({ default: m.BillsCalendar })));
+const CryptoMetalsTracker = lazy(() => import('./CryptoMetalsTracker').then(m => ({ default: m.CryptoMetalsTracker })));
+const MiscShopTracker = lazy(() => import('./MiscShopTracker').then(m => ({ default: m.MiscShopTracker })));
+
+// Loading component
+const Loading = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="text-white/70">Loading...</div>
+  </div>
+);
 
 type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
 type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
@@ -735,7 +743,9 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto">
-        {renderContent()}
+        <Suspense fallback={<Loading />}>
+          {renderContent()}
+        </Suspense>
       </div>
     </motion.div>
   );
