@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useBudgetPeriod } from '../hooks/useBudgetPeriod';
+import { addToPurchaseQueue } from '../lib/budgetOptimizer';
 
 interface MiscShopBudget {
   id: string;
@@ -21,6 +22,7 @@ interface MiscShopPurchase {
   date: string;
   category?: string; // Phase 6.2: Added category field
   notes: string | null;
+  is_wishlist?: boolean; // Wishlist items
   created_at: string;
 }
 
@@ -30,6 +32,7 @@ export const MiscShopTracker: React.FC = () => {
   const [purchases, setPurchases] = useState<MiscShopPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodOffset, setPeriodOffset] = useState(0); // 0 = current, -1 = previous, +1 = next
+  const [showWishlist, setShowWishlist] = useState(false); // Toggle wishlist view
 
   // Budget settings
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -42,6 +45,7 @@ export const MiscShopTracker: React.FC = () => {
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newCategory, setNewCategory] = useState('misc'); // Phase 6.2: Category instead of needs/wants
   const [newNotes, setNewNotes] = useState('');
+  const [newIsWishlist, setNewIsWishlist] = useState(false); // Wishlist checkbox
 
   useEffect(() => {
     if (currentPeriod && !periodLoading) {
@@ -184,7 +188,7 @@ export const MiscShopTracker: React.FC = () => {
 
       const amount = parseFloat(newAmount);
 
-      // Phase 6.2: Removed is_big_purchase, added category
+      // Phase 6.2: Removed is_big_purchase, added category and wishlist
       const { error } = await supabase
         .from('misc_shop_purchases')
         .insert({
@@ -193,19 +197,21 @@ export const MiscShopTracker: React.FC = () => {
           amount: amount,
           date: newDate,
           category: newCategory || 'misc',
-          notes: newNotes.trim() || null
+          notes: newNotes.trim() || null,
+          is_wishlist: newIsWishlist
         });
 
       if (error) {
         console.error('Error adding purchase:', error);
         alert('Failed to add purchase');
       } else {
-        // Reset form - Phase 6.2: Updated to use category
+        // Reset form - Phase 6.2: Updated to use category and wishlist
         setNewItemName('');
         setNewAmount('');
         setNewDate(new Date().toISOString().split('T')[0]);
         setNewCategory('misc');
         setNewNotes('');
+        setNewIsWishlist(false);
         setShowAddPurchase(false);
 
         // Reload data
@@ -235,6 +241,35 @@ export const MiscShopTracker: React.FC = () => {
     } catch (error) {
       console.error('Error deleting purchase:', error);
       alert('Failed to delete purchase');
+    }
+  };
+
+  const addWishlistToQueue = async (purchase: MiscShopPurchase) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const success = await addToPurchaseQueue(user.id, {
+        item_name: purchase.item_name,
+        category: purchase.category || 'misc',
+        estimated_cost: purchase.amount,
+        health_impact_score: 50,
+        timing_optimality_score: 70,
+        optimal_purchase_date: undefined,
+        reasoning: `Added from wishlist: ${purchase.notes || 'No additional notes'}`,
+        alternative_suggestions: [],
+        status: 'queue',
+        source: 'misc_shop_wishlist'
+      });
+
+      if (success) {
+        alert(`${purchase.item_name} added to purchase queue!`);
+      } else {
+        alert('Failed to add to queue');
+      }
+    } catch (error) {
+      console.error('Error adding to queue:', error);
+      alert('Failed to add to queue');
     }
   };
 
@@ -338,8 +373,10 @@ export const MiscShopTracker: React.FC = () => {
     );
   }
 
-  // Calculate period stats
-  const periodSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
+  // Calculate period stats (exclude wishlist items from budget)
+  const actualPurchases = purchases.filter(p => !p.is_wishlist);
+  const wishlistItems = purchases.filter(p => p.is_wishlist);
+  const periodSpent = actualPurchases.reduce((sum, p) => sum + p.amount, 0);
   const periodRemaining = budget.monthly_budget - periodSpent;
   const totalAvailable = periodRemaining + budget.rollover_savings;
   const percentUsed =
@@ -606,6 +643,16 @@ export const MiscShopTracker: React.FC = () => {
               />
             </div>
 
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={newIsWishlist}
+                onChange={(e) => setNewIsWishlist(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-700 bg-gray-800 text-purple-500 focus:ring-purple-500/50"
+              />
+              <label className="text-white/80">Add to Wishlist (don't count toward budget)</label>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <button
                 onClick={addPurchase}
@@ -631,24 +678,48 @@ export const MiscShopTracker: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Purchases List */}
+      {/* Wishlist/Purchases Toggle */}
+      <div className="flex gap-3 mb-4">
+        <button
+          onClick={() => setShowWishlist(false)}
+          className={`flex-1 px-4 py-2 rounded-lg transition-all ${
+            !showWishlist
+              ? 'bg-purple-500 text-white'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+          }`}
+        >
+          Purchases ({actualPurchases.length})
+        </button>
+        <button
+          onClick={() => setShowWishlist(true)}
+          className={`flex-1 px-4 py-2 rounded-lg transition-all ${
+            showWishlist
+              ? 'bg-purple-500 text-white'
+              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+          }`}
+        >
+          Wishlist ({wishlistItems.length})
+        </button>
+      </div>
+
+      {/* Purchases/Wishlist List */}
       <div className="space-y-4">
         <h3 className="text-xl font-semibold text-white">
-          Purchases ({purchases.length})
+          {showWishlist ? 'Wishlist' : 'Purchases'} ({showWishlist ? wishlistItems.length : actualPurchases.length})
         </h3>
 
         <AnimatePresence>
-          {purchases.length === 0 ? (
+          {(showWishlist ? wishlistItems : actualPurchases).length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="text-center py-12 text-gray-400"
             >
-              No purchases this period
+              {showWishlist ? 'No wishlist items yet' : 'No purchases this period'}
             </motion.div>
           ) : (
-            purchases.map((purchase) => (
+            (showWishlist ? wishlistItems : actualPurchases).map((purchase) => (
               <motion.div
                 key={purchase.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -687,6 +758,15 @@ export const MiscShopTracker: React.FC = () => {
                         ${purchase.amount.toFixed(2)}
                       </div>
                     </div>
+
+                    {showWishlist && (
+                      <button
+                        onClick={() => addWishlistToQueue(purchase)}
+                        className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
+                      >
+                        Add to Queue
+                      </button>
+                    )}
 
                     <button
                       onClick={() => deletePurchase(purchase.id)}
