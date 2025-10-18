@@ -63,6 +63,8 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
   const [popupCost, setPopupCost] = useState('');
   const [popupGallons, setPopupGallons] = useState('');
   const [popupPricePerGallon, setPopupPricePerGallon] = useState('');
+  const [supplementsTakenToday, setSupplementsTakenToday] = useState(0);
+  const [supplementsTotalToday, setSupplementsTotalToday] = useState(0);
 
   useEffect(() => {
     loadOverviewData();
@@ -111,8 +113,8 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
         .eq('user_id', user.id)
         .eq('month_year', currentMonth);
 
-      const total = budgetsData?.reduce((sum, b) => sum + b.target_amount, 0) || 0;
-      setTotalBudget(total);
+      const totalBudgetAmount = budgetsData?.reduce((sum, b) => sum + b.target_amount, 0) || 0;
+      setTotalBudget(totalBudgetAmount);
 
       // Load trend data (last 7 days)
       const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -199,9 +201,23 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
         }
       }
 
+      // Load today's supplement progress
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayLogs } = await supabase
+        .from('supplement_logs')
+        .select('is_taken')
+        .eq('user_id', user.id)
+        .eq('date', today);
+
+      const taken = todayLogs?.filter(log => log.is_taken).length || 0;
+      const totalSupps = todayLogs?.length || 0;
+
+      setSupplementsTakenToday(taken);
+      setSupplementsTotalToday(totalSupps);
+
       // Generate insights
       const insights: string[] = [];
-      const budgetUsagePercent = total > 0 ? (totalSpent / total) * 100 : 0;
+      const budgetUsagePercent = totalBudgetAmount > 0 ? (totalSpent / totalBudgetAmount) * 100 : 0;
 
       if (budgetUsagePercent > 90) {
         insights.push('⚠️ You\'ve used over 90% of your monthly budget');
@@ -346,12 +362,14 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
           <div className="flex items-center justify-between mb-3">
             <div className="text-4xl">💊</div>
             <div className="text-xs px-2 py-1 rounded-full bg-violet-500/20 text-violet-300">
-              Active
+              {supplementsTotalToday > 0 ? `${supplementsTakenToday}/${supplementsTotalToday}` : 'Active'}
             </div>
           </div>
           <h3 className="text-white/60 text-sm font-medium mb-1">Supplements</h3>
-          <p className="text-3xl font-bold text-white">{supplementCount}</p>
-          <p className="text-xs text-white/40 mt-2">in library</p>
+          <p className="text-3xl font-bold text-white">
+            {supplementsTotalToday > 0 ? `${supplementsTakenToday}/${supplementsTotalToday}` : supplementCount}
+          </p>
+          <p className="text-xs text-white/40 mt-2">{supplementsTotalToday > 0 ? 'taken today' : 'in library'}</p>
         </motion.div>
 
         <motion.div
