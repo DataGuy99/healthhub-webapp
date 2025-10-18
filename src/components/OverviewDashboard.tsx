@@ -270,7 +270,40 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
       const mileage = parseInt(popupMileage);
       const cost = parseFloat(popupCost);
       const gallons = parseFloat(popupGallons);
+
+      // Validate parsed values
+      if (!Number.isFinite(mileage) || !Number.isFinite(cost) || !Number.isFinite(gallons)) {
+        alert('Please enter valid numbers');
+        return;
+      }
+
+      if (mileage <= 0 || cost <= 0 || gallons <= 0) {
+        alert('All values must be positive');
+        return;
+      }
+
       const pricePerGallon = popupPricePerGallon ? parseFloat(popupPricePerGallon) : cost / gallons;
+
+      if (popupPricePerGallon && !Number.isFinite(pricePerGallon)) {
+        alert('Please enter a valid price per gallon');
+        return;
+      }
+
+      // Calculate MPG if previous fillup exists
+      const { data: previousFillup } = await supabase
+        .from('gas_fillups')
+        .select('mileage')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .order('mileage', { ascending: false })
+        .limit(1)
+        .single();
+
+      let mpg = null;
+      if (previousFillup && previousFillup.mileage < mileage) {
+        const milesDriven = mileage - previousFillup.mileage;
+        mpg = milesDriven / gallons;
+      }
 
       const { error } = await supabase
         .from('gas_fillups')
@@ -281,6 +314,7 @@ export function OverviewDashboard({ onCategorySelect }: OverviewDashboardProps) 
           gallons,
           cost,
           price_per_gallon: pricePerGallon,
+          mpg,
           created_at: new Date().toISOString(),
         });
 

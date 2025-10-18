@@ -143,12 +143,11 @@ export function ProteinCalculator() {
     }
   };
 
-  const markAsBought = async (calc: ProteinCalculation, quantity: number = 1) => {
+  const markAsBought = async (calc: ProteinCalculation, quantity: number = 1, quantityKey?: string) => {
     try {
       const user = await getCurrentUser();
       if (!user) return;
 
-      const currentMonth = new Date().toISOString().slice(0, 7);
       const totalCost = calc.price * quantity;
 
       const { error } = await supabase
@@ -164,7 +163,12 @@ export function ProteinCalculator() {
 
       if (error) throw error;
       alert(`Marked ${quantity}x ${calc.food_name} as bought ($${totalCost.toFixed(2)})`);
-      setQuantities(prev => ({ ...prev, [calc.created_at!]: 1 }));
+
+      // Reset quantity using provided key or calc.id
+      const resetKey = quantityKey || calc.id || calc.created_at;
+      if (resetKey) {
+        setQuantities(prev => ({ ...prev, [resetKey]: 1 }));
+      }
     } catch (error) {
       console.error('Error marking as bought:', error);
       alert('Failed to mark as bought');
@@ -587,9 +591,10 @@ export function ProteinCalculator() {
                           price: fav.price,
                           cost_per_gram: fav.cost_per_gram,
                           date: new Date().toISOString(),
-                          created_at: fav.id
+                          created_at: new Date().toISOString(),
+                          id: fav.id
                         };
-                        markAsBought(favCalc, quantities[fav.id!] || 1);
+                        markAsBought(favCalc, quantities[fav.id!] || 1, fav.id);
                       }}
                       className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
                     >
@@ -675,12 +680,12 @@ export function ProteinCalculator() {
                       <input
                         type="number"
                         min="1"
-                        value={quantities[calc.created_at!] || 1}
-                        onChange={(e) => setQuantities(prev => ({ ...prev, [calc.created_at!]: parseInt(e.target.value) || 1 }))}
+                        value={quantities[calc.id!] || 1}
+                        onChange={(e) => setQuantities(prev => ({ ...prev, [calc.id!]: parseInt(e.target.value) || 1 }))}
                         className="w-16 px-2 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                       />
                       <button
-                        onClick={() => markAsBought(calc, quantities[calc.created_at!] || 1)}
+                        onClick={() => markAsBought(calc, quantities[calc.id!] || 1, calc.id)}
                         className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 text-sm transition-all"
                       >
                         🛒 Buy
