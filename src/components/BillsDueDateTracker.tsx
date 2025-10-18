@@ -48,7 +48,7 @@ export function BillsDueDateTracker() {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('bills')
+        .from('recurring_bills')
         .select('*')
         .eq('user_id', user.id)
         .order('due_day', { ascending: true });
@@ -73,7 +73,7 @@ export function BillsDueDateTracker() {
       }
 
       const { error } = await supabase
-        .from('bills')
+        .from('recurring_bills')
         .insert([{
           ...newBill,
           user_id: user.id,
@@ -94,7 +94,7 @@ export function BillsDueDateTracker() {
   const toggleAutoPay = async (bill: Bill) => {
     try {
       const { error } = await supabase
-        .from('bills')
+        .from('recurring_bills')
         .update({ auto_pay: !bill.auto_pay })
         .eq('id', bill.id);
 
@@ -110,7 +110,7 @@ export function BillsDueDateTracker() {
 
     try {
       const { error } = await supabase
-        .from('bills')
+        .from('recurring_bills')
         .delete()
         .eq('id', id);
 

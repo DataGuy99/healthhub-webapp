@@ -1,0 +1,319 @@
+================================================================================
+HEALTHHUB SCHEMA AUDIT - FINAL REPORT
+================================================================================
+Generated: 2025-10-18
+Schema File: healthhub_complete_schema.sql
+Code Base: src/ TypeScript/React components
+
+================================================================================
+SECTION 1: CRITICAL MISMATCHES (BLOCKING ISSUES)
+================================================================================
+
+TABLE: bills (BillsDueDateTracker.tsx)
+------
+STATUS: ❌ MISSING IN SCHEMA
+SEVERITY: CRITICAL
+USAGE: 
+  - BillsDueDateTracker.tsx lines 51, 76, 97, 113
+  - Queries: SELECT, INSERT, UPDATE
+COLUMNS USED:
+  - id, user_id, name, provider, amount, due_day, category, auto_pay, notes, created_at
+ISSUE: 
+  - Schema has 'recurring_bills' table but NOT 'bills'
+  - BillsDueDateTracker uses different schema than recurring_bills
+  - Duplicate bills functionality with different schemas
+RECOMMENDATION:
+  - Option A: Create 'bills' table migration for BillsDueDateTracker
+  - Option B: Remove BillsDueDateTracker, use BillsCalendar with recurring_bills
+  - Suggest: Option B (consolidation) ⭐
+
+TABLE: daily_supplement_logs (correlationEngine.ts)
+------
+STATUS: ❌ MISSING IN SCHEMA
+SEVERITY: CRITICAL
+USAGE:
+  - correlationEngine.ts line 115
+  - Query: SELECT (joins with supplement_logs)
+ISSUE:
+  - Schema has 'supplement_logs' table
+  - Code references non-existent 'daily_supplement_logs'
+  - Mismatch in table naming
+RECOMMENDATION:
+  - Update correlationEngine.ts to use 'supplement_logs' instead
+
+TABLE: investment_holdings (CryptoMetalsTracker.tsx)
+------
+STATUS: ❌ MISSING IN SCHEMA
+SEVERITY: HIGH
+USAGE:
+  - CryptoMetalsTracker.tsx lines 54, 150, 173
+  - Queries: SELECT, INSERT, UPDATE, DELETE
+ISSUE:
+  - Table never created in schema
+  - Component appears incomplete/experimental
+RECOMMENDATION:
+  - Option A: Create investment_holdings table migration
+  - Option B: Disable/remove CryptoMetalsTracker component
+  - Suggest: Option B (until feature is ready) ⭐
+
+TABLE: recurring_items (RecurringItemTracker.tsx)
+------
+STATUS: ❌ MISSING IN SCHEMA
+SEVERITY: MEDIUM
+USAGE:
+  - RecurringItemTracker.tsx lines 60, 86, 108, 127
+  - Queries: SELECT, INSERT, UPDATE, DELETE
+ISSUE:
+  - Generic recurring items table not in schema
+  - Schema uses domain-specific tables (recurring_bills, maintenance_items, etc.)
+  - Architectural mismatch
+RECOMMENDATION:
+  - Consolidate into existing domain tables or create new table
+  - Design decision needed on categorization
+  - Suggest: Create table with proper categories ⭐
+
+================================================================================
+SECTION 2: COLUMN VERIFICATION - PHASE 6.2 ENHANCEMENTS
+================================================================================
+
+✅ SUPPLEMENTS TABLE - All Phase 6.2 columns present:
+  ✓ frequency_type (TEXT) - NEW in Phase 6.2
+  ✓ frequency_config (JSONB) - NEW in Phase 6.2 (complex patterns)
+  ✓ cost_per_container (NUMERIC(10,2)) - NEW in Phase 6.2
+  ✓ servings_per_container (INTEGER) - NEW in Phase 6.2
+  ✓ product_url (TEXT) - NEW in Phase 6.2
+  ✓ last_purchase_date (DATE) - NEW in Phase 6.2
+  ✓ is_in_stock (BOOLEAN) - NEW in Phase 6.2
+  ✓ monthly_cost (added via ALTER) - Phase 3
+  ✓ cost_per_serving (added via ALTER) - Phase 3
+
+✅ MAINTENANCE_ITEMS TABLE - All Phase 6.2 columns present:
+  ✓ is_projected (BOOLEAN DEFAULT FALSE) - NEW in Phase 6.2
+  ✓ projected_interval_miles (INTEGER) - NEW in Phase 6.2
+  ✓ last_completed_mileage (INTEGER) - NEW in Phase 6.2
+  ✓ next_due_mileage (INTEGER) - NEW in Phase 6.2
+  ✓ is_completed (BOOLEAN DEFAULT FALSE) - NEW in Phase 6.2
+  ✓ completed_date (DATE) - NEW in Phase 6.2
+
+✅ GAS_FILLUPS TABLE - All columns present:
+  ✓ mpg (NUMERIC) - calculated from previous fillup
+  ✓ cost_per_mile_at_fillup (NUMERIC) - Phase 6.2 enhancement
+
+✅ RECURRING_BILLS TABLE - All Phase 6.2 columns present:
+  ✓ recurrence_type (TEXT DEFAULT 'monthly') - NEW in Phase 6.2
+  ✓ recurrence_config (JSONB) - NEW in Phase 6.2 (complex patterns)
+  ✓ provider (TEXT) - NEW in Phase 6.2 (auto-populated from name)
+  ✓ is_income (BOOLEAN DEFAULT FALSE) - NEW in Phase 6.2
+
+✅ GROCERY_PURCHASES TABLE - All Phase 6.2 columns present:
+  ✓ favorite_food_id (UUID FK) - NEW in Phase 6.2
+  ✓ carbs_grams (NUMERIC(8,2)) - NEW in Phase 6.2
+  ✓ fat_grams (NUMERIC(8,2)) - NEW in Phase 6.2
+  ✓ calories (NUMERIC(8,2)) - NEW in Phase 6.2
+  ✓ servings (INTEGER) - NEW in Phase 6.2
+
+✅ FAVORITE_FOODS TABLE - New Phase 6.2 table present:
+  ✓ item_name (TEXT NOT NULL)
+  ✓ total_cost (NUMERIC(10,2) NOT NULL)
+  ✓ protein_grams (NUMERIC(8,2))
+  ✓ cost_per_gram (NUMERIC(10,4))
+  ✓ servings (INTEGER)
+  ✓ serving_size_oz (NUMERIC(6,2))
+  ✓ macros (JSONB)
+  ✓ Unique constraint on (user_id, item_name)
+  ✓ RLS policy configured
+
+✅ INCOME_SETTINGS TABLE - New Phase 6.2 table present:
+  ✓ post_tax_hourly_rate (NUMERIC(10,2))
+  ✓ hours_per_week (NUMERIC(5,2))
+  ✓ Unique constraint on user_id
+  ✓ RLS policy configured
+
+================================================================================
+SECTION 3: INFRASTRUCTURE TABLES (PLANNED/FUTURE USE)
+================================================================================
+
+Tables in schema but not yet used in UI code (15 tables):
+These appear to be infrastructure for planned features:
+
+Phase 3+ Features:
+  • health_budget_allocations - Budget allocation by health category
+  • purchase_queue - Smart purchase prioritization queue
+  • purchase_decisions - Track purchase decision outcomes
+  • supplement_budgets - Monthly supplement budget tracking
+  • supplement_purchases - Purchase history tracking
+  • supplement_roi_analysis - ROI calculations for supplements
+  • auto_transactions - Unified auto expense transactions
+  • auto_cost_analysis - Monthly auto cost summary
+  • unified_budgets - Consolidated budgets across categories
+
+Health Tracking Features:
+  • health_data_upload - Encrypted health data uploads
+  • health_exports - Raw health data exports
+  • health_insights - Auto-generated health insights
+  • health_sync_status - Sync status tracking
+  • correlation_jobs - Background correlation analysis jobs
+
+Finance Features:
+  • budget_categories - Hierarchical budget categories (hierarchy: parent_id)
+  • budget_goals - Budget target goals with periods
+  • plaid_sync_cursors - Plaid sync state management
+  • transaction_items - Line-item details from transactions
+  
+NOTE: These tables have RLS policies configured and are ready for use.
+
+================================================================================
+SECTION 4: RLS (ROW LEVEL SECURITY) VERIFICATION
+================================================================================
+
+✅ RLS ENABLED on all user-data tables:
+  - All tables have RLS enabled
+  - All policies follow pattern: "Users can manage their own {table}"
+  - Policy logic: WHERE (select auth.uid()) = user_id
+  - Exception: health_exports uses TEXT user_id (policy: user_id = auth.uid()::text)
+
+✅ RLS POLICIES CONFIGURED for new Phase 6.2 tables:
+  ✓ income_settings
+  ✓ supplement_purchases
+  ✓ supplement_budgets
+  ✓ favorite_foods
+  ✓ auto_transactions
+  ✓ unified_budgets
+
+================================================================================
+SECTION 5: FOREIGN KEY RELATIONSHIPS
+================================================================================
+
+✅ VERIFIED FOREIGN KEYS:
+  - category_items.supplement_id → supplements.id
+  - category_items.recurring_bill_id → recurring_bills.id
+  - grocery_purchases.favorite_food_id → favorite_foods.id
+  - supplements.stack_id → supplements.id (self-referencing)
+  - recurring_bills cascade on delete
+  - health_supplement_correlations.supplement_id references supplements
+
+✅ UNIQUE CONSTRAINTS:
+  - grocery_budgets: UNIQUE(user_id)
+  - protein_targets: UNIQUE(user_id)
+  - misc_shop_budgets: UNIQUE(user_id)
+  - user_settings: UNIQUE(user_id)
+  - favorite_foods: UNIQUE(user_id, item_name)
+  - income_settings: UNIQUE(user_id)
+
+================================================================================
+SECTION 6: TYPE MISMATCHES ANALYSIS
+================================================================================
+
+FavoriteFood Interface Mismatch:
+────────────────────────────────
+Code Interface (supabase.ts):
+  food_name: string
+  serving_size: number
+  serving_unit: string
+  protein_grams: number
+  price: number
+  cost_per_gram: number
+
+Schema Definition:
+  item_name (not food_name) - TYPE MISMATCH
+  total_cost (not price) - TYPE MISMATCH
+  serving_size_oz (not serving_size) - ADDITIONAL COLUMN
+  macros (JSONB) - ADDITIONAL COLUMN
+  
+NOTE: Interface doesn't match schema columns exactly!
+This will cause mapping issues in code.
+
+================================================================================
+SECTION 7: SUMMARY & RISK ASSESSMENT
+================================================================================
+
+OVERALL STATUS: PARTIAL MISMATCH (4 critical tables missing)
+
+Audit Metrics:
+  • Total tables in code: 34
+  • Total tables in schema: 45
+  • Matching tables: 30 (88%)
+  • Missing in schema: 4 (12%)
+  • Unused in code: 15 (35% of schema)
+
+Risk Level: HIGH
+  - 4 tables referenced in code don't exist in schema
+  - Will cause runtime errors when using affected features
+  - BillsDueDateTracker: Complete component failure
+  - correlationEngine: Table name mismatch error
+  - CryptoMetalsTracker: Feature disabled (no table)
+  - RecurringItemTracker: Feature disabled (no table)
+
+Code Quality: MEDIUM
+  - Phase 6.2 enhancements properly integrated
+  - Foreign key relationships intact
+  - RLS policies comprehensive
+  - Type mismatch: FavoriteFood interface
+
+================================================================================
+SECTION 8: ACTIONABLE RECOMMENDATIONS
+================================================================================
+
+PRIORITY 1: CRITICAL (Fix immediately)
+─────────────────────────────────────
+1. Daily Supplement Logs Table Reference
+   File: src/lib/correlationEngine.ts (line 115)
+   Action: Change .from('daily_supplement_logs') to .from('supplement_logs')
+   Effort: 5 minutes
+   Impact: Fixes correlation engine queries
+
+2. Bills vs Recurring Bills Consolidation  
+   Files: BillsDueDateTracker.tsx, BillsCalendar.tsx
+   Options:
+     A. Remove BillsDueDateTracker (if duplicate of BillsCalendar)
+     B. Create bills table migration
+   Recommendation: Option A (consolidate)
+   Effort: 1 hour (if removing), or 2 hours (if creating migration)
+   Impact: Eliminates schema inconsistency
+
+3. FavoriteFood Interface Update
+   File: src/lib/supabase.ts
+   Issue: Interface fields don't match schema columns
+   Changes Needed:
+     food_name → item_name
+     price → total_cost (and recalc cost_per_gram if needed)
+     Add: serving_size_oz, macros fields
+   Effort: 15 minutes
+   Impact: Prevents data mapping errors
+
+PRIORITY 2: HIGH (Fix before production)
+────────────────────────────────────────
+4. Investment Holdings Table
+   Component: CryptoMetalsTracker.tsx
+   Options:
+     A. Create investment_holdings table migration
+     B. Disable CryptoMetalsTracker component
+   Recommendation: Create table (Phase 6.3 feature)
+   Effort: 30 minutes (create table + RLS)
+   Impact: Enables crypto/metals tracking
+
+5. Recurring Items Table  
+   Component: RecurringItemTracker.tsx
+   Decision: Define schema & categorization strategy
+   Options:
+     A. Create generic recurring_items table
+     B. Consolidate categories into existing tables
+   Recommendation: Create table with category system
+   Effort: 1 hour
+   Impact: Enables flexible item tracking
+
+================================================================================
+FINAL VERDICT
+================================================================================
+
+Schema Status: MOSTLY COMPLETE WITH CRITICAL GAPS
+
+DO NOT DEPLOY to production until:
+  1. bills/recurring_bills inconsistency resolved
+  2. daily_supplement_logs → supplement_logs migration completed
+  3. FavoriteFood interface corrected
+  4. investment_holdings & recurring_items tables created or features disabled
+
+Estimated Effort to Fix All Issues: 3-4 hours
+
+================================================================================

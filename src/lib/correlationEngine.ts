@@ -112,13 +112,14 @@ export async function analyzeSupplementHealthCorrelation(
 
     // Fetch supplement logs
     const { data: supplementLogs, error: supplementError } = await supabase
-      .from('daily_supplement_logs')
+      .from('supplement_logs')
       .select('*, supplements(name)')
       .eq('user_id', userId)
       .eq('supplement_id', supplementId)
-      .gte('taken_at', startDate.toISOString())
-      .lte('taken_at', endDate.toISOString())
-      .order('taken_at', { ascending: true });
+      .gte('timestamp', startDate.toISOString())
+      .lte('timestamp', endDate.toISOString())
+      .eq('is_taken', true)
+      .order('timestamp', { ascending: true });
 
     if (supplementError) throw supplementError;
     if (!supplementLogs || supplementLogs.length < 5) {
@@ -197,7 +198,7 @@ export async function analyzeSupplementHealthCorrelation(
     // Create supplement taken map by day
     const supplementByDay = new Set<string>();
     supplementLogs.forEach(log => {
-      const dayKey = new Date(log.taken_at).toISOString().split('T')[0];
+      const dayKey = new Date(log.timestamp).toISOString().split('T')[0];
       supplementByDay.add(dayKey);
     });
 

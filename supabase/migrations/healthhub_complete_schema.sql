@@ -422,16 +422,15 @@ CREATE INDEX IF NOT EXISTS idx_income_settings_user ON public.income_settings(us
 CREATE TABLE IF NOT EXISTS public.favorite_foods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    item_name TEXT NOT NULL,
-    total_cost NUMERIC(10,2) NOT NULL,
-    protein_grams NUMERIC(8,2),
-    cost_per_gram NUMERIC(10,4),
-    servings INTEGER,
-    serving_size_oz NUMERIC(6,2),
-    macros JSONB,
+    food_name TEXT NOT NULL,
+    serving_size NUMERIC(8,2) NOT NULL,
+    serving_unit TEXT NOT NULL DEFAULT 'oz',
+    protein_grams NUMERIC(8,2) NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    cost_per_gram NUMERIC(10,4) NOT NULL,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, item_name)
+    UNIQUE(user_id, food_name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_favorite_foods_user ON public.favorite_foods(user_id);
