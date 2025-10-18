@@ -202,9 +202,36 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
   };
 
   const handleImport = async (mappedTransactions: MappedTransaction[]) => {
+    const startTime = Date.now();
+    let importLogId: string | null = null;
+    let errorCount = 0;
+    const errors: string[] = [];
+
     try {
       const user = await getCurrentUser();
       if (!user) return;
+
+      // Create import log entry
+      const { data: importLogData, error: logCreateError } = await supabase
+        .from('import_logs')
+        .insert({
+          user_id: user.id,
+          import_type: 'csv',
+          rows_count: mappedTransactions.length,
+          error_count: 0,
+          details: {
+            start_time: new Date().toISOString(),
+            merchant_count: new Set(mappedTransactions.map(t => t.merchant)).size
+          }
+        })
+        .select('id')
+        .single();
+
+      if (logCreateError) {
+        console.error('Failed to create import log:', logCreateError);
+      } else {
+        importLogId = importLogData?.id;
+      }
 
       // Save transaction rules for transactions marked "saveRule"
       const rulesToSave = mappedTransactions
@@ -227,7 +254,11 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
           .from('transaction_rules')
           .upsert(rulesToSave, { onConflict: 'user_id,keyword', ignoreDuplicates: true });
 
-        if (rulesError) throw rulesError;
+        if (rulesError) {
+          console.error('Transaction rules save error:', rulesError);
+          errors.push(`Rules: ${rulesError.message}`);
+          errorCount++;
+        }
       }
 
       // Expand transactions with splits into multiple entries
@@ -273,7 +304,10 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
         .upsert(itemsToCreate, { onConflict: 'user_id,category,name', ignoreDuplicates: true })
         .select('id, name, category');
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Category items insert error:', itemsError);
+        throw new Error(`Failed to create category items: ${itemsError.message}`);
+      }
 
       // Create lookup map for efficient matching
       const itemLookup = new Map<string, string>();
@@ -308,15 +342,72 @@ export function FinanceView({ onCategorySelect }: FinanceViewProps) {
         .from('category_logs')
         .insert(logsToCreate);
 
-      if (logsError) throw logsError;
+      if (logsError) {
+        console.error('Category logs insert error:', logsError);
+        throw new Error(`Failed to create category logs: ${logsError.message}`);
+      }
+
+      // Update import log with success
+      if (importLogId) {
+        const duration = Date.now() - startTime;
+        try {
+          await supabase
+            .from('import_logs')
+            .update({
+              error_count: errorCount,
+              details: {
+                start_time: new Date(startTime).toISOString(),
+                end_time: new Date().toISOString(),
+                duration_ms: duration,
+                merchant_count: new Set(mappedTransactions.map(t => t.merchant)).size,
+                expanded_count: expandedTransactions.length,
+                rules_saved: rulesToSave.length,
+                errors: errors.length > 0 ? errors : undefined
+              }
+            })
+            .eq('id', importLogId);
+        } catch (logError) {
+          console.error('Failed to update import log:', logError);
+        }
+      }
 
       setShowImportPreview(false);
       setParsedTransactions([]);
       loadData();
-      alert(`Successfully imported ${expandedTransactions.length} transaction logs from ${mappedTransactions.length} transactions!`);
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      const successMsg = `✓ Successfully imported ${expandedTransactions.length} transaction logs from ${mappedTransactions.length} transactions in ${duration}s`;
+      const warningMsg = errors.length > 0 ? `\n\n⚠️ Warnings:\n${errors.join('\n')}` : '';
+      alert(successMsg + warningMsg);
     } catch (error) {
       console.error('Error importing transactions:', error);
-      alert('Failed to import transactions');
+
+      // Update import log with failure
+      if (importLogId) {
+        const duration = Date.now() - startTime;
+        try {
+          await supabase
+            .from('import_logs')
+            .update({
+              error_count: errorCount + 1,
+              details: {
+                start_time: new Date(startTime).toISOString(),
+                end_time: new Date().toISOString(),
+                duration_ms: duration,
+                merchant_count: new Set(mappedTransactions.map(t => t.merchant)).size,
+                errors: [...errors, error instanceof Error ? error.message : String(error)],
+                failed: true
+              }
+            })
+            .eq('id', importLogId);
+        } catch (logError) {
+          console.error('Failed to update import log in error handler:', logError);
+        }
+      }
+
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+      const detailedErrors = errors.length > 0 ? `\n\nDetails:\n${errors.join('\n')}` : '';
+      alert(`❌ Failed to import transactions\n\n${errorMsg}${detailedErrors}`);
     }
   };
 

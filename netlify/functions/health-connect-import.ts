@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import initSqlJs from 'sql.js';
 import AdmZip from 'adm-zip';
 
-// Supabase client
+// Supabase client with service role key (bypasses RLS for trusted server operations)
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
-  process.env.VITE_SUPABASE_ANON_KEY || ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 interface HealthDataPoint {
@@ -26,12 +26,41 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    // Validate authentication token from Authorization header
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Missing or invalid authorization token' })
+      };
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify the token with Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Invalid authentication token' })
+      };
+    }
+
     const { fileData, isZip, userId } = JSON.parse(event.body || '{}');
 
     if (!fileData || !userId) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Missing fileData or userId' })
+      };
+    }
+
+    // Ensure the authenticated user matches the userId in the request
+    if (user.id !== userId) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: 'Forbidden: userId mismatch' })
       };
     }
 
@@ -378,9 +407,34 @@ export const handler: Handler = async (event) => {
     // Close database
     db.close();
 
+    const startTime = Date.now();
+    let importLogId: string | null = null;
+
+    // Create import log entry
+    const { data: importLogData, error: logCreateError } = await supabase
+      .from('import_logs')
+      .insert({
+        user_id: userId,
+        import_type: 'healthconnect',
+        rows_count: dataPoints.length,
+        error_count: 0,
+        details: {
+          start_time: new Date().toISOString(),
+          breakdown: importCounts,
+          is_zip: isZip
+        }
+      })
+      .select('id')
+      .single();
+
+    if (!logCreateError && importLogData) {
+      importLogId = importLogData.id;
+    }
+
     // Batch insert into Supabase (in chunks of 1000 to avoid payload limits)
     const BATCH_SIZE = 1000;
     let insertedCount = 0;
+    let errorCount = 0;
 
     for (let i = 0; i < dataPoints.length; i += BATCH_SIZE) {
       const batch = dataPoints.slice(i, i + BATCH_SIZE).map(dp => ({
@@ -399,6 +453,24 @@ export const handler: Handler = async (event) => {
 
       if (error) {
         console.error('Batch insert error:', error);
+        errorCount++;
+        // Update import log with failure
+        if (importLogId) {
+          await supabase
+            .from('import_logs')
+            .update({
+              error_count: errorCount,
+              details: {
+                start_time: new Date(startTime).toISOString(),
+                end_time: new Date().toISOString(),
+                breakdown: importCounts,
+                is_zip: isZip,
+                failed: true,
+                error_message: error.message
+              }
+            })
+            .eq('id', importLogId);
+        }
         throw new Error(`Failed to insert batch: ${error.message}`);
       }
 
@@ -413,6 +485,25 @@ export const handler: Handler = async (event) => {
         last_sync_timestamp: new Date().toISOString(),
         data_points_count: insertedCount
       }, { onConflict: 'user_id' });
+
+    // Update import log with success
+    if (importLogId) {
+      const duration = Date.now() - startTime;
+      await supabase
+        .from('import_logs')
+        .update({
+          error_count: 0,
+          details: {
+            start_time: new Date(startTime).toISOString(),
+            end_time: new Date().toISOString(),
+            duration_ms: duration,
+            breakdown: importCounts,
+            is_zip: isZip,
+            inserted_count: insertedCount
+          }
+        })
+        .eq('id', importLogId);
+    }
 
     return {
       statusCode: 200,
