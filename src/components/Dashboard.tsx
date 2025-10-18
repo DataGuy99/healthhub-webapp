@@ -39,15 +39,15 @@ const Loading = () => (
   </div>
 );
 
-type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills' | 'investment' | 'home-garden';
+type CategoryTab = 'overview' | 'health' | 'grocery' | 'supplements' | 'auto' | 'misc-shop' | 'bills';
+// Phase 6.2: Removed 'investment' and 'home-garden' from CategoryTab
 type HealthSubTab = 'import' | 'timeline' | 'insights' | 'correlations' | 'heatmap' | 'roi-timeline' | 'funnel' | 'purchase-queue' | 'roi-analysis';
 type SupplementsSubTab = 'daily' | 'library' | 'sections' | 'costs' | 'export';
 type GrocerySubTab = 'items' | 'protein' | 'budget' | 'costs' | 'common';
 type AutoSubTab = 'mpg-tracker' | 'maintenance' | 'gas' | 'costs' | 'cost-analysis';
 type BillsSubTab = 'calendar' | 'tracker' | 'providers';
-type InvestmentSubTab = 'portfolio' | 'crypto-metals' | 'performance';
 type MiscShopSubTab = 'budget' | 'purchases' | 'wishlist' | 'returns';
-type HomeGardenSubTab = 'projects' | 'maintenance' | 'purchases';
+// Phase 6.2: Removed InvestmentSubTab and HomeGardenSubTab - categories removed per user feedback
 
 interface DashboardProps {
   activeTab: CategoryTab;
@@ -62,8 +62,7 @@ const CATEGORY_CONFIG: Record<CategoryTab, { name: string; icon: string; color: 
   'auto': { name: 'Auto', icon: '🚗', color: 'from-red-500/20 to-rose-500/20 border-red-500/30' },
   'misc-shop': { name: 'Misc Shopping', icon: '🛍️', color: 'from-pink-500/20 to-fuchsia-500/20 border-pink-500/30' },
   'bills': { name: 'Bills & Payments', icon: '💳', color: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30' },
-  'investment': { name: 'Investment', icon: '📈', color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/30' },
-  'home-garden': { name: 'Home & Garden', icon: '🌱', color: 'from-lime-500/20 to-green-500/20 border-lime-500/30' },
+  // Phase 6.2: Removed 'investment' and 'home-garden' categories
 };
 
 export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
