@@ -21,6 +21,7 @@ export interface Ingredient {
 
 export type FrequencyPattern = 'everyday' | '5/2' | 'workout' | 'custom';
 
+// Phase 6.2: Enhanced Supplement interface with complex frequency patterns and purchase tracking
 export interface Supplement {
   id?: string;
   user_id?: string;
@@ -40,6 +41,24 @@ export interface Supplement {
   frequency?: number; // times per day
   notes?: string;
   created_at?: string;
+
+  // Phase 6.2: Complex frequency patterns
+  frequency_type?: 'daily' | 'weekly' | 'alternating' | 'cyclic' | 'custom';
+  frequency_config?: {
+    times_per_day?: number; // How many times per day
+    days_of_week?: number[]; // [0,2,4] = Sun, Tue, Thu
+    pattern?: 'on_off'; // Alternating days
+    days_on?: number; // For cyclic pattern
+    days_off?: number; // For cyclic pattern
+    calendar?: Record<string, number[]>; // {"2025-10": [1,5,10,15]} = specific dates
+  };
+
+  // Phase 6.2: Product and purchase tracking
+  product_url?: string; // Link to product page
+  cost_per_container?: number;
+  servings_per_container?: number;
+  last_purchase_date?: string;
+  is_in_stock?: boolean; // Toggle on/off based on stock
 }
 
 export interface SupplementLog {
@@ -56,6 +75,27 @@ export interface SupplementSection {
   user_id?: string;
   name: string;
   order?: number;
+  created_at?: string;
+}
+
+// Phase 6.2: Supplement purchase tracking
+export interface SupplementPurchase {
+  id?: string;
+  user_id?: string;
+  supplement_id?: string;
+  purchase_date: string;
+  cost: number;
+  quantity?: number;
+  notes?: string;
+  created_at?: string;
+}
+
+// Phase 6.2: Supplement budget management
+export interface SupplementBudget {
+  id?: string;
+  user_id?: string;
+  budget_amount: number;
+  month_year: string; // e.g., "2025-10"
   created_at?: string;
 }
 
