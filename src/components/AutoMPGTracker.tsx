@@ -152,14 +152,17 @@ export function AutoMPGTracker() {
 
       const pricePerGallon = cost / gallons;
 
-      // Calculate MPG from previous fillup
+      // Calculate MPG from previous fillup (only for new fillups)
       let mpg = null;
-      if (fillups.length > 0) {
+      if (!editingFillup && fillups.length > 0) {
         const prevFillup = fillups[0]; // Most recent
         if (mileage > prevFillup.mileage) {
           const milesDriven = mileage - prevFillup.mileage;
           mpg = milesDriven / gallons;
         }
+      } else if (editingFillup) {
+        // Preserve existing MPG during edit to avoid stale calculation
+        mpg = editingFillup.mpg ?? null;
       }
 
       if (editingFillup) {

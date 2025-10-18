@@ -216,6 +216,8 @@ export function ProteinCalculator() {
   };
 
   const markAsBought = async (calc: ProteinCalculation) => {
+    if (!confirm('Add this to Grocery purchases?')) return;
+
     try {
       const user = await getCurrentUser();
       if (!user) return;
@@ -226,10 +228,10 @@ export function ProteinCalculator() {
         .from('grocery_purchases')
         .insert({
           user_id: user.id,
-          store: calc.notes || 'Grocery Store',
+          store: 'Grocery Store',
           amount: calc.price,
           date: new Date().toISOString().split('T')[0],
-          notes: `${calc.food_name} - ${calc.serving_size}${calc.serving_unit} × ${calc.num_servings} servings`,
+          notes: `${calc.food_name} - ${calc.serving_size}${calc.serving_unit} × ${calc.num_servings} servings${calc.notes ? ` (${calc.notes})` : ''}`,
           protein_grams: totalProtein,
           is_protein_source: true,
           created_at: new Date().toISOString(),
@@ -238,6 +240,7 @@ export function ProteinCalculator() {
       if (error) throw error;
 
       alert(`✓ Added ${calc.food_name} to Grocery purchases!`);
+      loadData();
     } catch (error) {
       console.error('Error marking as bought:', error);
       alert('Failed to mark as bought');

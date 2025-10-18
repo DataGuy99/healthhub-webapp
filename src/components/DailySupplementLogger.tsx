@@ -566,10 +566,10 @@ export function DailySupplementLogger() {
                           return supplement.id ? !savedLogs.has(supplement.id) : true;
                         })
                         .map(supplement => {
-                        // In history mode, show what's saved. In today mode, show visual selections
+                        // In history mode, show what's saved. In today mode, show visual selections or saved
                         const isTaken = isHistoryMode
                           ? (supplement.id ? savedLogs.has(supplement.id) : false)
-                          : (logs[supplement.id!] || false);
+                          : (supplement.id ? (logs[supplement.id] || savedLogs.has(supplement.id)) : false);
 
                         return (
                           <motion.button
@@ -702,10 +702,10 @@ export function DailySupplementLogger() {
                         return supplement.id ? !savedLogs.has(supplement.id) : true;
                       })
                       .map(supplement => {
-                      // In history mode, show what's saved. In today mode, show visual selections
+                      // In history mode, show what's saved. In today mode, show visual selections or saved
                       const isTaken = isHistoryMode
                         ? (supplement.id ? savedLogs.has(supplement.id) : false)
-                        : (logs[supplement.id!] || false);
+                        : (supplement.id ? (logs[supplement.id] || savedLogs.has(supplement.id)) : false);
 
                       return (
                         <motion.button
